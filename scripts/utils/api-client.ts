@@ -1,11 +1,13 @@
 import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import type { UsageLimits, CacheEntry } from '../types.js';
 import { getCredentials } from './credentials.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
 
 const API_TIMEOUT_MS = 5000;
-const CACHE_FILE_PREFIX = '/tmp/claude-dashboard-cache-';
+const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
 
 /**
  * In-memory cache Map: tokenHash -> CacheEntry
@@ -13,10 +15,25 @@ const CACHE_FILE_PREFIX = '/tmp/claude-dashboard-cache-';
 const usageCacheMap: Map<string, CacheEntry<UsageLimits>> = new Map();
 
 /**
+ * Pending API requests Map: tokenHash -> Promise
+ * Prevents duplicate concurrent requests for the same token
+ */
+const pendingRequests: Map<string, Promise<UsageLimits | null>> = new Map();
+
+/**
+ * Ensure cache directory exists with secure permissions
+ */
+function ensureCacheDir(): void {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true, mode: 0o700 });
+  }
+}
+
+/**
  * Get cache file path for a specific token hash
  */
 function getCacheFilePath(tokenHash: string): string {
-  return `${CACHE_FILE_PREFIX}${tokenHash}.json`;
+  return path.join(CACHE_DIR, `cache-${tokenHash}.json`);
 }
 
 /**
@@ -46,7 +63,8 @@ export async function fetchUsageLimits(ttlSeconds: number = 60): Promise<UsageLi
 
   // Check memory cache first
   if (isCacheValid(tokenHash, ttlSeconds)) {
-    return usageCacheMap.get(tokenHash)!.data;
+    const cached = usageCacheMap.get(tokenHash);
+    if (cached) return cached.data;
   }
 
   // Try to load from file cache (for persistence across calls)
@@ -56,7 +74,27 @@ export async function fetchUsageLimits(ttlSeconds: number = 60): Promise<UsageLi
     return fileCache;
   }
 
-  // Fetch from API
+  // Check if there's already a pending request for this token
+  const pending = pendingRequests.get(tokenHash);
+  if (pending) {
+    return pending;
+  }
+
+  // Create new API request
+  const requestPromise = fetchFromApi(token, tokenHash);
+  pendingRequests.set(tokenHash, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    pendingRequests.delete(tokenHash);
+  }
+}
+
+/**
+ * Internal function to fetch from API
+ */
+async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimits | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -122,6 +160,7 @@ async function loadFileCache(tokenHash: string, ttlSeconds: number): Promise<Usa
  */
 async function saveFileCache(tokenHash: string, data: UsageLimits): Promise<void> {
   try {
+    ensureCacheDir();
     const cacheFile = getCacheFilePath(tokenHash);
     fs.writeFileSync(
       cacheFile,

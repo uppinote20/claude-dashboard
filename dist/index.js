@@ -117,6 +117,8 @@ function renderProgressBar(percent, config = DEFAULT_PROGRESS_BAR_CONFIG) {
 
 // scripts/utils/api-client.ts
 import fs from "fs";
+import os from "os";
+import path from "path";
 
 // scripts/utils/credentials.ts
 import { execFileSync } from "child_process";
@@ -159,8 +161,9 @@ async function getCredentialsFromFile() {
 
 // scripts/utils/hash.ts
 import { createHash } from "crypto";
+var HASH_LENGTH = 16;
 function hashToken(token) {
-  return createHash("sha256").update(token).digest("hex").substring(0, 12);
+  return createHash("sha256").update(token).digest("hex").substring(0, HASH_LENGTH);
 }
 
 // scripts/version.ts
@@ -168,10 +171,16 @@ var VERSION = true ? "1.1.0" : "dev";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
-var CACHE_FILE_PREFIX = "/tmp/claude-dashboard-cache-";
+var CACHE_DIR = path.join(os.homedir(), ".cache", "claude-dashboard");
 var usageCacheMap = /* @__PURE__ */ new Map();
+var pendingRequests = /* @__PURE__ */ new Map();
+function ensureCacheDir() {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true, mode: 448 });
+  }
+}
 function getCacheFilePath(tokenHash) {
-  return `${CACHE_FILE_PREFIX}${tokenHash}.json`;
+  return path.join(CACHE_DIR, `cache-${tokenHash}.json`);
 }
 function isCacheValid(tokenHash, ttlSeconds) {
   const cache = usageCacheMap.get(tokenHash);
@@ -187,13 +196,28 @@ async function fetchUsageLimits(ttlSeconds = 60) {
   }
   const tokenHash = hashToken(token);
   if (isCacheValid(tokenHash, ttlSeconds)) {
-    return usageCacheMap.get(tokenHash).data;
+    const cached = usageCacheMap.get(tokenHash);
+    if (cached)
+      return cached.data;
   }
   const fileCache = await loadFileCache(tokenHash, ttlSeconds);
   if (fileCache) {
     usageCacheMap.set(tokenHash, { data: fileCache, timestamp: Date.now() });
     return fileCache;
   }
+  const pending = pendingRequests.get(tokenHash);
+  if (pending) {
+    return pending;
+  }
+  const requestPromise = fetchFromApi(token, tokenHash);
+  pendingRequests.set(tokenHash, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    pendingRequests.delete(tokenHash);
+  }
+}
+async function fetchFromApi(token, tokenHash) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
@@ -242,6 +266,7 @@ async function loadFileCache(tokenHash, ttlSeconds) {
 }
 async function saveFileCache(tokenHash, data) {
   try {
+    ensureCacheDir();
     const cacheFile = getCacheFilePath(tokenHash);
     fs.writeFileSync(
       cacheFile,
