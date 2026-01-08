@@ -191,7 +191,8 @@ async function saveFileCache(tokenHash: string, data: UsageLimits): Promise<void
       JSON.stringify({
         data,
         timestamp: Date.now(),
-      })
+      }),
+      { mode: 0o600 }
     );
 
     // Probabilistically clean up old cache files (fire-and-forget)
