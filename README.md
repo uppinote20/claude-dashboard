@@ -12,6 +12,8 @@ Comprehensive status line plugin for Claude Code with context usage, API rate li
 - 📁 **Project Info**: Directory name with git branch
 - 🔧 **Config Counts**: CLAUDE.md, rules, MCPs, hooks counts
 - ⚙️ **Tool Activity**: Running/completed tools tracking
+- ⏱️ **Session Duration**: Session time tracking
+- 🤖 **Agent Status**: Subagent progress tracking
 - ✓ **Todo Progress**: Task completion rate
 - 🌐 **i18n**: English and Korean support (auto-detect)
 - 📐 **Multi-line**: Compact (1), Normal (2), Detailed (3) line modes
