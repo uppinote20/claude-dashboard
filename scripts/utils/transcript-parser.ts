@@ -80,11 +80,11 @@ export async function parseTranscript(
         }
       }
 
-      // Extract tool_result blocks
-      if (entry.type === 'tool_result' && entry.message?.content) {
+      // Extract tool_result blocks (they come as user messages with tool_result content)
+      if (entry.type === 'user' && entry.message?.content) {
         for (const block of entry.message.content) {
-          if (block.type === 'tool_result' && block.id) {
-            toolResults.add(block.id);
+          if (block.type === 'tool_result' && block.tool_use_id) {
+            toolResults.add(block.tool_use_id);
           }
         }
       }

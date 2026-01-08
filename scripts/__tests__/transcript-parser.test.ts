@@ -79,10 +79,10 @@ describe('transcript-parser', () => {
     it('should extract tool results', async () => {
       await writeTranscript([
         {
-          type: 'tool_result',
+          type: 'user',
           message: {
             content: [
-              { type: 'tool_result', id: 'tool-1' },
+              { type: 'tool_result', tool_use_id: 'tool-1' },
             ],
           },
         },
@@ -119,8 +119,8 @@ describe('transcript-parser', () => {
           },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'tool-1' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tool-1' }] },
         },
       ]);
 
@@ -139,8 +139,8 @@ describe('transcript-parser', () => {
           message: { content: [{ type: 'tool_use', id: 'tool-1', name: 'Bash' }] },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'tool-1' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tool-1' }] },
         },
       ]);
 
@@ -165,12 +165,12 @@ describe('transcript-parser', () => {
           },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'tool-1' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tool-1' }] },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'tool-2' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tool-2' }] },
         },
       ]);
 
@@ -215,8 +215,8 @@ describe('transcript-parser', () => {
           },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'todo-1' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'todo-1' }] },
         },
       ]);
 
@@ -255,8 +255,8 @@ describe('transcript-parser', () => {
           },
         },
         {
-          type: 'tool_result',
-          message: { content: [{ type: 'tool_result', id: 'agent-1' }] },
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'agent-1' }] },
         },
       ]);
 

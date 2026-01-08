@@ -257,6 +257,7 @@ export interface TranscriptEntry {
     content?: Array<{
       type: 'tool_use' | 'tool_result' | 'text';
       id?: string;
+      tool_use_id?: string; // For tool_result blocks
       name?: string;
       input?: unknown;
     }>;
