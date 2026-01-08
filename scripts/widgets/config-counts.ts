@@ -56,23 +56,34 @@ async function countClaudeMd(projectDir: string): Promise<number> {
 }
 
 /**
- * Count MCP server configurations
+ * Count MCP server configurations from project and global configs
  */
 async function countMcps(projectDir: string): Promise<number> {
-  // Check .claude/mcp.json
-  const mcpPath = join(projectDir, '.claude', 'mcp.json');
-  if (await pathExists(mcpPath)) {
-    try {
-      const { readFile } = await import('fs/promises');
-      const content = await readFile(mcpPath, 'utf-8');
-      const config = JSON.parse(content);
-      // Count mcpServers entries
-      return Object.keys(config.mcpServers || {}).length;
-    } catch {
-      return 0;
+  const { readFile } = await import('fs/promises');
+  const homeDir = process.env.HOME || '';
+
+  // Check multiple MCP config locations
+  const mcpPaths = [
+    { path: join(projectDir, '.claude', 'mcp.json'), key: 'mcpServers' },
+    { path: join(homeDir, '.claude.json'), key: 'mcpServers' },
+    { path: join(homeDir, '.config', 'claude-code', 'mcp.json'), key: 'mcpServers' },
+  ];
+
+  let totalCount = 0;
+
+  for (const { path, key } of mcpPaths) {
+    if (await pathExists(path)) {
+      try {
+        const content = await readFile(path, 'utf-8');
+        const config = JSON.parse(content);
+        totalCount += Object.keys(config[key] || {}).length;
+      } catch {
+        // Parsing failed, skip this file
+      }
     }
   }
-  return 0;
+
+  return totalCount;
 }
 
 export const configCountsWidget: Widget<ConfigCountsData> = {
