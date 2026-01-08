@@ -16,8 +16,10 @@ export const rateLimit5hWidget: Widget<RateLimitData> = {
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
     const limits = ctx.rateLimits;
-    if (!limits?.five_hour) {
-      return null;
+
+    // API failed or no data - show warning (only in this widget to avoid duplicate warnings)
+    if (!limits || !limits.five_hour) {
+      return { utilization: 0, resetsAt: null, isError: true };
     }
 
     return {
@@ -27,6 +29,11 @@ export const rateLimit5hWidget: Widget<RateLimitData> = {
   },
 
   render(data: RateLimitData, ctx: WidgetContext): string {
+    // Show warning icon if API failed
+    if (data.isError) {
+      return colorize('⚠️', COLORS.yellow);
+    }
+
     const { translations: t } = ctx;
     const color = getColorForPercent(data.utilization);
     let text = `${t.labels['5h']}: ${colorize(`${data.utilization}%`, color)}`;

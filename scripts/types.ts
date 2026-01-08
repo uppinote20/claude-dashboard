@@ -197,6 +197,7 @@ export interface CostData {
 export interface RateLimitData {
   utilization: number;
   resetsAt: string | null;
+  isError?: boolean;
 }
 
 export interface ProjectInfoData {
