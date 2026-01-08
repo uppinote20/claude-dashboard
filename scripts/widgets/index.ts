@@ -27,7 +27,7 @@ import { todoProgressWidget } from './todo-progress.js';
 /**
  * Widget registry - maps widget IDs to widget implementations
  */
-const widgetRegistry: Map<WidgetId, Widget> = new Map([
+const widgetRegistry = new Map<WidgetId, Widget>([
   ['model', modelWidget],
   ['context', contextWidget],
   ['cost', costWidget],
@@ -40,7 +40,7 @@ const widgetRegistry: Map<WidgetId, Widget> = new Map([
   ['toolActivity', toolActivityWidget],
   ['agentStatus', agentStatusWidget],
   ['todoProgress', todoProgressWidget],
-]);
+] as [WidgetId, Widget][]);
 
 /**
  * Get widget by ID
