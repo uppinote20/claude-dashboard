@@ -119,7 +119,9 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 | `todoProgress` | Todo completion rate |
 | `burnRate` | Token consumption per minute |
 | `cacheHit` | Cache hit rate percentage |
-| `depletionTime` | Estimated time to rate limit |
+| `depletionTime` | Estimated time to rate limit (approx)¹ |
+
+> ¹ **Depletion time approximation**: Assumes all current utilization came from this session. May be inaccurate if session started with pre-existing usage or multiple concurrent sessions are running. Estimate improves as session runs longer.
 
 ### Display Mode Presets
 

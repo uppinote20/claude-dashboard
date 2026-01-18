@@ -10,10 +10,18 @@ import { debugLog } from './debug.js';
 
 const SESSION_DIR = join(homedir(), '.cache', 'claude-dashboard', 'sessions');
 
+// In-memory cache to avoid repeated file I/O during a single process lifecycle
+const sessionCache = new Map<string, number>();
+
 /**
  * Get or create session start time
  */
 export async function getSessionStartTime(sessionId: string): Promise<number> {
+  // Check memory cache first
+  if (sessionCache.has(sessionId)) {
+    return sessionCache.get(sessionId)!;
+  }
+
   const sessionFile = join(SESSION_DIR, `${sessionId}.json`);
 
   try {
@@ -25,6 +33,8 @@ export async function getSessionStartTime(sessionId: string): Promise<number> {
       throw new Error('Invalid session file format');
     }
 
+    // Cache result before returning
+    sessionCache.set(sessionId, data.startTime);
     return data.startTime;
   } catch (error: unknown) {
     // Check if file simply doesn't exist (expected case)
@@ -49,6 +59,8 @@ export async function getSessionStartTime(sessionId: string): Promise<number> {
       // Continue with in-memory start time - widget will still work for current process
     }
 
+    // Cache result before returning
+    sessionCache.set(sessionId, startTime);
     return startTime;
   }
 }

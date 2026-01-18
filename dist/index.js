@@ -116,7 +116,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.2.0";
+var VERSION = "1.3.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -757,7 +757,11 @@ import { readFile as readFile3, writeFile as writeFile2, mkdir as mkdir2 } from 
 import { join as join3 } from "path";
 import { homedir as homedir2 } from "os";
 var SESSION_DIR = join3(homedir2(), ".cache", "claude-dashboard", "sessions");
+var sessionCache = /* @__PURE__ */ new Map();
 async function getSessionStartTime(sessionId) {
+  if (sessionCache.has(sessionId)) {
+    return sessionCache.get(sessionId);
+  }
   const sessionFile = join3(SESSION_DIR, `${sessionId}.json`);
   try {
     const content = await readFile3(sessionFile, "utf-8");
@@ -766,6 +770,7 @@ async function getSessionStartTime(sessionId) {
       debugLog("session", `Invalid session file format for ${sessionId}`);
       throw new Error("Invalid session file format");
     }
+    sessionCache.set(sessionId, data.startTime);
     return data.startTime;
   } catch (error) {
     const isNotFound = error instanceof Error && "code" in error && error.code === "ENOENT";
@@ -779,6 +784,7 @@ async function getSessionStartTime(sessionId) {
     } catch (writeError) {
       debugLog("session", `Failed to persist session ${sessionId}`, writeError);
     }
+    sessionCache.set(sessionId, startTime);
     return startTime;
   }
 }
@@ -1122,7 +1128,8 @@ var cacheHitWidget = {
     }
     const cacheRead = usage.cache_read_input_tokens;
     const freshInput = usage.input_tokens;
-    const total = cacheRead + freshInput;
+    const cacheCreation = usage.cache_creation_input_tokens;
+    const total = cacheRead + freshInput + cacheCreation;
     if (total === 0) {
       return { hitPercentage: 0 };
     }

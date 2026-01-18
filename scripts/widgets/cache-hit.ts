@@ -20,7 +20,8 @@ export const cacheHitWidget: Widget<CacheHitData> = {
 
     const cacheRead = usage.cache_read_input_tokens;
     const freshInput = usage.input_tokens;
-    const total = cacheRead + freshInput;
+    const cacheCreation = usage.cache_creation_input_tokens;
+    const total = cacheRead + freshInput + cacheCreation;
 
     // Show 0% if no input tokens yet
     if (total === 0) {

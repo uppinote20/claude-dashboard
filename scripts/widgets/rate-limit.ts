@@ -3,7 +3,7 @@
  */
 
 import type { Widget } from './base.js';
-import type { WidgetContext, RateLimitData, WidgetId, UsageLimits } from '../types.js';
+import type { WidgetContext, RateLimitData, UsageLimits } from '../types.js';
 import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
 

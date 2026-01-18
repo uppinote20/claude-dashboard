@@ -22,7 +22,11 @@ export const depletionTimeWidget: Widget<DepletionTimeData> = {
     const elapsedMinutes = await getSessionElapsedMinutes(ctx, 0);
     if (elapsedMinutes === null || elapsedMinutes === 0) return null;
 
-    // Calculate utilization rate per minute (approximation: assumes all usage from this session)
+    // APPROXIMATION: Assumes all current utilization came from this session.
+    // This may be inaccurate if:
+    // - Session started with pre-existing usage from previous 5 hours
+    // - Multiple concurrent sessions are running
+    // The estimate improves as session runs longer.
     const utilizationPerMinute = utilization / elapsedMinutes;
     if (utilizationPerMinute < MIN_UTILIZATION_RATE) return null;
 

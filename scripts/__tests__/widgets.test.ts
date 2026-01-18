@@ -398,7 +398,7 @@ describe('widgets', () => {
       expect(burnRateWidget.name).toBe('Burn Rate');
     });
 
-    it('should return null when usage is missing', async () => {
+    it('should return 0 when usage is missing', async () => {
       const ctx = createContext({
         context_window: {
           total_input_tokens: 0,
@@ -408,7 +408,7 @@ describe('widgets', () => {
         },
       });
       const data = await burnRateWidget.getData(ctx);
-      expect(data).toBeNull();
+      expect(data).toEqual({ tokensPerMinute: 0 });
     });
 
     it('should render burn rate with tokens per minute', () => {
@@ -436,7 +436,7 @@ describe('widgets', () => {
       expect(cacheHitWidget.name).toBe('Cache Hit Rate');
     });
 
-    it('should return null when usage is missing', async () => {
+    it('should return 0% when usage is missing', async () => {
       const ctx = createContext({
         context_window: {
           total_input_tokens: 0,
@@ -446,10 +446,10 @@ describe('widgets', () => {
         },
       });
       const data = await cacheHitWidget.getData(ctx);
-      expect(data).toBeNull();
+      expect(data).toEqual({ hitPercentage: 0 });
     });
 
-    it('should return null when no input tokens', async () => {
+    it('should return 0% when no input tokens', async () => {
       const ctx = createContext({
         context_window: {
           total_input_tokens: 0,
@@ -464,7 +464,7 @@ describe('widgets', () => {
         },
       });
       const data = await cacheHitWidget.getData(ctx);
-      expect(data).toBeNull();
+      expect(data).toEqual({ hitPercentage: 0 });
     });
 
     it('should calculate cache hit rate correctly', async () => {
@@ -484,8 +484,29 @@ describe('widgets', () => {
       const data = await cacheHitWidget.getData(ctx);
 
       expect(data).not.toBeNull();
-      // cache_read(7000) / (cache_read(7000) + input(3000)) = 70%
+      // cache_read(7000) / (cache_read(7000) + input(3000) + cache_creation(0)) = 70%
       expect(data?.hitPercentage).toBe(70);
+    });
+
+    it('should include cache_creation_input_tokens in denominator', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 14000,
+          total_output_tokens: 5000,
+          context_window_size: 200000,
+          current_usage: {
+            input_tokens: 0,
+            output_tokens: 5000,
+            cache_creation_input_tokens: 7000,
+            cache_read_input_tokens: 7000,
+          },
+        },
+      });
+      const data = await cacheHitWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      // cache_read(7000) / (cache_read(7000) + input(0) + cache_creation(7000)) = 50%
+      expect(data?.hitPercentage).toBe(50);
     });
 
     it('should render cache hit percentage', () => {
