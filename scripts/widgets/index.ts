@@ -7,9 +7,9 @@ import type {
   WidgetId,
   WidgetContext,
   Config,
-  DISPLAY_PRESETS,
   DisplayMode,
 } from '../types.js';
+import { DISPLAY_PRESETS } from '../types.js';
 import { COLORS, RESET } from '../utils/colors.js';
 import { debugLog } from '../utils/debug.js';
 
@@ -73,24 +73,8 @@ export function getLines(config: Config): WidgetId[][] {
     return config.lines;
   }
 
-  // Preset configurations (synced with DISPLAY_PRESETS in types.ts)
-  const presets = {
-    compact: [
-      ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ] as WidgetId[][],
-    normal: [
-      ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-      ['projectInfo', 'sessionDuration', 'burnRate', 'todoProgress'],
-    ] as WidgetId[][],
-    detailed: [
-      ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-      ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
-      ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
-      ['codexUsage'],
-    ] as WidgetId[][],
-  };
-
-  return presets[config.displayMode as keyof typeof presets] || presets.compact;
+  // Use single source of truth from types.ts
+  return DISPLAY_PRESETS[config.displayMode as keyof typeof DISPLAY_PRESETS] || DISPLAY_PRESETS.compact;
 }
 
 /**

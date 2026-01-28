@@ -6,6 +6,21 @@ import { join as join4 } from "path";
 import { homedir as homedir3 } from "os";
 
 // scripts/types.ts
+var DISPLAY_PRESETS = {
+  compact: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
+  ],
+  normal: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
+  ],
+  detailed: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
+    ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
+    ["codexUsage"]
+  ]
+};
 var DEFAULT_CONFIG = {
   language: "auto",
   plan: "max",
@@ -1411,22 +1426,7 @@ function getLines(config) {
   if (config.displayMode === "custom" && config.lines) {
     return config.lines;
   }
-  const presets = {
-    compact: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
-    ],
-    normal: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
-      ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
-    ],
-    detailed: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
-      ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
-      ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
-      ["codexUsage"]
-    ]
-  };
-  return presets[config.displayMode] || presets.compact;
+  return DISPLAY_PRESETS[config.displayMode] || DISPLAY_PRESETS.compact;
 }
 async function renderWidget(widgetId, ctx) {
   const widget = getWidget(widgetId);
