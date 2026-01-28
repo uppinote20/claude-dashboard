@@ -110,16 +110,25 @@ Create `~/.claude/claude-dashboard.local.json`:
 
 Add or update the statusLine configuration in `~/.claude/settings.json`:
 
+**Step 1**: Find the plugin path dynamically (version-independent):
+```bash
+PLUGIN_PATH=$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)
+```
+
+**Step 2**: Use the found path in settings.json:
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/index.js"
+    "command": "node <PLUGIN_PATH_FROM_STEP_1>"
   }
 }
 ```
 
-**Important**: Use `${CLAUDE_PLUGIN_ROOT}` for the plugin path.
+**CRITICAL**:
+- NEVER hardcode version numbers like `1.3.0` or `1.4.0` in the path
+- Always use the dynamic lookup command above to find the latest version
+- The path should look like: `~/.claude/plugins/cache/claude-dashboard/claude-dashboard/X.Y.Z/dist/index.js`
 
 ### 4. Show example output
 
