@@ -601,8 +601,8 @@ describe('widgets', () => {
       vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue({
         model: 'gpt-5.2-codex',
         planType: 'plus',
-        primary: { usedPercent: 15, windowSeconds: 18000, resetAt: 1769604227 },
-        secondary: { usedPercent: 5, windowSeconds: 604800, resetAt: 1770191027 },
+        primary: { usedPercent: 15, resetAt: 1769604227 },
+        secondary: { usedPercent: 5, resetAt: 1770191027 },
       });
 
       const ctx = createContext();
@@ -621,7 +621,7 @@ describe('widgets', () => {
         model: 'o3',
         planType: 'pro',
         primary: null,
-        secondary: { usedPercent: 10, windowSeconds: 604800, resetAt: 1770191027 },
+        secondary: { usedPercent: 10, resetAt: 1770191027 },
       });
 
       const ctx = createContext();

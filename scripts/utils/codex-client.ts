@@ -108,8 +108,8 @@ async function getCodexAuth(): Promise<CodexAuthData | null> {
 export async function getCodexModel(): Promise<string | null> {
   try {
     const raw = await readFile(CODEX_CONFIG_PATH, 'utf-8');
-    // Parse simple TOML: model = "gpt-5.2-codex"
-    const match = raw.match(/^model\s*=\s*"([^"]+)"/m);
+    // Parse TOML: model = "gpt-5.2-codex" or model = 'gpt-5.2-codex' with optional comment
+    const match = raw.match(/^model\s*=\s*["']([^"']+)["']\s*(?:#.*)?$/m);
     return match ? match[1] : null;
   } catch {
     return null;
@@ -143,7 +143,7 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
   }
 
   // Create new request
-  const requestPromise = fetchFromCodexApi(auth, tokenHash);
+  const requestPromise = fetchFromCodexApi(auth);
   pendingRequests.set(tokenHash, requestPromise);
 
   try {
@@ -157,13 +157,13 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
  * Internal API fetch
  */
 async function fetchFromCodexApi(
-  auth: CodexAuthData,
-  tokenHash: string
+  auth: CodexAuthData
 ): Promise<CodexUsageLimits | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
+
   try {
     debugLog('codex', 'fetchFromCodexApi: starting...');
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS);
 
     const response = await fetch('https://chatgpt.com/backend-api/wham/usage', {
       method: 'GET',
@@ -177,7 +177,6 @@ async function fetchFromCodexApi(
       signal: controller.signal,
     });
 
-    clearTimeout(timeout);
     debugLog('codex', 'fetchFromCodexApi: response status', response.status);
 
     if (!response.ok) {
@@ -185,28 +184,41 @@ async function fetchFromCodexApi(
       return null;
     }
 
-    const data: CodexApiResponse = await response.json();
-    debugLog('codex', 'fetchFromCodexApi: got data', data.plan_type);
+    const data: unknown = await response.json();
+
+    // Validate API response structure
+    if (!data || typeof data !== 'object') {
+      debugLog('codex', 'fetchFromCodexApi: invalid response - not an object');
+      return null;
+    }
+    if (!('rate_limit' in data) || !('plan_type' in data)) {
+      debugLog('codex', 'fetchFromCodexApi: invalid response - missing required fields');
+      return null;
+    }
+
+    const typedData = data as CodexApiResponse;
+    debugLog('codex', 'fetchFromCodexApi: got data', typedData.plan_type);
     const model = await getCodexModel();
 
     const limits: CodexUsageLimits = {
       model: model ?? 'unknown',
-      planType: data.plan_type,
-      primary: data.rate_limit.primary_window
+      planType: typedData.plan_type,
+      primary: typedData.rate_limit.primary_window
         ? {
-            usedPercent: data.rate_limit.primary_window.used_percent,
-            resetAt: data.rate_limit.primary_window.reset_at,
+            usedPercent: typedData.rate_limit.primary_window.used_percent,
+            resetAt: typedData.rate_limit.primary_window.reset_at,
           }
         : null,
-      secondary: data.rate_limit.secondary_window
+      secondary: typedData.rate_limit.secondary_window
         ? {
-            usedPercent: data.rate_limit.secondary_window.used_percent,
-            resetAt: data.rate_limit.secondary_window.reset_at,
+            usedPercent: typedData.rate_limit.secondary_window.used_percent,
+            resetAt: typedData.rate_limit.secondary_window.reset_at,
           }
         : null,
     };
 
     // Update cache
+    const tokenHash = hashToken(auth.accessToken);
     codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
     debugLog('codex', 'fetchFromCodexApi: success', limits);
 
@@ -214,6 +226,8 @@ async function fetchFromCodexApi(
   } catch (err) {
     debugLog('codex', 'fetchFromCodexApi: error', err);
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
