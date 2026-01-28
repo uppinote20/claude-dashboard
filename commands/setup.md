@@ -72,7 +72,7 @@ Use AskUserQuestion to ask the user:
    - Ask if they want to add Line 2
    - If yes, Line 2 widgets (multi-select)
    - Ask if they want to add Line 3
-   - Continue until they say no or reach 3 lines
+   - Continue until they say no (no line limit)
 
 **If arguments provided (direct mode):**
 
