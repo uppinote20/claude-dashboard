@@ -131,7 +131,7 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 |------|-------|--------|--------|--------|--------|
 | `compact` | 1 | model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet | - | - | - |
 | `normal` | 2 | (same as compact) | projectInfo, sessionDuration, burnRate, todoProgress | - | - |
-| `detailed` | 4 | (same as compact) | codexUsage² | projectInfo, sessionDuration, burnRate, depletionTime, todoProgress | configCounts, toolActivity, agentStatus, cacheHit |
+| `detailed` | 4 | (same as compact) | projectInfo, sessionDuration, burnRate, depletionTime, todoProgress | configCounts, toolActivity, agentStatus, cacheHit | codexUsage² |
 
 > ² **codexUsage**: Auto-hides if Codex CLI is not installed (~/.codex/auth.json)
 

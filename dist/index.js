@@ -1410,9 +1410,9 @@ function getLines(config) {
     ],
     detailed: [
       ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
-      ["codexUsage"],
       ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
-      ["configCounts", "toolActivity", "agentStatus", "cacheHit"]
+      ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
+      ["codexUsage"]
     ]
   };
   return presets[config.displayMode] || presets.compact;

@@ -112,9 +112,9 @@ const DISPLAY_PRESETS = {
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ['codexUsage'],
     ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
+    ['codexUsage'],
   ],
 };
 ```

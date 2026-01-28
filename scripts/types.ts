@@ -72,9 +72,9 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ['codexUsage'],
     ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
+    ['codexUsage'],
   ],
 };
 
