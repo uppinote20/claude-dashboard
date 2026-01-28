@@ -47,7 +47,8 @@ export type WidgetId =
   | 'todoProgress'
   | 'burnRate'
   | 'depletionTime'
-  | 'cacheHit';
+  | 'cacheHit'
+  | 'codexUsage';
 
 /**
  * Display mode for status line output
@@ -73,6 +74,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
     ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
+    ['codexUsage'],
   ],
 };
 
@@ -270,6 +272,38 @@ export interface CacheHitData {
 }
 
 /**
+ * Codex CLI usage limits from ChatGPT backend API
+ */
+export interface CodexUsageLimits {
+  /** Current model from config.toml */
+  model: string;
+  /** Plan type: plus, pro, etc. */
+  planType: string;
+  /** Primary (5h) rate limit window */
+  primary: {
+    usedPercent: number;
+    resetAt: number;
+  } | null;
+  /** Secondary (7d) rate limit window */
+  secondary: {
+    usedPercent: number;
+    resetAt: number;
+  } | null;
+}
+
+/**
+ * Codex usage widget data
+ */
+export interface CodexUsageData {
+  model: string;
+  planType: string;
+  primaryPercent: number | null;
+  primaryResetAt: number | null;
+  secondaryPercent: number | null;
+  secondaryResetAt: number | null;
+}
+
+/**
  * Union type of all widget data
  */
 export type WidgetData =
@@ -285,7 +319,8 @@ export type WidgetData =
   | TodoProgressData
   | BurnRateData
   | DepletionTimeData
-  | CacheHitData;
+  | CacheHitData
+  | CodexUsageData;
 
 /**
  * Transcript entry from JSONL file

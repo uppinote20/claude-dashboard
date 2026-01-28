@@ -1,11 +1,26 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile5, stat as stat4 } from "fs/promises";
+import { readFile as readFile6, stat as stat5 } from "fs/promises";
 import { join as join4 } from "path";
 import { homedir as homedir3 } from "os";
 
 // scripts/types.ts
+var DISPLAY_PRESETS = {
+  compact: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
+  ],
+  normal: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
+  ],
+  detailed: [
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
+    ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
+    ["codexUsage"]
+  ]
+};
 var DEFAULT_CONFIG = {
   language: "auto",
   plan: "max",
@@ -130,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.3.0";
+var VERSION = "1.4.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -294,7 +309,8 @@ var en_default = {
     "5h": "5h",
     "7d": "7d",
     "7d_all": "7d",
-    "7d_sonnet": "7d-S"
+    "7d_sonnet": "7d-S",
+    codex: "Codex"
   },
   time: {
     days: "d",
@@ -332,7 +348,8 @@ var ko_default = {
     "5h": "5\uC2DC\uAC04",
     "7d": "7\uC77C",
     "7d_all": "7\uC77C",
-    "7d_sonnet": "7\uC77C-S"
+    "7d_sonnet": "7\uC77C-S",
+    codex: "Codex"
   },
   time: {
     days: "\uC77C",
@@ -679,9 +696,9 @@ import { join as join2 } from "path";
 import { constants } from "fs";
 var CONFIG_CACHE_TTL_MS = 3e4;
 var configCountsCache = null;
-async function pathExists(path2) {
+async function pathExists(path3) {
   try {
-    await access(path2, constants.F_OK);
+    await access(path3, constants.F_OK);
     return true;
   } catch {
     return false;
@@ -709,7 +726,7 @@ async function countClaudeMd(projectDir) {
   return count;
 }
 async function countMcps(projectDir) {
-  const { readFile: readFile6 } = await import("fs/promises");
+  const { readFile: readFile7 } = await import("fs/promises");
   const homeDir = process.env.HOME || "";
   const mcpPaths = [
     { path: join2(projectDir, ".claude", "mcp.json"), key: "mcpServers" },
@@ -717,10 +734,10 @@ async function countMcps(projectDir) {
     { path: join2(homeDir, ".config", "claude-code", "mcp.json"), key: "mcpServers" }
   ];
   let totalCount = 0;
-  for (const { path: path2, key } of mcpPaths) {
-    if (await pathExists(path2)) {
+  for (const { path: path3, key } of mcpPaths) {
+    if (await pathExists(path3)) {
       try {
-        const content = await readFile6(path2, "utf-8");
+        const content = await readFile7(path3, "utf-8");
         const config = JSON.parse(content);
         totalCount += Object.keys(config[key] || {}).length;
       } catch {
@@ -1205,6 +1222,188 @@ var cacheHitWidget = {
   }
 };
 
+// scripts/utils/codex-client.ts
+import { readFile as readFile5, stat as stat4 } from "fs/promises";
+import os2 from "os";
+import path2 from "path";
+var API_TIMEOUT_MS2 = 5e3;
+var CODEX_AUTH_PATH = path2.join(os2.homedir(), ".codex", "auth.json");
+var CODEX_CONFIG_PATH = path2.join(os2.homedir(), ".codex", "config.toml");
+var codexCacheMap = /* @__PURE__ */ new Map();
+var pendingRequests3 = /* @__PURE__ */ new Map();
+var cachedAuth = null;
+async function isCodexInstalled() {
+  try {
+    await stat4(CODEX_AUTH_PATH);
+    return true;
+  } catch {
+    return false;
+  }
+}
+async function getCodexAuth() {
+  try {
+    const fileStat = await stat4(CODEX_AUTH_PATH);
+    if (cachedAuth && cachedAuth.mtime === fileStat.mtimeMs) {
+      return cachedAuth.data;
+    }
+    const raw = await readFile5(CODEX_AUTH_PATH, "utf-8");
+    const json = JSON.parse(raw);
+    const accessToken = json?.tokens?.access_token;
+    const accountId = json?.tokens?.account_id;
+    if (!accessToken || !accountId) {
+      return null;
+    }
+    const data = { accessToken, accountId };
+    cachedAuth = { data, mtime: fileStat.mtimeMs };
+    return data;
+  } catch {
+    return null;
+  }
+}
+async function getCodexModel() {
+  try {
+    const raw = await readFile5(CODEX_CONFIG_PATH, "utf-8");
+    const match = raw.match(/^model\s*=\s*["']([^"']+)["']\s*(?:#.*)?$/m);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+async function fetchCodexUsage(ttlSeconds = 60) {
+  const auth = await getCodexAuth();
+  if (!auth) {
+    return null;
+  }
+  const tokenHash = hashToken(auth.accessToken);
+  const cached = codexCacheMap.get(tokenHash);
+  if (cached) {
+    const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
+    if (ageSeconds < ttlSeconds) {
+      return cached.data;
+    }
+  }
+  const pending = pendingRequests3.get(tokenHash);
+  if (pending) {
+    return pending;
+  }
+  const requestPromise = fetchFromCodexApi(auth);
+  pendingRequests3.set(tokenHash, requestPromise);
+  try {
+    return await requestPromise;
+  } finally {
+    pendingRequests3.delete(tokenHash);
+  }
+}
+async function fetchFromCodexApi(auth) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS2);
+  try {
+    debugLog("codex", "fetchFromCodexApi: starting...");
+    const response = await fetch("https://chatgpt.com/backend-api/wham/usage", {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": `claude-dashboard/${VERSION}`,
+        "Authorization": `Bearer ${auth.accessToken}`,
+        "ChatGPT-Account-Id": auth.accountId
+      },
+      signal: controller.signal
+    });
+    debugLog("codex", "fetchFromCodexApi: response status", response.status);
+    if (!response.ok) {
+      debugLog("codex", "fetchFromCodexApi: response not ok");
+      return null;
+    }
+    const data = await response.json();
+    if (!data || typeof data !== "object") {
+      debugLog("codex", "fetchFromCodexApi: invalid response - not an object");
+      return null;
+    }
+    if (!("rate_limit" in data) || !("plan_type" in data)) {
+      debugLog("codex", "fetchFromCodexApi: invalid response - missing required fields");
+      return null;
+    }
+    if (typeof data.rate_limit !== "object" || data.rate_limit === null) {
+      debugLog("codex", "fetchFromCodexApi: invalid response - rate_limit is not an object");
+      return null;
+    }
+    const typedData = data;
+    debugLog("codex", "fetchFromCodexApi: got data", typedData.plan_type);
+    const model = await getCodexModel();
+    const limits = {
+      model: model ?? "unknown",
+      planType: typedData.plan_type,
+      primary: typedData.rate_limit.primary_window ? {
+        usedPercent: typedData.rate_limit.primary_window.used_percent,
+        resetAt: typedData.rate_limit.primary_window.reset_at
+      } : null,
+      secondary: typedData.rate_limit.secondary_window ? {
+        usedPercent: typedData.rate_limit.secondary_window.used_percent,
+        resetAt: typedData.rate_limit.secondary_window.reset_at
+      } : null
+    };
+    const tokenHash = hashToken(auth.accessToken);
+    codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
+    debugLog("codex", "fetchFromCodexApi: success", limits);
+    return limits;
+  } catch (err) {
+    debugLog("codex", "fetchFromCodexApi: error", err);
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+// scripts/widgets/codex-usage.ts
+function formatRateLimit(label, percent, resetAt, t) {
+  const color = getColorForPercent(percent);
+  let result = `${label}: ${colorize(`${Math.round(percent)}%`, color)}`;
+  if (resetAt) {
+    const resetTime = formatTimeRemaining(new Date(resetAt * 1e3), t);
+    if (resetTime) {
+      result += ` (${resetTime})`;
+    }
+  }
+  return result;
+}
+var codexUsageWidget = {
+  id: "codexUsage",
+  name: "Codex Usage",
+  async getData(ctx) {
+    const installed = await isCodexInstalled();
+    debugLog("codex", "isCodexInstalled:", installed);
+    if (!installed) {
+      return null;
+    }
+    const limits = await fetchCodexUsage(ctx.config.cache.ttlSeconds);
+    debugLog("codex", "fetchCodexUsage result:", limits);
+    if (!limits) {
+      return null;
+    }
+    return {
+      model: limits.model,
+      planType: limits.planType,
+      primaryPercent: limits.primary?.usedPercent ?? null,
+      primaryResetAt: limits.primary?.resetAt ?? null,
+      secondaryPercent: limits.secondary?.usedPercent ?? null,
+      secondaryResetAt: limits.secondary?.resetAt ?? null
+    };
+  },
+  render(data, ctx) {
+    const { translations: t } = ctx;
+    const parts = [];
+    parts.push(`${colorize("\u{1F537}", COLORS.blue)} ${data.model}`);
+    if (data.primaryPercent !== null) {
+      parts.push(formatRateLimit(t.labels["5h"], data.primaryPercent, data.primaryResetAt, t));
+    }
+    if (data.secondaryPercent !== null) {
+      parts.push(formatRateLimit(t.labels["7d"], data.secondaryPercent, data.secondaryResetAt, t));
+    }
+    return parts.join(` ${colorize("\u2502", COLORS.dim)} `);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -1221,7 +1420,8 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["todoProgress", todoProgressWidget],
   ["burnRate", burnRateWidget],
   ["depletionTime", depletionTimeWidget],
-  ["cacheHit", cacheHitWidget]
+  ["cacheHit", cacheHitWidget],
+  ["codexUsage", codexUsageWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);
@@ -1230,21 +1430,7 @@ function getLines(config) {
   if (config.displayMode === "custom" && config.lines) {
     return config.lines;
   }
-  const presets = {
-    compact: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
-    ],
-    normal: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
-      ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
-    ],
-    detailed: [
-      ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
-      ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
-      ["configCounts", "toolActivity", "agentStatus", "cacheHit"]
-    ]
-  };
-  return presets[config.displayMode] || presets.compact;
+  return DISPLAY_PRESETS[config.displayMode] || DISPLAY_PRESETS.compact;
 }
 async function renderWidget(widgetId, ctx) {
   const widget = getWidget(widgetId);
@@ -1304,12 +1490,12 @@ async function readStdin() {
 }
 async function loadConfig() {
   try {
-    const fileStat = await stat4(CONFIG_PATH);
+    const fileStat = await stat5(CONFIG_PATH);
     const mtime = fileStat.mtimeMs;
     if (configCache?.mtime === mtime) {
       return configCache.config;
     }
-    const content = await readFile5(CONFIG_PATH, "utf-8");
+    const content = await readFile6(CONFIG_PATH, "utf-8");
     const userConfig = JSON.parse(content);
     const config = {
       ...DEFAULT_CONFIG,

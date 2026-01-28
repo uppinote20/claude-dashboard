@@ -9,13 +9,20 @@ import { projectInfoWidget } from '../widgets/project-info.js';
 import { burnRateWidget } from '../widgets/burn-rate.js';
 import { cacheHitWidget } from '../widgets/cache-hit.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
+import { codexUsageWidget } from '../widgets/codex-usage.js';
+import * as codexClient from '../utils/codex-client.js';
 import type { WidgetContext, StdinInput, Config, Translations } from '../types.js';
+
+// Mock version module for codex-client
+vi.mock('../version.js', () => ({
+  VERSION: '1.0.0-test',
+}));
 
 // Mock translations
 const mockTranslations: Translations = {
   model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S' },
-  time: { hours: 'h', minutes: 'm', seconds: 's' },
+  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S', codex: 'Codex' },
+  time: { days: 'd', hours: 'h', minutes: 'm', seconds: 's' },
   errors: { no_context: 'No context yet' },
   widgets: {
     tools: 'Tools',
@@ -559,6 +566,123 @@ describe('widgets', () => {
       const result = depletionTimeWidget.render(data, ctx);
 
       expect(result).toContain('45m');
+    });
+  });
+
+  describe('codexUsageWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(codexUsageWidget.id).toBe('codexUsage');
+      expect(codexUsageWidget.name).toBe('Codex Usage');
+    });
+
+    it('should return null when Codex is not installed', async () => {
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(false);
+
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when API call fails', async () => {
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
+      vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue(null);
+
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return usage data when API call succeeds', async () => {
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
+      vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue({
+        model: 'gpt-5.2-codex',
+        planType: 'plus',
+        primary: { usedPercent: 15, resetAt: 1769604227 },
+        secondary: { usedPercent: 5, resetAt: 1770191027 },
+      });
+
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.model).toBe('gpt-5.2-codex');
+      expect(data?.planType).toBe('plus');
+      expect(data?.primaryPercent).toBe(15);
+      expect(data?.secondaryPercent).toBe(5);
+    });
+
+    it('should handle missing primary window', async () => {
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
+      vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue({
+        model: 'o3',
+        planType: 'pro',
+        primary: null,
+        secondary: { usedPercent: 10, resetAt: 1770191027 },
+      });
+
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+
+      expect(data?.primaryPercent).toBeNull();
+      expect(data?.secondaryPercent).toBe(10);
+    });
+
+    it('should render model name and percentages', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'gpt-5.2-codex',
+        planType: 'plus',
+        primaryPercent: 25,
+        primaryResetAt: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now
+        secondaryPercent: 10,
+        secondaryResetAt: Math.floor(Date.now() / 1000) + 86400, // 1 day from now
+      };
+      const result = codexUsageWidget.render(data, ctx);
+
+      expect(result).toContain('🔷');
+      expect(result).toContain('gpt-5.2-codex');
+      expect(result).toContain('5h:');
+      expect(result).toContain('25%');
+      expect(result).toContain('7d:');
+      expect(result).toContain('10%');
+    });
+
+    it('should render reset times', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'gpt-5.2-codex',
+        planType: 'plus',
+        primaryPercent: 50,
+        primaryResetAt: Math.floor(Date.now() / 1000) + 7200, // 2 hours from now
+        secondaryPercent: 20,
+        secondaryResetAt: null,
+      };
+      const result = codexUsageWidget.render(data, ctx);
+
+      expect(result).toContain('('); // Has reset time in parentheses
+      expect(result).toMatch(/1h\d+m|2h/); // ~2 hours remaining (1h59m or 2h depending on timing)
+    });
+
+    it('should handle null percentages gracefully', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'o3',
+        planType: 'pro',
+        primaryPercent: null,
+        primaryResetAt: null,
+        secondaryPercent: null,
+        secondaryResetAt: null,
+      };
+      const result = codexUsageWidget.render(data, ctx);
+
+      expect(result).toContain('🔷');
+      expect(result).toContain('o3');
+      expect(result).not.toContain('5h:');
+      expect(result).not.toContain('7d:');
     });
   });
 });

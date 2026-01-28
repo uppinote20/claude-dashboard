@@ -51,6 +51,10 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `toolActivity` | Running/completed tools |
 | `agentStatus` | Subagent progress |
 | `todoProgress` | Todo completion rate |
+| `burnRate` | Token consumption per minute |
+| `cacheHit` | Cache hit rate percentage |
+| `depletionTime` | Estimated time to rate limit |
+| `codexUsage` | OpenAI Codex CLI usage (model, 5h, 7d) |
 
 ## Tasks
 
@@ -110,16 +114,19 @@ Create `~/.claude/claude-dashboard.local.json`:
 
 Add or update the statusLine configuration in `~/.claude/settings.json`:
 
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "node ${CLAUDE_PLUGIN_ROOT}/dist/index.js"
-  }
-}
+**Find the plugin path and update settings.json** (copy-paste one-liner):
+```bash
+jq --arg path "$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)" '.statusLine = {"type": "command", "command": ("node " + $path)}' ~/.claude/settings.json > ~/.claude/settings.json.tmp && mv ~/.claude/settings.json.tmp ~/.claude/settings.json
 ```
 
-**Important**: Use `${CLAUDE_PLUGIN_ROOT}` for the plugin path.
+This command:
+1. Finds the latest plugin version dynamically
+2. Updates `statusLine` in settings.json with the correct path
+
+**CRITICAL**:
+- NEVER hardcode version numbers like `1.3.0` or `1.4.0` in the path
+- Always use the dynamic lookup to find the latest version
+- The path should look like: `~/.claude/plugins/cache/claude-dashboard/claude-dashboard/X.Y.Z/dist/index.js`
 
 ### 4. Show example output
 
@@ -136,11 +143,12 @@ Display what the status line will look like based on their configuration:
 📁 project (main) │ ⏱ 45m │ ✓ 3/5
 ```
 
-**Detailed (3 lines):**
+**Detailed (4 lines):**
 ```
 🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main) │ ⏱ 45m │ ✓ 3/5
-CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1
+📁 project (main) │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
+CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
+🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5%
 ```
 
 ## Examples

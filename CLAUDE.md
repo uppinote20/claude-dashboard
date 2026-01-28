@@ -35,15 +35,22 @@ claude-dashboard/
 │   │   ├── session-duration.ts # Session duration widget
 │   │   ├── tool-activity.ts # Tool activity widget
 │   │   ├── agent-status.ts  # Agent status widget
-│   │   └── todo-progress.ts # Todo progress widget
+│   │   ├── todo-progress.ts # Todo progress widget
+│   │   ├── burn-rate.ts     # Burn rate widget
+│   │   ├── cache-hit.ts     # Cache hit rate widget
+│   │   ├── depletion-time.ts # Depletion time widget
+│   │   └── codex-usage.ts   # Codex CLI usage widget
 │   └── utils/
 │       ├── api-client.ts    # OAuth API client with caching
+│       ├── codex-client.ts  # Codex CLI API client
 │       ├── colors.ts        # ANSI color codes
 │       ├── credentials.ts   # Keychain/credentials extraction
+│       ├── debug.ts         # Debug utilities
 │       ├── formatters.ts    # Token/cost/time/duration formatting
 │       ├── hash.ts          # Token hashing for cache keys
 │       ├── i18n.ts          # Internationalization
 │       ├── progress-bar.ts  # Progress bar rendering
+│       ├── session.ts       # Session duration tracking
 │       └── transcript-parser.ts # Transcript JSONL parsing
 ├── locales/
 │   ├── en.json              # English translations
@@ -84,6 +91,10 @@ interface Widget<T extends WidgetData> {
 | `toolActivity` | transcript | Tool tracking |
 | `agentStatus` | transcript | Agent tracking |
 | `todoProgress` | transcript | Todo completion |
+| `burnRate` | stdin + session | Token consumption per minute |
+| `cacheHit` | stdin | Cache hit rate percentage |
+| `depletionTime` | API + session | Estimated time to rate limit |
+| `codexUsage` | Codex API | OpenAI Codex CLI usage (model, 5h, 7d) |
 
 ### Display Modes
 
@@ -101,8 +112,9 @@ const DISPLAY_PRESETS = {
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ['projectInfo', 'sessionDuration', 'todoProgress'],
-    ['configCounts', 'toolActivity', 'agentStatus'],
+    ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
+    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
+    ['codexUsage'],
   ],
 };
 ```
