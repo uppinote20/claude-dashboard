@@ -54,10 +54,13 @@ export const zaiUsageWidget: Widget<ZaiUsageData> = {
 
     const limits = await fetchZaiUsage(ctx.config.cache.ttlSeconds);
     debugLog('zai', 'fetchZaiUsage result:', limits);
+    // Get model name from stdin (prefer display_name, fallback to 'GLM')
+    const modelName = ctx.stdin.model?.display_name || 'GLM';
+
     if (!limits) {
       // Return error state instead of null to show warning indicator
       return {
-        model: 'GLM',
+        model: modelName,
         tokensPercent: null,
         tokensResetAt: null,
         mcpPercent: null,
@@ -67,7 +70,7 @@ export const zaiUsageWidget: Widget<ZaiUsageData> = {
     }
 
     return {
-      model: limits.model,
+      model: modelName,
       tokensPercent: limits.tokensPercent,
       tokensResetAt: limits.tokensResetAt,
       mcpPercent: limits.mcpPercent,

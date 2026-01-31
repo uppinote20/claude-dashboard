@@ -6,8 +6,16 @@
 import type { CacheEntry } from '../types.js';
 import { isZaiProvider, getZaiApiBaseUrl } from './provider.js';
 import { debugLog } from './debug.js';
+import { hashToken } from './hash.js';
 
 const API_TIMEOUT_MS = 5000;
+
+/**
+ * Convert value to safe percentage (0-100 range)
+ */
+function toSafePercent(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value * 100)));
+}
 
 /**
  * z.ai usage limits data
@@ -80,8 +88,9 @@ export async function fetchZaiUsage(ttlSeconds: number = 60): Promise<ZaiUsageLi
     return null;
   }
 
-  // Use base URL as cache key (per provider)
-  const cacheKey = baseUrl;
+  // Use base URL + token hash as cache key (supports multi-account)
+  const tokenHash = hashToken(authToken);
+  const cacheKey = `${baseUrl}:${tokenHash}`;
 
   // Check memory cache
   const cached = zaiCacheMap.get(cacheKey);
@@ -174,21 +183,19 @@ async function fetchFromZaiApi(
 
     for (const limit of limits) {
       if (limit.type === 'TOKENS_LIMIT') {
-        // Token usage: currentValue is used amount, calculate percentage
-        // Note: The API might return usage as a fraction or absolute value
-        // We'll treat currentValue as percentage for now
+        // Token usage: currentValue is used amount (0-1 fraction)
         if (limit.currentValue !== undefined) {
-          tokensPercent = Math.round(limit.currentValue * 100);
+          tokensPercent = toSafePercent(limit.currentValue);
         }
         if (limit.nextResetTime !== undefined) {
           tokensResetAt = limit.nextResetTime;
         }
       } else if (limit.type === 'TIME_LIMIT') {
-        // MCP usage: usage field contains percentage
+        // MCP usage: usage or currentValue field contains fraction (0-1)
         if (limit.usage !== undefined) {
-          mcpPercent = Math.round(limit.usage * 100);
+          mcpPercent = toSafePercent(limit.usage);
         } else if (limit.currentValue !== undefined) {
-          mcpPercent = Math.round(limit.currentValue * 100);
+          mcpPercent = toSafePercent(limit.currentValue);
         }
         if (limit.nextResetTime !== undefined) {
           mcpResetAt = limit.nextResetTime;

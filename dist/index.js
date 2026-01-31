@@ -1872,6 +1872,9 @@ var geminiUsageWidget = {
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
+function toSafePercent(value) {
+  return Math.min(100, Math.max(0, Math.round(value * 100)));
+}
 var zaiCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests5 = /* @__PURE__ */ new Map();
 function isZaiInstalled() {
@@ -1891,7 +1894,8 @@ async function fetchZaiUsage(ttlSeconds = 60) {
     debugLog("zai", "fetchZaiUsage: missing base URL or auth token");
     return null;
   }
-  const cacheKey = baseUrl;
+  const tokenHash = hashToken(authToken);
+  const cacheKey = `${baseUrl}:${tokenHash}`;
   const cached = zaiCacheMap.get(cacheKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
@@ -1959,16 +1963,16 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     for (const limit of limits) {
       if (limit.type === "TOKENS_LIMIT") {
         if (limit.currentValue !== void 0) {
-          tokensPercent = Math.round(limit.currentValue * 100);
+          tokensPercent = toSafePercent(limit.currentValue);
         }
         if (limit.nextResetTime !== void 0) {
           tokensResetAt = limit.nextResetTime;
         }
       } else if (limit.type === "TIME_LIMIT") {
         if (limit.usage !== void 0) {
-          mcpPercent = Math.round(limit.usage * 100);
+          mcpPercent = toSafePercent(limit.usage);
         } else if (limit.currentValue !== void 0) {
-          mcpPercent = Math.round(limit.currentValue * 100);
+          mcpPercent = toSafePercent(limit.currentValue);
         }
         if (limit.nextResetTime !== void 0) {
           mcpResetAt = limit.nextResetTime;
@@ -2024,9 +2028,10 @@ var zaiUsageWidget = {
     }
     const limits = await fetchZaiUsage(ctx.config.cache.ttlSeconds);
     debugLog("zai", "fetchZaiUsage result:", limits);
+    const modelName = ctx.stdin.model?.display_name || "GLM";
     if (!limits) {
       return {
-        model: "GLM",
+        model: modelName,
         tokensPercent: null,
         tokensResetAt: null,
         mcpPercent: null,
@@ -2035,7 +2040,7 @@ var zaiUsageWidget = {
       };
     }
     return {
-      model: limits.model,
+      model: modelName,
       tokensPercent: limits.tokensPercent,
       tokensResetAt: limits.tokensResetAt,
       mcpPercent: limits.mcpPercent,
