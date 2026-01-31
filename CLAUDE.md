@@ -40,11 +40,14 @@ claude-dashboard/
 │   │   ├── cache-hit.ts     # Cache hit rate widget
 │   │   ├── depletion-time.ts # Depletion time widget
 │   │   ├── codex-usage.ts   # Codex CLI usage widget
-│   │   └── gemini-usage.ts  # Gemini CLI usage widget
+│   │   ├── gemini-usage.ts  # Gemini CLI usage widget
+│   │   └── zai-usage.ts     # z.ai/ZHIPU usage widget
 │   └── utils/
 │       ├── api-client.ts    # OAuth API client with caching
 │       ├── codex-client.ts  # Codex CLI API client
 │       ├── gemini-client.ts # Gemini CLI API client
+│       ├── zai-api-client.ts # z.ai/ZHIPU API client
+│       ├── provider.ts      # Provider detection (anthropic/zai/zhipu)
 │       ├── colors.ts        # ANSI color codes
 │       ├── credentials.ts   # Keychain/credentials extraction
 │       ├── debug.ts         # Debug utilities
@@ -98,6 +101,7 @@ interface Widget<T extends WidgetData> {
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model, 5h, 7d) |
 | `geminiUsage` | Gemini API | Google Gemini CLI usage (model, usage %) |
+| `zaiUsage` | z.ai API | z.ai/ZHIPU GLM usage (5h tokens, 1m MCP) |
 
 ### Display Modes
 
@@ -117,7 +121,7 @@ const DISPLAY_PRESETS = {
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
     ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
-    ['codexUsage', 'geminiUsage'],
+    ['codexUsage', 'geminiUsage', 'zaiUsage'],
   ],
 };
 ```

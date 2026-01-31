@@ -56,6 +56,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `depletionTime` | Estimated time to rate limit |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) |
 | `geminiUsage` | Google Gemini CLI usage (auto-hide if not installed) |
+| `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai) |
 
 ## Tasks
 
@@ -149,7 +150,7 @@ Display what the status line will look like based on their configuration:
 🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
 📁 project (main) │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
-🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m)
+🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m) │ 🟠 GLM │ 5h: 23% │ 1m: 45%
 ```
 
 ## Examples

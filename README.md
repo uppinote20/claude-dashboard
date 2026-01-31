@@ -27,6 +27,7 @@ Comprehensive status line plugin for Claude Code with context usage, API rate li
 - ⏳ **Depletion Time**: Estimated time to rate limit
 - 🔷 **Codex Usage**: OpenAI Codex CLI usage (model, 5h/7d limits) - auto-detected
 - 💎 **Gemini Usage**: Google Gemini CLI usage (model, usage %) - auto-detected
+- 🟠 **Z.ai/ZHIPU Usage**: z.ai/ZHIPU GLM usage (5h tokens, 1m MCP) - auto-detected
 - 🌐 **i18n**: English and Korean support (auto-detect)
 - 📐 **Multi-line**: Compact (1), Normal (2), Detailed (4) line modes
 
@@ -124,12 +125,15 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 | `depletionTime` | Estimated time to rate limit (approx)¹ |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed)² |
 | `geminiUsage` | Google Gemini CLI usage (auto-hide if not installed)³ |
+| `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai)⁴ |
 
 > ¹ **Depletion time approximation**: Assumes all current utilization came from this session. May be inaccurate if session started with pre-existing usage or multiple concurrent sessions are running. Estimate improves as session runs longer.
 >
 > ² **codexUsage**: Auto-hides if Codex CLI is not installed (~/.codex/auth.json)
 >
 > ³ **geminiUsage**: Auto-hides if Gemini CLI is not installed (~/.gemini/oauth_creds.json)
+>
+> ⁴ **zaiUsage**: Auto-hides if not using z.ai/ZHIPU (detected via ANTHROPIC_BASE_URL)
 
 ### Display Mode Presets
 
@@ -137,7 +141,7 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 |------|-------|--------|--------|--------|--------|
 | `compact` | 1 | model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet | - | - | - |
 | `normal` | 2 | (same as compact) | projectInfo, sessionDuration, burnRate, todoProgress | - | - |
-| `detailed` | 4 | (same as compact) | projectInfo, sessionDuration, burnRate, depletionTime, todoProgress | configCounts, toolActivity, agentStatus, cacheHit | codexUsage, geminiUsage |
+| `detailed` | 4 | (same as compact) | projectInfo, sessionDuration, burnRate, depletionTime, todoProgress | configCounts, toolActivity, agentStatus, cacheHit | codexUsage, geminiUsage, zaiUsage |
 
 ### Configuration File
 
