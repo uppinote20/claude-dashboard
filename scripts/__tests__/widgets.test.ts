@@ -592,13 +592,18 @@ describe('widgets', () => {
       expect(data).toBeNull();
     });
 
-    it('should return null when API call fails', async () => {
+    it('should return error state when API call fails', async () => {
       vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
       vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue(null);
 
       const ctx = createContext();
       const data = await codexUsageWidget.getData(ctx);
-      expect(data).toBeNull();
+
+      // Should return error state instead of null
+      expect(data).not.toBeNull();
+      expect(data?.isError).toBe(true);
+      expect(data?.model).toBe('codex');
+      expect(data?.primaryPercent).toBeNull();
     });
 
     it('should return usage data when API call succeeds', async () => {
@@ -686,6 +691,26 @@ describe('widgets', () => {
 
       expect(result).toContain('🔷');
       expect(result).toContain('o3');
+      expect(result).not.toContain('5h:');
+      expect(result).not.toContain('7d:');
+    });
+
+    it('should render error indicator when isError is true', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'codex',
+        planType: '',
+        primaryPercent: null,
+        primaryResetAt: null,
+        secondaryPercent: null,
+        secondaryResetAt: null,
+        isError: true,
+      };
+      const result = codexUsageWidget.render(data, ctx);
+
+      expect(result).toContain('🔷');
+      expect(result).toContain('codex');
+      expect(result).toContain('⚠️');
       expect(result).not.toContain('5h:');
       expect(result).not.toContain('7d:');
     });

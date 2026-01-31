@@ -302,6 +302,8 @@ export interface CodexUsageData {
   primaryResetAt: number | null;
   secondaryPercent: number | null;
   secondaryResetAt: number | null;
+  /** Indicates API error occurred */
+  isError?: boolean;
 }
 
 /**

@@ -46,7 +46,16 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
     const limits = await fetchCodexUsage(ctx.config.cache.ttlSeconds);
     debugLog('codex', 'fetchCodexUsage result:', limits);
     if (!limits) {
-      return null;
+      // Return error state instead of null to show ⚠️ indicator
+      return {
+        model: 'codex',
+        planType: '',
+        primaryPercent: null,
+        primaryResetAt: null,
+        secondaryPercent: null,
+        secondaryResetAt: null,
+        isError: true,
+      };
     }
 
     return {
@@ -65,12 +74,17 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
 
     parts.push(`${colorize('🔷', COLORS.blue)} ${data.model}`);
 
-    if (data.primaryPercent !== null) {
-      parts.push(formatRateLimit(t.labels['5h'], data.primaryPercent, data.primaryResetAt, t));
-    }
+    // Show error indicator or usage percentages
+    if (data.isError) {
+      parts.push(colorize('⚠️', COLORS.yellow));
+    } else {
+      if (data.primaryPercent !== null) {
+        parts.push(formatRateLimit(t.labels['5h'], data.primaryPercent, data.primaryResetAt, t));
+      }
 
-    if (data.secondaryPercent !== null) {
-      parts.push(formatRateLimit(t.labels['7d'], data.secondaryPercent, data.secondaryResetAt, t));
+      if (data.secondaryPercent !== null) {
+        parts.push(formatRateLimit(t.labels['7d'], data.secondaryPercent, data.secondaryResetAt, t));
+      }
     }
 
     return parts.join(` ${colorize('│', COLORS.dim)} `);
