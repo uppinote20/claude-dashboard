@@ -148,6 +148,16 @@ export interface Translations {
     cache: string;
     toLimit: string;
   };
+  /** Check-usage command labels */
+  checkUsage: {
+    title: string;
+    recommendation: string;
+    lowestUsage: string;
+    used: string;
+    notInstalled: string;
+    errorFetching: string;
+    noData: string;
+  };
 }
 
 /**
@@ -419,6 +429,15 @@ export interface ParsedTranscript {
 }
 
 /**
+ * Bucket usage info for CLI with multiple model buckets (e.g., Gemini)
+ */
+export interface BucketUsageInfo {
+  modelId: string;
+  usedPercent: number | null;
+  resetAt: string | null;
+}
+
+/**
  * CLI usage data for check-usage command
  */
 export interface CLIUsageInfo {
@@ -431,6 +450,7 @@ export interface CLIUsageInfo {
   sevenDayReset: string | null;
   model?: string;
   plan?: string;
+  buckets?: BucketUsageInfo[];
 }
 
 /**

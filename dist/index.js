@@ -1923,15 +1923,7 @@ var geminiUsageAllWidget = {
     const parts = data.buckets.map((bucket) => {
       const modelShort = bucket.modelId.replace("gemini-", "");
       if (bucket.usedPercent !== null) {
-        const color = getColorForPercent(bucket.usedPercent);
-        let result = `${colorize(modelShort, COLORS.dim)}: ${colorize(`${bucket.usedPercent}%`, color)}`;
-        if (bucket.resetAt) {
-          const resetTime = formatTimeRemaining(new Date(bucket.resetAt), t);
-          if (resetTime) {
-            result += ` (${resetTime})`;
-          }
-        }
-        return result;
+        return `${colorize(modelShort, COLORS.dim)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
       }
       return `${colorize(modelShort, COLORS.dim)}: ${colorize("--", COLORS.dim)}`;
     });

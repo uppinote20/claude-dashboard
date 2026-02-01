@@ -1079,9 +1079,10 @@ function getTranslationsByLang(lang) {
 
 // scripts/check-usage.ts
 var BOX_WIDTH = 40;
-function formatTimeFromTimestampMs(resetAtMs, t) {
-  const resetDate = new Date(resetAtMs);
-  return formatTimeRemaining(resetDate, t);
+function normalizeToISO(dateStr) {
+  if (!dateStr)
+    return null;
+  return new Date(dateStr).toISOString();
 }
 function formatTimeFromTimestamp(resetAt, t) {
   const resetDate = new Date(resetAt * 1e3);
@@ -1094,15 +1095,15 @@ function renderTitle(title) {
   const padding = Math.max(0, Math.floor((BOX_WIDTH - title.length) / 2));
   return " ".repeat(padding) + colorize(title, COLORS.bold);
 }
-function renderCLISection(name, usage, t) {
+function renderClaudeSection(name, usage, t) {
   const lines = [];
   const label = colorize(`[${name}]`, COLORS.pastelCyan);
   if (!usage.available) {
-    lines.push(`${label} ${colorize("(not installed)", COLORS.gray)}`);
+    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
     return lines;
   }
   if (usage.error) {
-    lines.push(`${label} ${colorize("\u26A0\uFE0F Error fetching data", COLORS.pastelYellow)}`);
+    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
   const parts = [];
@@ -1132,11 +1133,11 @@ function renderCodexSection(usage, codexData, t) {
   const lines = [];
   const label = colorize("[Codex]", COLORS.pastelCyan);
   if (!usage.available) {
-    lines.push(`${label} ${colorize("(not installed)", COLORS.gray)}`);
+    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
     return lines;
   }
   if (usage.error || !codexData) {
-    lines.push(`${label} ${colorize("\u26A0\uFE0F Error fetching data", COLORS.pastelYellow)}`);
+    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
   const parts = [];
@@ -1165,11 +1166,11 @@ function renderGeminiSection(usage, geminiData, t) {
   const lines = [];
   const label = colorize("[Gemini]", COLORS.pastelCyan);
   if (!usage.available) {
-    lines.push(`${label} ${colorize("(not installed)", COLORS.gray)}`);
+    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
     return lines;
   }
   if (usage.error || !geminiData) {
-    lines.push(`${label} ${colorize("\u26A0\uFE0F Error fetching data", COLORS.pastelYellow)}`);
+    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
   lines.push(`${label}`);
@@ -1200,22 +1201,22 @@ function renderZaiSection(usage, zaiData, t) {
   const lines = [];
   const label = colorize("[z.ai]", COLORS.pastelCyan);
   if (!usage.available) {
-    lines.push(`${label} ${colorize("(not configured)", COLORS.gray)}`);
+    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
     return lines;
   }
   if (usage.error || !zaiData) {
-    lines.push(`${label} ${colorize("\u26A0\uFE0F Error fetching data", COLORS.pastelYellow)}`);
+    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
   const parts = [];
   if (zaiData.tokensPercent !== null) {
     const color = getColorForPercent(zaiData.tokensPercent);
-    const reset = zaiData.tokensResetAt ? ` (${formatTimeFromTimestampMs(zaiData.tokensResetAt, t)})` : "";
+    const reset = zaiData.tokensResetAt ? ` (${formatTimeRemaining(new Date(zaiData.tokensResetAt), t)})` : "";
     parts.push(`Tokens: ${colorize(`${zaiData.tokensPercent}%`, color)}${reset}`);
   }
   if (zaiData.mcpPercent !== null) {
     const color = getColorForPercent(zaiData.mcpPercent);
-    const reset = zaiData.mcpResetAt ? ` (${formatTimeFromTimestampMs(zaiData.mcpResetAt, t)})` : "";
+    const reset = zaiData.mcpResetAt ? ` (${formatTimeRemaining(new Date(zaiData.mcpResetAt), t)})` : "";
     parts.push(`MCP: ${colorize(`${zaiData.mcpPercent}%`, color)}${reset}`);
   }
   if (zaiData.model) {
@@ -1227,7 +1228,7 @@ function renderZaiSection(usage, zaiData, t) {
   }
   return lines;
 }
-function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, lang) {
+function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, t) {
   const candidates = [];
   if (!claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
     candidates.push({ name: "claude", score: claudeUsage.fiveHourPercent });
@@ -1244,25 +1245,39 @@ function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage,
   if (candidates.length === 0) {
     return {
       name: null,
-      reason: lang === "ko" ? "\uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130 \uC5C6\uC74C" : "No usage data available"
+      reason: t.checkUsage.noData
     };
   }
   candidates.sort((a, b) => a.score - b.score);
   const best = candidates[0];
-  const reason = lang === "ko" ? `\uAC00\uC7A5 \uC5EC\uC720 (${best.score}% \uC0AC\uC6A9)` : `Lowest usage (${best.score}% used)`;
+  const reason = `${t.checkUsage.lowestUsage} (${best.score}% ${t.checkUsage.used})`;
   return { name: best.name, reason };
+}
+function createNotInstalledResult(name) {
+  return {
+    name,
+    available: false,
+    error: false,
+    fiveHourPercent: null,
+    sevenDayPercent: null,
+    fiveHourReset: null,
+    sevenDayReset: null
+  };
+}
+function createErrorResult(name) {
+  return {
+    name,
+    available: true,
+    error: true,
+    fiveHourPercent: null,
+    sevenDayPercent: null,
+    fiveHourReset: null,
+    sevenDayReset: null
+  };
 }
 function parseClaudeUsage(limits) {
   if (!limits) {
-    return {
-      name: "Claude",
-      available: true,
-      error: true,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
+    return createErrorResult("Claude");
   }
   return {
     name: "Claude",
@@ -1270,115 +1285,62 @@ function parseClaudeUsage(limits) {
     error: false,
     fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
-    fiveHourReset: limits.five_hour?.resets_at ?? null,
-    sevenDayReset: limits.seven_day?.resets_at ?? null
+    fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
+    sevenDayReset: normalizeToISO(limits.seven_day?.resets_at ?? null)
   };
 }
 function parseCodexUsage(limits, installed) {
-  if (!installed) {
-    return {
-      name: "Codex",
-      available: false,
-      error: false,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
-  if (!limits) {
-    return {
-      name: "Codex",
-      available: true,
-      error: true,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
+  if (!installed)
+    return createNotInstalledResult("Codex");
+  if (!limits)
+    return createErrorResult("Codex");
   return {
     name: "Codex",
     available: true,
     error: false,
     fiveHourPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
     sevenDayPercent: limits.secondary ? Math.round(limits.secondary.usedPercent) : null,
-    fiveHourReset: null,
-    // Codex uses timestamps, not ISO strings
-    sevenDayReset: null,
+    fiveHourReset: limits.primary ? new Date(limits.primary.resetAt * 1e3).toISOString() : null,
+    sevenDayReset: limits.secondary ? new Date(limits.secondary.resetAt * 1e3).toISOString() : null,
     model: limits.model,
     plan: limits.planType
   };
 }
 function parseGeminiUsage(limits, installed) {
-  if (!installed) {
-    return {
-      name: "Gemini",
-      available: false,
-      error: false,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
-  if (!limits) {
-    return {
-      name: "Gemini",
-      available: true,
-      error: true,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
+  if (!installed)
+    return createNotInstalledResult("Gemini");
+  if (!limits)
+    return createErrorResult("Gemini");
+  const buckets = limits.buckets?.map((b) => ({
+    modelId: b.modelId || "unknown",
+    usedPercent: b.usedPercent,
+    resetAt: normalizeToISO(b.resetAt)
+  }));
   return {
     name: "Gemini",
     available: true,
     error: false,
-    // Gemini has single usage metric, map to fiveHourPercent for recommendation calculation
     fiveHourPercent: limits.usedPercent,
     sevenDayPercent: null,
-    fiveHourReset: limits.resetAt,
+    fiveHourReset: normalizeToISO(limits.resetAt),
     sevenDayReset: null,
-    model: limits.model
+    model: limits.model,
+    buckets
   };
 }
 function parseZaiUsage(limits, installed) {
-  if (!installed) {
-    return {
-      name: "z.ai",
-      available: false,
-      error: false,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
-  if (!limits) {
-    return {
-      name: "z.ai",
-      available: true,
-      error: true,
-      fiveHourPercent: null,
-      sevenDayPercent: null,
-      fiveHourReset: null,
-      sevenDayReset: null
-    };
-  }
+  if (!installed)
+    return createNotInstalledResult("z.ai");
+  if (!limits)
+    return createErrorResult("z.ai");
   return {
     name: "z.ai",
     available: true,
     error: false,
-    // Use tokensPercent as primary metric for recommendation
     fiveHourPercent: limits.tokensPercent,
     sevenDayPercent: limits.mcpPercent,
-    // MCP is monthly, map to sevenDay for display
-    fiveHourReset: null,
-    // z.ai uses ms timestamps
-    sevenDayReset: null,
+    fiveHourReset: limits.tokensResetAt ? new Date(limits.tokensResetAt).toISOString() : null,
+    sevenDayReset: limits.mcpResetAt ? new Date(limits.mcpResetAt).toISOString() : null,
     model: limits.model
   };
 }
@@ -1411,7 +1373,7 @@ async function main() {
     codexInstalled ? codexUsage : null,
     geminiInstalled ? geminiUsage : null,
     zaiInstalled ? zaiUsage : null,
-    lang
+    t
   );
   if (isJsonMode) {
     const output = {
@@ -1427,28 +1389,39 @@ async function main() {
   }
   const outputLines = [];
   outputLines.push(colorize(renderLine(), COLORS.gray));
-  outputLines.push(renderTitle("CLI Usage Dashboard"));
+  outputLines.push(renderTitle(t.checkUsage.title));
   outputLines.push(colorize(renderLine(), COLORS.gray));
   outputLines.push("");
-  outputLines.push(...renderCLISection("Claude", claudeUsage, t));
-  outputLines.push("");
-  if (codexInstalled) {
-    outputLines.push(...renderCodexSection(codexUsage, codexLimits, t));
+  const claudeLines = renderClaudeSection("Claude", claudeUsage, t);
+  if (claudeLines.length > 0) {
+    outputLines.push(...claudeLines);
     outputLines.push("");
+  }
+  if (codexInstalled) {
+    const codexLines = renderCodexSection(codexUsage, codexLimits, t);
+    if (codexLines.length > 0) {
+      outputLines.push(...codexLines);
+      outputLines.push("");
+    }
   }
   if (geminiInstalled) {
-    outputLines.push(...renderGeminiSection(geminiUsage, geminiLimits, t));
-    outputLines.push("");
+    const geminiLines = renderGeminiSection(geminiUsage, geminiLimits, t);
+    if (geminiLines.length > 0) {
+      outputLines.push(...geminiLines);
+      outputLines.push("");
+    }
   }
   if (zaiInstalled) {
-    outputLines.push(...renderZaiSection(zaiUsage, zaiLimits, t));
-    outputLines.push("");
+    const zaiLines = renderZaiSection(zaiUsage, zaiLimits, t);
+    if (zaiLines.length > 0) {
+      outputLines.push(...zaiLines);
+      outputLines.push("");
+    }
   }
   outputLines.push(colorize(renderLine(), COLORS.gray));
   if (recommendation.name) {
-    const recLabel = lang === "ko" ? "\uCD94\uCC9C" : "Recommendation";
     outputLines.push(
-      `${recLabel}: ${colorize(recommendation.name, COLORS.pastelGreen)} (${recommendation.reason})`
+      `${t.checkUsage.recommendation}: ${colorize(recommendation.name, COLORS.pastelGreen)} (${recommendation.reason})`
     );
   } else {
     outputLines.push(colorize(recommendation.reason, COLORS.pastelYellow));
@@ -1457,6 +1430,7 @@ async function main() {
   console.log(outputLines.join("\n"));
 }
 main().catch((err) => {
-  console.error("Error:", err.message);
+  const message = err instanceof Error ? err.message : String(err);
+  console.error("Error:", message);
   process.exit(1);
 });
