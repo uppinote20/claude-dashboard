@@ -1,10 +1,11 @@
 /**
- * Gemini usage widget - displays Google Gemini CLI usage limits
- * Shows model and usage percentage in a single line
+ * Gemini usage widgets - displays Google Gemini CLI usage limits
+ * - geminiUsageWidget: Shows current model usage in a single line (compact)
+ * - geminiUsageAllWidget: Shows all model buckets (detailed)
  */
 
 import type { Widget } from './base.js';
-import type { WidgetContext, GeminiUsageData, Translations } from '../types.js';
+import type { WidgetContext, GeminiUsageData, GeminiUsageAllData, Translations } from '../types.js';
 import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
 import { isGeminiInstalled, fetchGeminiUsage } from '../utils/gemini-client.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
@@ -76,5 +77,61 @@ export const geminiUsageWidget: Widget<GeminiUsageData> = {
     }
 
     return parts.join(` ${colorize('│', COLORS.dim)} `);
+  },
+};
+
+/**
+ * Gemini usage all widget - displays all model buckets
+ */
+export const geminiUsageAllWidget: Widget<GeminiUsageAllData> = {
+  id: 'geminiUsageAll',
+  name: 'Gemini Usage All',
+
+  async getData(ctx: WidgetContext): Promise<GeminiUsageAllData | null> {
+    const installed = await isGeminiInstalled();
+    debugLog('gemini', 'geminiUsageAll - isGeminiInstalled:', installed);
+    if (!installed) {
+      return null;
+    }
+
+    const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
+    debugLog('gemini', 'geminiUsageAll - fetchGeminiUsage result:', limits);
+    if (!limits) {
+      return {
+        buckets: [],
+        isError: true,
+      };
+    }
+
+    return {
+      buckets: limits.buckets.map(b => ({
+        modelId: b.modelId || 'unknown',
+        usedPercent: b.usedPercent,
+        resetAt: b.resetAt,
+      })),
+    };
+  },
+
+  render(data: GeminiUsageAllData, ctx: WidgetContext): string {
+    const { translations: t } = ctx;
+
+    if (data.isError) {
+      return `${colorize('💎', COLORS.cyan)} Gemini ${colorize('⚠️', COLORS.yellow)}`;
+    }
+
+    if (data.buckets.length === 0) {
+      return `${colorize('💎', COLORS.cyan)} Gemini ${colorize('--', COLORS.dim)}`;
+    }
+
+    // Render each bucket as "model: X% (reset)"
+    const parts = data.buckets.map(bucket => {
+      const modelShort = bucket.modelId.replace('gemini-', '');
+      if (bucket.usedPercent !== null) {
+        return `${colorize(modelShort, COLORS.dim)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
+      }
+      return `${colorize(modelShort, COLORS.dim)}: ${colorize('--', COLORS.dim)}`;
+    });
+
+    return `${colorize('💎', COLORS.cyan)} ${parts.join(' │ ')}`;
   },
 };

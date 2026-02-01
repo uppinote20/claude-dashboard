@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.6.0";
+var VERSION = "1.7.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -335,6 +335,15 @@ var en_default = {
     burnRate: "Rate",
     cache: "Cache",
     toLimit: "to"
+  },
+  checkUsage: {
+    title: "CLI Usage Dashboard",
+    recommendation: "Recommendation",
+    lowestUsage: "Lowest usage",
+    used: "used",
+    notInstalled: "not installed",
+    errorFetching: "Error fetching data",
+    noData: "No usage data available"
   }
 };
 
@@ -375,6 +384,15 @@ var ko_default = {
     burnRate: "\uC18C\uBAA8\uC728",
     cache: "\uCE90\uC2DC",
     toLimit: "\uD6C4"
+  },
+  checkUsage: {
+    title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",
+    recommendation: "\uCD94\uCC9C",
+    lowestUsage: "\uAC00\uC7A5 \uC5EC\uC720",
+    used: "\uC0AC\uC6A9",
+    notInstalled: "\uC124\uCE58\uB418\uC9C0 \uC54A\uC74C",
+    errorFetching: "\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30 \uC624\uB958",
+    noData: "\uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130 \uC5C6\uC74C"
   }
 };
 
@@ -1869,6 +1887,49 @@ var geminiUsageWidget = {
     return parts.join(` ${colorize("\u2502", COLORS.dim)} `);
   }
 };
+var geminiUsageAllWidget = {
+  id: "geminiUsageAll",
+  name: "Gemini Usage All",
+  async getData(ctx) {
+    const installed = await isGeminiInstalled();
+    debugLog("gemini", "geminiUsageAll - isGeminiInstalled:", installed);
+    if (!installed) {
+      return null;
+    }
+    const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
+    debugLog("gemini", "geminiUsageAll - fetchGeminiUsage result:", limits);
+    if (!limits) {
+      return {
+        buckets: [],
+        isError: true
+      };
+    }
+    return {
+      buckets: limits.buckets.map((b) => ({
+        modelId: b.modelId || "unknown",
+        usedPercent: b.usedPercent,
+        resetAt: b.resetAt
+      }))
+    };
+  },
+  render(data, ctx) {
+    const { translations: t } = ctx;
+    if (data.isError) {
+      return `${colorize("\u{1F48E}", COLORS.cyan)} Gemini ${colorize("\u26A0\uFE0F", COLORS.yellow)}`;
+    }
+    if (data.buckets.length === 0) {
+      return `${colorize("\u{1F48E}", COLORS.cyan)} Gemini ${colorize("--", COLORS.dim)}`;
+    }
+    const parts = data.buckets.map((bucket) => {
+      const modelShort = bucket.modelId.replace("gemini-", "");
+      if (bucket.usedPercent !== null) {
+        return `${colorize(modelShort, COLORS.dim)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
+      }
+      return `${colorize(modelShort, COLORS.dim)}: ${colorize("--", COLORS.dim)}`;
+    });
+    return `${colorize("\u{1F48E}", COLORS.cyan)} ${parts.join(" \u2502 ")}`;
+  }
+};
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
@@ -2092,6 +2153,7 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["cacheHit", cacheHitWidget],
   ["codexUsage", codexUsageWidget],
   ["geminiUsage", geminiUsageWidget],
+  ["geminiUsageAll", geminiUsageAllWidget],
   ["zaiUsage", zaiUsageWidget]
 ]);
 function getWidget(id) {

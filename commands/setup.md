@@ -55,7 +55,8 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `cacheHit` | Cache hit rate percentage |
 | `depletionTime` | Estimated time to rate limit |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) |
-| `geminiUsage` | Google Gemini CLI usage (auto-hide if not installed) |
+| `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed) |
+| `geminiUsageAll` | Google Gemini CLI usage - all models (auto-hide if not installed) |
 | `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai) |
 
 ## Tasks

@@ -19,9 +19,11 @@ claude-dashboard/
 │   ├── plugin.json          # Plugin manifest
 │   └── marketplace.json     # Marketplace metadata
 ├── commands/
-│   └── setup.md             # /claude-dashboard:setup command
+│   ├── setup.md             # /claude-dashboard:setup command
+│   └── check-usage.md       # /claude-dashboard:check-usage command
 ├── scripts/
-│   ├── statusline.ts        # Main entry point
+│   ├── statusline.ts        # Main entry point (status line)
+│   ├── check-usage.ts       # CLI usage dashboard entry point
 │   ├── types.ts             # TypeScript interfaces
 │   ├── widgets/             # Widget system
 │   │   ├── base.ts          # Widget interface
@@ -61,7 +63,8 @@ claude-dashboard/
 │   ├── en.json              # English translations
 │   └── ko.json              # Korean translations
 ├── dist/
-│   └── index.js             # Built output (committed)
+│   ├── index.js             # Status line built output (committed)
+│   └── check-usage.js       # CLI usage dashboard built output (committed)
 └── package.json
 ```
 
@@ -100,7 +103,8 @@ interface Widget<T extends WidgetData> {
 | `cacheHit` | stdin | Cache hit rate percentage |
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model, 5h, 7d) |
-| `geminiUsage` | Gemini API | Google Gemini CLI usage (model, usage %) |
+| `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only) |
+| `geminiUsageAll` | Gemini API | Google Gemini CLI usage (all model buckets) |
 | `zaiUsage` | z.ai API | z.ai/ZHIPU GLM usage (5h tokens, 1m MCP) |
 
 ### Display Modes

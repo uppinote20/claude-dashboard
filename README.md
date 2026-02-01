@@ -135,7 +135,8 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 | `cacheHit` | Cache hit rate percentage |
 | `depletionTime` | Estimated time to rate limit (approx)¹ |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed)² |
-| `geminiUsage` | Google Gemini CLI usage (auto-hide if not installed)³ |
+| `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed)³ |
+| `geminiUsageAll` | Google Gemini CLI usage - all models (auto-hide if not installed)³ |
 | `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai)⁴ |
 
 > ¹ **Depletion time approximation**: Assumes all current utilization came from this session. May be inaccurate if session started with pre-existing usage or multiple concurrent sessions are running. Estimate improves as session runs longer.
@@ -237,6 +238,50 @@ rm -rf ~/.cache/claude-dashboard/
 ```
 
 Cache files are automatically cleaned up after 1 hour.
+
+## Commands
+
+### `/claude-dashboard:setup`
+
+Configure the status line display mode, language, and plan. See [Configuration](#configuration) section above.
+
+### `/claude-dashboard:check-usage`
+
+Check usage limits for all AI CLIs (Claude, Codex, Gemini, z.ai) at once and get a recommendation for which CLI has the most available capacity.
+
+```bash
+# Interactive output with colors
+/claude-dashboard:check-usage
+
+# JSON output for scripting
+/claude-dashboard:check-usage --json
+```
+
+**Example output:**
+
+```
+════════════════════════════════════════
+          CLI Usage Dashboard
+════════════════════════════════════════
+
+[Claude]
+  5h: 25% (4h10m)  |  7d: 18% (4d20h)
+
+[Codex]
+  5h: 0% (4h59m)  |  7d: 1% (3d8h)  |  Plan: plus
+
+[Gemini]
+  gemini-2.0-flash        0% (57m)
+  gemini-2.5-flash        0% (57m)
+  gemini-2.5-flash-lite   1% (57m)
+  gemini-2.5-pro          2% (12h57m)
+  gemini-3-flash-preview  0% (57m)
+  gemini-3-pro-preview    2% (12h57m)
+
+════════════════════════════════════════
+Recommendation: codex (Lowest usage (0% used))
+════════════════════════════════════════
+```
 
 ## Development
 

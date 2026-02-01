@@ -28,7 +28,7 @@ import { burnRateWidget } from './burn-rate.js';
 import { depletionTimeWidget } from './depletion-time.js';
 import { cacheHitWidget } from './cache-hit.js';
 import { codexUsageWidget } from './codex-usage.js';
-import { geminiUsageWidget } from './gemini-usage.js';
+import { geminiUsageWidget, geminiUsageAllWidget } from './gemini-usage.js';
 import { zaiUsageWidget } from './zai-usage.js';
 
 /**
@@ -52,6 +52,7 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['cacheHit', cacheHitWidget],
   ['codexUsage', codexUsageWidget],
   ['geminiUsage', geminiUsageWidget],
+  ['geminiUsageAll', geminiUsageAllWidget],
   ['zaiUsage', zaiUsageWidget],
 ] as [WidgetId, Widget][]);
 

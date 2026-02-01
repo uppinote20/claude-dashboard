@@ -34,5 +34,14 @@
     "burnRate": "Rate",
     "cache": "Cache",
     "toLimit": "to"
+  },
+  "checkUsage": {
+    "title": "CLI Usage Dashboard",
+    "recommendation": "Recommendation",
+    "lowestUsage": "Lowest usage",
+    "used": "used",
+    "notInstalled": "not installed",
+    "errorFetching": "Error fetching data",
+    "noData": "No usage data available"
   }
 }

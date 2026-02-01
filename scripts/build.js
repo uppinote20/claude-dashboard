@@ -37,19 +37,33 @@ async function main() {
       throw new Error('Version not found in package.json');
     }
 
-    // Build with esbuild, injecting version
-    await build({
-      entryPoints: ['scripts/statusline.ts'],
+    // Common build options
+    const commonOptions = {
       bundle: true,
       platform: 'node',
       format: 'esm',
-      outfile: 'dist/index.js',
       define: {
         __VERSION__: JSON.stringify(version),
       },
+    };
+
+    // Build main statusline entry point
+    await build({
+      ...commonOptions,
+      entryPoints: ['scripts/statusline.ts'],
+      outfile: 'dist/index.js',
     });
 
     console.log(`✓ Built dist/index.js with version ${version}`);
+
+    // Build check-usage entry point
+    await build({
+      ...commonOptions,
+      entryPoints: ['scripts/check-usage.ts'],
+      outfile: 'dist/check-usage.js',
+    });
+
+    console.log(`✓ Built dist/check-usage.js with version ${version}`);
 
     // Sync plugin.json
     const pluginJson = readJsonFile('./.claude-plugin/plugin.json', 'plugin.json');

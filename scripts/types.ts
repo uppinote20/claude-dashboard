@@ -50,6 +50,7 @@ export type WidgetId =
   | 'cacheHit'
   | 'codexUsage'
   | 'geminiUsage'
+  | 'geminiUsageAll'
   | 'zaiUsage';
 
 /**
@@ -146,6 +147,16 @@ export interface Translations {
     burnRate: string;
     cache: string;
     toLimit: string;
+  };
+  /** Check-usage command labels */
+  checkUsage: {
+    title: string;
+    recommendation: string;
+    lowestUsage: string;
+    used: string;
+    notInstalled: string;
+    errorFetching: string;
+    noData: string;
   };
 }
 
@@ -327,12 +338,25 @@ export interface GeminiUsageLimits {
 }
 
 /**
- * Gemini usage widget data
+ * Gemini usage widget data (single model)
  */
 export interface GeminiUsageData {
   model: string;
   usedPercent: number | null;
   resetAt: string | null;
+  /** Indicates API error occurred */
+  isError?: boolean;
+}
+
+/**
+ * Gemini usage all widget data (all models)
+ */
+export interface GeminiUsageAllData {
+  buckets: Array<{
+    modelId: string;
+    usedPercent: number | null;
+    resetAt: string | null;
+  }>;
   /** Indicates API error occurred */
   isError?: boolean;
 }
@@ -374,6 +398,7 @@ export type WidgetData =
   | CacheHitData
   | CodexUsageData
   | GeminiUsageData
+  | GeminiUsageAllData
   | ZaiUsageData;
 
 /**
@@ -401,4 +426,41 @@ export interface ParsedTranscript {
   toolUses: Map<string, { name: string; timestamp?: string }>;
   toolResults: Set<string>;
   sessionStartTime?: number;
+}
+
+/**
+ * Bucket usage info for CLI with multiple model buckets (e.g., Gemini)
+ */
+export interface BucketUsageInfo {
+  modelId: string;
+  usedPercent: number | null;
+  resetAt: string | null;
+}
+
+/**
+ * CLI usage data for check-usage command
+ */
+export interface CLIUsageInfo {
+  name: string;
+  available: boolean;
+  error: boolean;
+  fiveHourPercent: number | null;
+  sevenDayPercent: number | null;
+  fiveHourReset: string | null;
+  sevenDayReset: string | null;
+  model?: string;
+  plan?: string;
+  buckets?: BucketUsageInfo[];
+}
+
+/**
+ * Output structure for check-usage command
+ */
+export interface CheckUsageOutput {
+  claude: CLIUsageInfo;
+  codex: CLIUsageInfo | null;
+  gemini: CLIUsageInfo | null;
+  zai: CLIUsageInfo | null;
+  recommendation: string | null;
+  recommendationReason: string;
 }

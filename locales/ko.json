@@ -34,5 +34,14 @@
     "burnRate": "소모율",
     "cache": "캐시",
     "toLimit": "후"
+  },
+  "checkUsage": {
+    "title": "CLI 사용량 대시보드",
+    "recommendation": "추천",
+    "lowestUsage": "가장 여유",
+    "used": "사용",
+    "notInstalled": "설치되지 않음",
+    "errorFetching": "데이터 가져오기 오류",
+    "noData": "사용량 데이터 없음"
   }
 }
