@@ -843,6 +843,9 @@ import { homedir as homedir2 } from "os";
 var SESSION_DIR = join3(homedir2(), ".cache", "claude-dashboard", "sessions");
 var SESSION_MAX_AGE_SECONDS = 86400;
 var CLEANUP_INTERVAL_MS2 = 36e5;
+function isErrnoException(error, code) {
+  return error instanceof Error && "code" in error && error.code === code;
+}
 var lastCleanupTime2 = 0;
 var sessionCache = /* @__PURE__ */ new Map();
 var pendingRequests2 = /* @__PURE__ */ new Map();
@@ -878,8 +881,7 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId) {
     sessionCache.set(safeSessionId, data.startTime);
     return data.startTime;
   } catch (error) {
-    const isNotFound = error instanceof Error && "code" in error && error.code === "ENOENT";
-    if (!isNotFound) {
+    if (!isErrnoException(error, "ENOENT")) {
       debugLog("session", `Failed to read session ${safeSessionId}`, error);
     }
     const startTime = Date.now();
@@ -896,8 +898,7 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId) {
       });
       return startTime;
     } catch (writeError) {
-      const isExists = writeError instanceof Error && "code" in writeError && writeError.code === "EEXIST";
-      if (isExists) {
+      if (isErrnoException(writeError, "EEXIST")) {
         try {
           const content = await readFile3(sessionFile, "utf-8");
           const data = JSON.parse(content);
@@ -908,7 +909,8 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId) {
         } catch {
           debugLog("session", `Failed to read existing session ${safeSessionId} after EEXIST`);
         }
-      } else {
+      }
+      if (!isErrnoException(writeError, "EEXIST")) {
         debugLog("session", `Failed to persist session ${safeSessionId}`, writeError);
       }
       sessionCache.set(safeSessionId, startTime);
@@ -1314,6 +1316,9 @@ var MODEL_CACHE_PATH = path2.join(CACHE_DIR2, "codex-model-cache.json");
 var codexCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests3 = /* @__PURE__ */ new Map();
 var cachedAuth = null;
+function isValidCodexApiResponse(data) {
+  return data !== null && typeof data === "object" && "rate_limit" in data && "plan_type" in data && typeof data.rate_limit === "object" && data.rate_limit !== null;
+}
 async function isCodexInstalled() {
   try {
     await stat5(CODEX_AUTH_PATH);
@@ -1469,16 +1474,8 @@ async function fetchFromCodexApi(auth) {
       return null;
     }
     const data = await response.json();
-    if (!data || typeof data !== "object") {
-      debugLog("codex", "fetchFromCodexApi: invalid response - not an object");
-      return null;
-    }
-    if (!("rate_limit" in data) || !("plan_type" in data)) {
-      debugLog("codex", "fetchFromCodexApi: invalid response - missing required fields");
-      return null;
-    }
-    if (typeof data.rate_limit !== "object" || data.rate_limit === null) {
-      debugLog("codex", "fetchFromCodexApi: invalid response - rate_limit is not an object");
+    if (!isValidCodexApiResponse(data)) {
+      debugLog("codex", "fetchFromCodexApi: invalid response structure");
       return null;
     }
     const typedData = data;

@@ -248,6 +248,9 @@ var MODEL_CACHE_PATH = path2.join(CACHE_DIR2, "codex-model-cache.json");
 var codexCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests2 = /* @__PURE__ */ new Map();
 var cachedAuth = null;
+function isValidCodexApiResponse(data) {
+  return data !== null && typeof data === "object" && "rate_limit" in data && "plan_type" in data && typeof data.rate_limit === "object" && data.rate_limit !== null;
+}
 async function isCodexInstalled() {
   try {
     await stat3(CODEX_AUTH_PATH);
@@ -403,16 +406,8 @@ async function fetchFromCodexApi(auth) {
       return null;
     }
     const data = await response.json();
-    if (!data || typeof data !== "object") {
-      debugLog("codex", "fetchFromCodexApi: invalid response - not an object");
-      return null;
-    }
-    if (!("rate_limit" in data) || !("plan_type" in data)) {
-      debugLog("codex", "fetchFromCodexApi: invalid response - missing required fields");
-      return null;
-    }
-    if (typeof data.rate_limit !== "object" || data.rate_limit === null) {
-      debugLog("codex", "fetchFromCodexApi: invalid response - rate_limit is not an object");
+    if (!isValidCodexApiResponse(data)) {
+      debugLog("codex", "fetchFromCodexApi: invalid response structure");
       return null;
     }
     const typedData = data;

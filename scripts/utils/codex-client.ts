@@ -69,6 +69,20 @@ interface CodexApiResponse {
 }
 
 /**
+ * Type guard to validate Codex API response structure
+ */
+function isValidCodexApiResponse(data: unknown): data is CodexApiResponse {
+  return (
+    data !== null &&
+    typeof data === 'object' &&
+    'rate_limit' in data &&
+    'plan_type' in data &&
+    typeof (data as Record<string, unknown>).rate_limit === 'object' &&
+    (data as Record<string, unknown>).rate_limit !== null
+  );
+}
+
+/**
  * Check if Codex CLI is installed
  */
 export async function isCodexInstalled(): Promise<boolean> {
@@ -295,21 +309,12 @@ async function fetchFromCodexApi(
 
     const data: unknown = await response.json();
 
-    // Validate API response structure
-    if (!data || typeof data !== 'object') {
-      debugLog('codex', 'fetchFromCodexApi: invalid response - not an object');
-      return null;
-    }
-    if (!('rate_limit' in data) || !('plan_type' in data)) {
-      debugLog('codex', 'fetchFromCodexApi: invalid response - missing required fields');
-      return null;
-    }
-    if (typeof (data as any).rate_limit !== 'object' || (data as any).rate_limit === null) {
-      debugLog('codex', 'fetchFromCodexApi: invalid response - rate_limit is not an object');
+    if (!isValidCodexApiResponse(data)) {
+      debugLog('codex', 'fetchFromCodexApi: invalid response structure');
       return null;
     }
 
-    const typedData = data as CodexApiResponse;
+    const typedData = data;
     debugLog('codex', 'fetchFromCodexApi: got data', typedData.plan_type);
     const model = await getCodexModel();
 

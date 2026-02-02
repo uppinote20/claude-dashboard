@@ -13,6 +13,17 @@ const SESSION_MAX_AGE_SECONDS = 86400; // 24 hours - cleanup files older than th
 const CLEANUP_INTERVAL_MS = 3600000; // 1 hour - minimum interval between cleanups
 
 /**
+ * Type guard to check if an error is an ErrnoException with a specific code
+ */
+function isErrnoException(error: unknown, code: string): boolean {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    (error as NodeJS.ErrnoException).code === code
+  );
+}
+
+/**
  * Last cleanup timestamp for time-based throttling
  */
 let lastCleanupTime = 0;
@@ -79,12 +90,7 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId: string): Promise<n
     return data.startTime;
   } catch (error: unknown) {
     // Check if file simply doesn't exist (expected case)
-    const isNotFound =
-      error instanceof Error &&
-      'code' in error &&
-      (error as NodeJS.ErrnoException).code === 'ENOENT';
-
-    if (!isNotFound) {
+    if (!isErrnoException(error, 'ENOENT')) {
       // Unexpected error - log for debugging
       debugLog('session', `Failed to read session ${safeSessionId}`, error);
     }
@@ -113,12 +119,7 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId: string): Promise<n
       return startTime;
     } catch (writeError: unknown) {
       // If file was created by another process (EEXIST), read it instead
-      const isExists =
-        writeError instanceof Error &&
-        'code' in writeError &&
-        (writeError as NodeJS.ErrnoException).code === 'EEXIST';
-
-      if (isExists) {
+      if (isErrnoException(writeError, 'EEXIST')) {
         try {
           const content = await readFile(sessionFile, 'utf-8');
           const data = JSON.parse(content);
@@ -129,7 +130,10 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId: string): Promise<n
         } catch {
           debugLog('session', `Failed to read existing session ${safeSessionId} after EEXIST`);
         }
-      } else {
+      }
+
+      // Log non-EEXIST write errors
+      if (!isErrnoException(writeError, 'EEXIST')) {
         debugLog('session', `Failed to persist session ${safeSessionId}`, writeError);
       }
 
