@@ -1,6 +1,6 @@
 ---
 description: Check all AI CLI (Claude, Codex, Gemini, z.ai) usage limits and get recommendations
-allowed-tools: Bash(node:*)
+allowed-tools: Bash
 ---
 
 # Check CLI Usage

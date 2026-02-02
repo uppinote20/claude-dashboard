@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.8.0";
+var VERSION = "1.8.1";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
