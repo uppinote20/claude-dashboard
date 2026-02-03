@@ -42,6 +42,8 @@ interface ZaiQuotaResponse {
       type: string;
       usage?: number;
       currentValue?: number;
+      remaining?: number;
+      percentage?: number;  // API provides pre-calculated percentage
       nextResetTime?: number;
     }>;
   };
@@ -183,17 +185,23 @@ async function fetchFromZaiApi(
 
     for (const limit of limits) {
       if (limit.type === 'TOKENS_LIMIT') {
-        // Token usage: currentValue is used amount (0-1 fraction)
-        if (limit.currentValue !== undefined) {
-          tokensPercent = toSafePercent(limit.currentValue);
+        // Token usage: use percentage field from API response
+        if (limit.percentage !== undefined) {
+          tokensPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.currentValue !== undefined && limit.usage !== undefined) {
+          // Fallback: calculate percentage from currentValue / usage
+          tokensPercent = Math.min(100, Math.max(0, Math.round((limit.currentValue / limit.usage) * 100)));
         }
         if (limit.nextResetTime !== undefined) {
           tokensResetAt = limit.nextResetTime;
         }
       } else if (limit.type === 'TIME_LIMIT') {
-        // MCP usage: usage or currentValue field contains fraction (0-1)
-        if (limit.usage !== undefined) {
-          mcpPercent = toSafePercent(limit.usage);
+        // MCP usage: use percentage field from API response
+        if (limit.percentage !== undefined) {
+          mcpPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.usage !== undefined) {
+          // Fallback: usage field may contain percentage value
+          mcpPercent = Math.min(100, Math.max(0, limit.usage));
         } else if (limit.currentValue !== undefined) {
           mcpPercent = toSafePercent(limit.currentValue);
         }

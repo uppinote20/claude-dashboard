@@ -2124,15 +2124,19 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     let mcpResetAt = null;
     for (const limit of limits) {
       if (limit.type === "TOKENS_LIMIT") {
-        if (limit.currentValue !== void 0) {
-          tokensPercent = toSafePercent(limit.currentValue);
+        if (limit.percentage !== void 0) {
+          tokensPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.currentValue !== void 0 && limit.usage !== void 0) {
+          tokensPercent = Math.min(100, Math.max(0, Math.round(limit.currentValue / limit.usage * 100)));
         }
         if (limit.nextResetTime !== void 0) {
           tokensResetAt = limit.nextResetTime;
         }
       } else if (limit.type === "TIME_LIMIT") {
-        if (limit.usage !== void 0) {
-          mcpPercent = toSafePercent(limit.usage);
+        if (limit.percentage !== void 0) {
+          mcpPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.usage !== void 0) {
+          mcpPercent = Math.min(100, Math.max(0, limit.usage));
         } else if (limit.currentValue !== void 0) {
           mcpPercent = toSafePercent(limit.currentValue);
         }

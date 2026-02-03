@@ -930,15 +930,19 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     let mcpResetAt = null;
     for (const limit of limits) {
       if (limit.type === "TOKENS_LIMIT") {
-        if (limit.currentValue !== void 0) {
-          tokensPercent = toSafePercent(limit.currentValue);
+        if (limit.percentage !== void 0) {
+          tokensPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.currentValue !== void 0 && limit.usage !== void 0) {
+          tokensPercent = Math.min(100, Math.max(0, Math.round(limit.currentValue / limit.usage * 100)));
         }
         if (limit.nextResetTime !== void 0) {
           tokensResetAt = limit.nextResetTime;
         }
       } else if (limit.type === "TIME_LIMIT") {
-        if (limit.usage !== void 0) {
-          mcpPercent = toSafePercent(limit.usage);
+        if (limit.percentage !== void 0) {
+          mcpPercent = Math.min(100, Math.max(0, limit.percentage));
+        } else if (limit.usage !== void 0) {
+          mcpPercent = Math.min(100, Math.max(0, limit.usage));
         } else if (limit.currentValue !== void 0) {
           mcpPercent = toSafePercent(limit.currentValue);
         }
@@ -1430,6 +1434,7 @@ async function main() {
   const isJsonMode = args.includes("--json");
   const lang = parseLangArg(args) ?? detectSystemLanguage();
   const t = getTranslationsByLang(lang);
+  const isZaiActive = isZaiProvider();
   const zaiInstalled = isZaiInstalled();
   const [
     claudeLimits,
@@ -1450,7 +1455,8 @@ async function main() {
   const geminiUsage = parseGeminiUsage(geminiLimits, geminiInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
   const recommendation = calculateRecommendation(
-    claudeUsage,
+    isZaiActive ? createErrorResult("Claude") : claudeUsage,
+    // Don't recommend Claude if using z.ai
     codexInstalled ? codexUsage : null,
     geminiInstalled ? geminiUsage : null,
     zaiInstalled ? zaiUsage : null,

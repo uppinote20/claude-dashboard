@@ -12,6 +12,7 @@ import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-
 import { formatTimeRemaining } from './utils/formatters.js';
 import { getColorForPercent, colorize, COLORS } from './utils/colors.js';
 import { getTranslationsByLang, detectSystemLanguage } from './utils/i18n.js';
+import { isZaiProvider } from './utils/provider.js';
 import type {
   UsageLimits,
   CodexUsageLimits,
@@ -466,6 +467,9 @@ async function main(): Promise<void> {
   const lang = parseLangArg(args) ?? detectSystemLanguage();
   const t = getTranslationsByLang(lang);
 
+  // Check if using z.ai/ZHIPU provider (for recommendation logic only)
+  const isZaiActive = isZaiProvider();
+
   // Check installation status
   const zaiInstalled = isZaiInstalled();
 
@@ -493,9 +497,9 @@ async function main(): Promise<void> {
   const geminiUsage = parseGeminiUsage(geminiLimits, geminiInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
 
-  // Calculate recommendation
+  // Calculate recommendation (exclude Claude if using z.ai/ZHIPU)
   const recommendation = calculateRecommendation(
-    claudeUsage,
+    isZaiActive ? createErrorResult('Claude') : claudeUsage,  // Don't recommend Claude if using z.ai
     codexInstalled ? codexUsage : null,
     geminiInstalled ? geminiUsage : null,
     zaiInstalled ? zaiUsage : null,
@@ -525,7 +529,7 @@ async function main(): Promise<void> {
   outputLines.push(colorize(renderLine(), COLORS.gray));
   outputLines.push('');
 
-  // Claude section (always available)
+  // Claude section (always shown - displays Anthropic account usage)
   const claudeLines = renderClaudeSection('Claude', claudeUsage, t);
   if (claudeLines.length > 0) {
     outputLines.push(...claudeLines);
