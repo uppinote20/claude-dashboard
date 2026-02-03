@@ -529,18 +529,32 @@ function getZaiApiBaseUrl() {
 }
 
 // scripts/widgets/model.ts
+function isSonnet5With1M(data) {
+  const lower = data.displayName.toLowerCase();
+  const isSonnet5 = /sonnet\s*5|5\s*sonnet/.test(lower);
+  if (!isSonnet5)
+    return false;
+  return data.contextWindowSize === 1e6 || lower.includes("1m");
+}
+function getDisplayName(data) {
+  if (isSonnet5With1M(data)) {
+    return "Sonnet5 1M";
+  }
+  return shortenModelName(data.displayName);
+}
 var modelWidget = {
   id: "model",
   name: "Model",
   async getData(ctx) {
-    const { model } = ctx.stdin;
+    const { model, context_window } = ctx.stdin;
     return {
       id: model?.id || "",
-      displayName: model?.display_name || "-"
+      displayName: model?.display_name || "-",
+      contextWindowSize: context_window?.context_window_size
     };
   },
   render(data) {
-    const shortName = shortenModelName(data.displayName);
+    const shortName = getDisplayName(data);
     const icon = isZaiProvider() ? "\u{1F7E0}" : "\u{1F916}";
     return `${COLORS.pastelCyan}${icon} ${shortName}${RESET}`;
   }

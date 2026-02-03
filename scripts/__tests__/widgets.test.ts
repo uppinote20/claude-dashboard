@@ -91,7 +91,7 @@ describe('widgets', () => {
     it('should return default values when model data is missing', async () => {
       const ctx = createContext({ model: undefined as any });
       const data = await modelWidget.getData(ctx);
-      expect(data).toEqual({ id: '', displayName: '-' });
+      expect(data).toEqual({ id: '', displayName: '-', contextWindowSize: 200000 });
     });
 
     it('should extract model data', async () => {
@@ -118,6 +118,69 @@ describe('widgets', () => {
       const result = modelWidget.render(data, ctx);
 
       expect(result).toContain('Opus');
+    });
+
+    describe('Sonnet 5 1M support', () => {
+      it('should display "Sonnet5 1M" for Sonnet 5 with 1M context', () => {
+        const ctx = createContext();
+        const data = { id: 'claude-5-sonnet', displayName: 'Claude 5 Sonnet', contextWindowSize: 1_000_000 };
+        const result = modelWidget.render(data, ctx);
+
+        expect(result).toContain('Sonnet5 1M');
+      });
+
+      it('should display "Sonnet" for Sonnet 5 with 200K context', () => {
+        const ctx = createContext();
+        const data = { id: 'claude-5-sonnet', displayName: 'Claude 5 Sonnet', contextWindowSize: 200_000 };
+        const result = modelWidget.render(data, ctx);
+
+        expect(result).toContain('Sonnet');
+        expect(result).not.toContain('Sonnet5 1M');
+      });
+
+      it('should display "Sonnet" for Sonnet 3.5', () => {
+        const ctx = createContext();
+        const data = { id: 'claude-sonnet-3.5', displayName: 'Claude 3.5 Sonnet', contextWindowSize: 200_000 };
+        const result = modelWidget.render(data, ctx);
+
+        expect(result).toContain('Sonnet');
+        expect(result).not.toContain('Sonnet5 1M');
+      });
+
+      it('should display "Sonnet5 1M" when display_name contains "1m"', () => {
+        const ctx = createContext();
+        const data = { id: 'claude-5-sonnet-1m', displayName: 'Claude 5 Sonnet 1M' };
+        const result = modelWidget.render(data, ctx);
+
+        expect(result).toContain('Sonnet5 1M');
+      });
+
+      it('should display "Sonnet5 1M" for "Claude Sonnet 5" with 1M context', () => {
+        const ctx = createContext();
+        const data = { id: 'claude-sonnet-5', displayName: 'Claude Sonnet 5', contextWindowSize: 1_000_000 };
+        const result = modelWidget.render(data, ctx);
+
+        expect(result).toContain('Sonnet5 1M');
+      });
+
+      it('should include contextWindowSize in getData', async () => {
+        const ctx = createContext({
+          context_window: {
+            total_input_tokens: 5000,
+            total_output_tokens: 2000,
+            context_window_size: 1_000_000,
+            current_usage: {
+              input_tokens: 5000,
+              output_tokens: 2000,
+              cache_creation_input_tokens: 0,
+              cache_read_input_tokens: 0,
+            },
+          },
+        });
+        const data = await modelWidget.getData(ctx);
+
+        expect(data?.contextWindowSize).toBe(1_000_000);
+      });
     });
   });
 

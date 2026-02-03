@@ -203,6 +203,7 @@ export interface WidgetContext {
 export interface ModelData {
   id: string;
   displayName: string;
+  contextWindowSize?: number;
 }
 
 export interface ContextData {
