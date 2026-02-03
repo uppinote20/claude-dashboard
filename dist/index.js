@@ -8,7 +8,7 @@ import { homedir as homedir3 } from "os";
 // scripts/types.ts
 var DISPLAY_PRESETS = {
   compact: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
+    ["model", "context", "cost", "zaiUsage"]
   ],
   normal: [
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
@@ -513,7 +513,17 @@ function detectProvider() {
 }
 function isZaiProvider() {
   const provider = detectProvider();
-  return provider === "zai" || provider === "zhipu";
+  if (provider === "zai" || provider === "zhipu") {
+    return true;
+  }
+  // Also check if model name contains GLM
+  if (typeof globalThis.claudeDashboardModelName === "string") {
+    const modelName = globalThis.claudeDashboardModelName.toLowerCase();
+    if (modelName.includes("glm") || modelName.includes("zhipu") || modelName.includes("z.ai")) {
+      return true;
+    }
+  }
+  return false;
 }
 function getZaiApiBaseUrl() {
   const baseUrl = process.env.ANTHROPIC_BASE_URL;
@@ -564,25 +574,188 @@ function renderProgressBar(percent, config = DEFAULT_PROGRESS_BAR_CONFIG) {
   return `${color}${bar}${RESET}`;
 }
 
+// scripts/utils/transcript-parser.ts
+import { readFile as readFile3, stat as stat3 } from "fs/promises";
+var cachedTranscript = null;
+function parseJsonlLine(line) {
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
+  }
+}
+async function parseTranscript(transcriptPath) {
+  try {
+    const fileStat = await stat3(transcriptPath);
+    const mtime = fileStat.mtimeMs;
+    if (cachedTranscript?.path === transcriptPath && cachedTranscript.mtime === mtime) {
+      return cachedTranscript.data;
+    }
+    const content = await readFile3(transcriptPath, "utf-8");
+    const lines = content.trim().split("\n").filter(Boolean);
+    const entries = [];
+    for (const line of lines) {
+      const entry = parseJsonlLine(line);
+      if (entry) {
+        entries.push(entry);
+      }
+    }
+    const toolUses = /* @__PURE__ */ new Map();
+    const toolResults = /* @__PURE__ */ new Set();
+    let sessionStartTime;
+    for (const entry of entries) {
+      if (!sessionStartTime && entry.timestamp) {
+        sessionStartTime = new Date(entry.timestamp).getTime();
+      }
+      if (entry.type === "assistant" && entry.message?.content) {
+        for (const block of entry.message.content) {
+          if (block.type === "tool_use" && block.id && block.name) {
+            toolUses.set(block.id, {
+              name: block.name,
+              timestamp: entry.timestamp
+            });
+          }
+        }
+      }
+      if (entry.type === "user" && entry.message?.content) {
+        for (const block of entry.message.content) {
+          if (block.type === "tool_result" && block.tool_use_id) {
+            toolResults.add(block.tool_use_id);
+          }
+        }
+      }
+    }
+    const data = {
+      entries,
+      toolUses,
+      toolResults,
+      sessionStartTime
+    };
+    cachedTranscript = { path: transcriptPath, mtime, data };
+    return data;
+  } catch {
+    return null;
+  }
+}
+function getRunningTools(transcript) {
+  const running = [];
+  for (const [id, tool] of transcript.toolUses) {
+    if (!transcript.toolResults.has(id)) {
+      running.push({
+        name: tool.name,
+        startTime: tool.timestamp ? new Date(tool.timestamp).getTime() : Date.now()
+      });
+    }
+  }
+  return running;
+}
+function getCompletedToolCount(transcript) {
+  return transcript.toolResults.size;
+}
+function extractTodoProgress(transcript) {
+  let lastTodoWrite = null;
+  for (const [id, tool] of transcript.toolUses) {
+    if (tool.name === "TodoWrite" && transcript.toolResults.has(id)) {
+      for (const entry of transcript.entries) {
+        if (entry.type === "assistant" && entry.message?.content) {
+          for (const block of entry.message.content) {
+            if (block.type === "tool_use" && block.id === id && block.input) {
+              lastTodoWrite = block.input;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (!lastTodoWrite || typeof lastTodoWrite !== "object") {
+    return null;
+  }
+  const input = lastTodoWrite;
+  if (!Array.isArray(input.todos)) {
+    return null;
+  }
+  const todos = input.todos;
+  const completed = todos.filter((t) => t.status === "completed").length;
+  const total = todos.length;
+  const current = todos.find(
+    (t) => t.status === "in_progress" || t.status === "pending"
+  );
+  return {
+    current: current ? {
+      content: current.content,
+      status: current.status
+    } : void 0,
+    completed,
+    total
+  };
+}
+function extractAgentStatus(transcript) {
+  const active = [];
+  let completed = 0;
+  for (const [id, tool] of transcript.toolUses) {
+    if (tool.name === "Task") {
+      if (transcript.toolResults.has(id)) {
+        completed++;
+      } else {
+        for (const entry of transcript.entries) {
+          if (entry.type === "assistant" && entry.message?.content) {
+            for (const block of entry.message.content) {
+              if (block.type === "tool_use" && block.id === id && block.input) {
+                const input = block.input;
+                active.push({
+                  name: input.subagent_type || "Agent",
+                  description: input.description
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return { active, completed };
+}
+function getCurrentSessionTokens(transcript) {
+  let inputTokens = 0;
+  let outputTokens = 0;
+  for (const entry of transcript.entries) {
+    if (entry.type === "assistant" && entry.message?.usage) {
+      const usage = entry.message.usage;
+      inputTokens += usage.input_tokens || 0;
+      outputTokens += usage.output_tokens || 0;
+    }
+  }
+  return { inputTokens, outputTokens };
+}
+
 // scripts/widgets/context.ts
 var contextWidget = {
   id: "context",
   name: "Context",
   async getData(ctx) {
-    const { context_window } = ctx.stdin;
+    const { context_window, transcript_path } = ctx.stdin;
     const usage = context_window?.current_usage;
     const contextSize = context_window?.context_window_size || 2e5;
-    if (!usage) {
-      return {
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        contextSize,
-        percentage: 0
-      };
+    const isZai = isZaiProvider();
+    let inputTokens;
+    let outputTokens;
+    if (isZai) {
+      // For z.ai, current_usage is always 0, use total_input_tokens (current session cumulative)
+      inputTokens = context_window?.total_input_tokens || 0;
+      outputTokens = context_window?.total_output_tokens || 0;
+    } else {
+      if (!usage) {
+        return {
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          contextSize,
+          percentage: 0
+        };
+      }
+      inputTokens = (usage.input_tokens || 0) + (usage.cache_creation_input_tokens || 0) + (usage.cache_read_input_tokens || 0);
+      outputTokens = usage.output_tokens || 0;
     }
-    const inputTokens = usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens;
-    const outputTokens = usage.output_tokens;
     const totalTokens = inputTokens + outputTokens;
     const percentage = calculatePercent(inputTokens, contextSize);
     return {
@@ -607,11 +780,56 @@ var contextWidget = {
 };
 
 // scripts/widgets/cost.ts
+var ANTHROPIC_PRICING = {
+  "opus": { inputPrice: 15, outputPrice: 75 },
+  "sonnet": { inputPrice: 3, outputPrice: 15 },
+  "haiku": { inputPrice: 0.25, outputPrice: 1.25 }
+};
+var ZAI_PRICING = {
+  "glm-4.7": { inputPrice: 0.6, outputPrice: 2.2 },
+  "glm-4.6": { inputPrice: 0.6, outputPrice: 2.2 },
+  "glm-4.5": { inputPrice: 0.35, outputPrice: 1.55 },
+  "glm-4.5-air": { inputPrice: 0.11, outputPrice: 0.28 },
+  "glm-4.7-flash": { inputPrice: 0, outputPrice: 0 },
+  "glm": { inputPrice: 0.6, outputPrice: 2.2 }
+  // default
+};
+function getPricing(provider, modelName) {
+  const lowerModel = modelName.toLowerCase();
+  if (provider === "zai") {
+    for (const [key, pricing] of Object.entries(ZAI_PRICING)) {
+      if (lowerModel.includes(key)) {
+        return pricing;
+      }
+    }
+    return ZAI_PRICING["glm"];
+  }
+  for (const [key, pricing] of Object.entries(ANTHROPIC_PRICING)) {
+    if (lowerModel.includes(key)) {
+      return pricing;
+    }
+  }
+  return ANTHROPIC_PRICING["sonnet"];
+}
+function calculateCost(inputTokens, outputTokens, pricing) {
+  return inputTokens / 1e6 * pricing.inputPrice + outputTokens / 1e6 * pricing.outputPrice;
+}
 var costWidget = {
   id: "cost",
   name: "Cost",
   async getData(ctx) {
-    const { cost } = ctx.stdin;
+    const { cost, context_window, model } = ctx.stdin;
+    const isZai = isZaiProvider();
+    if (isZai) {
+      const modelName = model?.display_name || "GLM";
+      const pricing = getPricing("zai", modelName);
+      const inputTokens = context_window?.total_input_tokens ?? 0;
+      const outputTokens = context_window?.total_output_tokens ?? 0;
+      const calculatedCost = calculateCost(inputTokens, outputTokens, pricing);
+      return {
+        totalCostUsd: calculatedCost
+      };
+    }
     return {
       totalCostUsd: cost?.total_cost_usd ?? 0
     };
@@ -837,7 +1055,7 @@ var configCountsWidget = {
 };
 
 // scripts/utils/session.ts
-import { readFile as readFile3, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat3 } from "fs/promises";
+import { readFile as readFile4, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat4 } from "fs/promises";
 import { join as join3 } from "path";
 import { homedir as homedir2 } from "os";
 var SESSION_DIR = join3(homedir2(), ".cache", "claude-dashboard", "sessions");
@@ -872,7 +1090,7 @@ async function getSessionStartTime(sessionId) {
 async function getOrCreateSessionStartTimeImpl(safeSessionId) {
   const sessionFile = join3(SESSION_DIR, `${safeSessionId}.json`);
   try {
-    const content = await readFile3(sessionFile, "utf-8");
+    const content = await readFile4(sessionFile, "utf-8");
     const data = JSON.parse(content);
     if (typeof data.startTime !== "number") {
       debugLog("session", `Invalid session file format for ${safeSessionId}`);
@@ -900,7 +1118,7 @@ async function getOrCreateSessionStartTimeImpl(safeSessionId) {
     } catch (writeError) {
       if (isErrnoException(writeError, "EEXIST")) {
         try {
-          const content = await readFile3(sessionFile, "utf-8");
+          const content = await readFile4(sessionFile, "utf-8");
           const data = JSON.parse(content);
           if (typeof data.startTime === "number") {
             sessionCache.set(safeSessionId, data.startTime);
@@ -944,7 +1162,7 @@ async function cleanupExpiredSessions() {
         continue;
       try {
         const filePath = join3(SESSION_DIR, file);
-        const fileStat = await stat3(filePath);
+        const fileStat = await stat4(filePath);
         if (fileStat.mtimeMs < cutoffTime) {
           await unlink2(filePath);
           debugLog("session", `Cleaned up expired session: ${file}`);
@@ -971,148 +1189,6 @@ var sessionDurationWidget = {
     return colorize(`\u23F1 ${duration}`, COLORS.dim);
   }
 };
-
-// scripts/utils/transcript-parser.ts
-import { readFile as readFile4, stat as stat4 } from "fs/promises";
-var cachedTranscript = null;
-function parseJsonlLine(line) {
-  try {
-    return JSON.parse(line);
-  } catch {
-    return null;
-  }
-}
-async function parseTranscript(transcriptPath) {
-  try {
-    const fileStat = await stat4(transcriptPath);
-    const mtime = fileStat.mtimeMs;
-    if (cachedTranscript?.path === transcriptPath && cachedTranscript.mtime === mtime) {
-      return cachedTranscript.data;
-    }
-    const content = await readFile4(transcriptPath, "utf-8");
-    const lines = content.trim().split("\n").filter(Boolean);
-    const entries = [];
-    for (const line of lines) {
-      const entry = parseJsonlLine(line);
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-    const toolUses = /* @__PURE__ */ new Map();
-    const toolResults = /* @__PURE__ */ new Set();
-    let sessionStartTime;
-    for (const entry of entries) {
-      if (!sessionStartTime && entry.timestamp) {
-        sessionStartTime = new Date(entry.timestamp).getTime();
-      }
-      if (entry.type === "assistant" && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === "tool_use" && block.id && block.name) {
-            toolUses.set(block.id, {
-              name: block.name,
-              timestamp: entry.timestamp
-            });
-          }
-        }
-      }
-      if (entry.type === "user" && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === "tool_result" && block.tool_use_id) {
-            toolResults.add(block.tool_use_id);
-          }
-        }
-      }
-    }
-    const data = {
-      entries,
-      toolUses,
-      toolResults,
-      sessionStartTime
-    };
-    cachedTranscript = { path: transcriptPath, mtime, data };
-    return data;
-  } catch {
-    return null;
-  }
-}
-function getRunningTools(transcript) {
-  const running = [];
-  for (const [id, tool] of transcript.toolUses) {
-    if (!transcript.toolResults.has(id)) {
-      running.push({
-        name: tool.name,
-        startTime: tool.timestamp ? new Date(tool.timestamp).getTime() : Date.now()
-      });
-    }
-  }
-  return running;
-}
-function getCompletedToolCount(transcript) {
-  return transcript.toolResults.size;
-}
-function extractTodoProgress(transcript) {
-  let lastTodoWrite = null;
-  for (const [id, tool] of transcript.toolUses) {
-    if (tool.name === "TodoWrite" && transcript.toolResults.has(id)) {
-      for (const entry of transcript.entries) {
-        if (entry.type === "assistant" && entry.message?.content) {
-          for (const block of entry.message.content) {
-            if (block.type === "tool_use" && block.id === id && block.input) {
-              lastTodoWrite = block.input;
-            }
-          }
-        }
-      }
-    }
-  }
-  if (!lastTodoWrite || typeof lastTodoWrite !== "object") {
-    return null;
-  }
-  const input = lastTodoWrite;
-  if (!Array.isArray(input.todos)) {
-    return null;
-  }
-  const todos = input.todos;
-  const completed = todos.filter((t) => t.status === "completed").length;
-  const total = todos.length;
-  const current = todos.find(
-    (t) => t.status === "in_progress" || t.status === "pending"
-  );
-  return {
-    current: current ? {
-      content: current.content,
-      status: current.status
-    } : void 0,
-    completed,
-    total
-  };
-}
-function extractAgentStatus(transcript) {
-  const active = [];
-  let completed = 0;
-  for (const [id, tool] of transcript.toolUses) {
-    if (tool.name === "Task") {
-      if (transcript.toolResults.has(id)) {
-        completed++;
-      } else {
-        for (const entry of transcript.entries) {
-          if (entry.type === "assistant" && entry.message?.content) {
-            for (const block of entry.message.content) {
-              if (block.type === "tool_use" && block.id === id && block.input) {
-                const input = block.input;
-                active.push({
-                  name: input.subagent_type || "Agent",
-                  description: input.description
-                });
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return { active, completed };
-}
 
 // scripts/widgets/tool-activity.ts
 var toolActivityWidget = {
@@ -2039,11 +2115,28 @@ function toSafePercent(value) {
 }
 var zaiCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests5 = /* @__PURE__ */ new Map();
-function isZaiInstalled() {
-  return isZaiProvider() && !!getZaiApiBaseUrl() && !!getZaiAuthToken();
+async function isZaiInstalled() {
+  if (!isZaiProvider()) {
+    return false;
+  }
+  const baseUrl = getZaiApiBaseUrl();
+  const authToken = await getZaiAuthToken();
+  return !!baseUrl && !!authToken;
 }
-function getZaiAuthToken() {
-  return process.env.ANTHROPIC_AUTH_TOKEN || null;
+async function getZaiAuthToken() {
+  const envToken = process.env.ANTHROPIC_AUTH_TOKEN;
+  if (envToken) {
+    return envToken;
+  }
+  // Try to read from credentials file
+  try {
+    const credPath = join(homedir(), ".claude", ".credentials.json");
+    const content = await readFile7(credPath, "utf-8");
+    const creds = JSON.parse(content);
+    return creds?.apiKey || creds?.claudeAiOauth?.accessToken || null;
+  } catch {
+    return null;
+  }
 }
 async function fetchZaiUsage(ttlSeconds = 60) {
   if (!isZaiProvider()) {
@@ -2051,7 +2144,7 @@ async function fetchZaiUsage(ttlSeconds = 60) {
     return null;
   }
   const baseUrl = getZaiApiBaseUrl();
-  const authToken = getZaiAuthToken();
+  const authToken = await getZaiAuthToken();
   if (!baseUrl || !authToken) {
     debugLog("zai", "fetchZaiUsage: missing base URL or auth token");
     return null;
@@ -2187,7 +2280,7 @@ var zaiUsageWidget = {
   id: "zaiUsage",
   name: "Z.ai Usage",
   async getData(ctx) {
-    const installed = isZaiInstalled();
+    const installed = await isZaiInstalled();
     debugLog("zai", "isZaiInstalled:", installed);
     if (!installed) {
       return null;
@@ -2216,7 +2309,6 @@ var zaiUsageWidget = {
   render(data, ctx) {
     const { translations: t } = ctx;
     const parts = [];
-    parts.push(`\u{1F7E0} ${data.model}`);
     if (data.isError) {
       parts.push(colorize("\u26A0\uFE0F", COLORS.yellow));
     } else {
@@ -2296,7 +2388,14 @@ async function renderLine(widgetIds, ctx) {
   return outputs.join(separator);
 }
 async function renderAllLines(ctx) {
-  const lines = getLines(ctx.config);
+  let lines = getLines(ctx.config);
+  // For z.ai provider, replace rate limits with zaiUsage in normal mode
+  if (isZaiProvider() && ctx.config.displayMode === "normal") {
+    lines = [
+      ["model", "zaiUsage", "cost"],
+      ["projectInfo", "sessionDuration", "todoProgress"]
+    ];
+  }
   const renderedLines = [];
   for (const lineWidgets of lines) {
     const rendered = await renderLine(lineWidgets, ctx);
@@ -2355,6 +2454,10 @@ async function main() {
   if (!stdin) {
     console.log(colorize("\u26A0\uFE0F", COLORS.yellow));
     return;
+  }
+  // Store model name for provider detection
+  if (stdin.model?.display_name) {
+    globalThis.claudeDashboardModelName = stdin.model.display_name;
   }
   const rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
   const ctx = {
