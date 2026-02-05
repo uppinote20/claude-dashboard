@@ -9,6 +9,7 @@ import { fetchUsageLimits } from './utils/api-client.js';
 import { fetchCodexUsage, isCodexInstalled } from './utils/codex-client.js';
 import { fetchGeminiUsage, isGeminiInstalled } from './utils/gemini-client.js';
 import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-api-client.js';
+import { isZaiProvider } from './utils/provider.js';
 import { formatTimeRemaining } from './utils/formatters.js';
 import { getColorForPercent, colorize, COLORS } from './utils/colors.js';
 import { getTranslationsByLang, detectSystemLanguage } from './utils/i18n.js';
@@ -292,7 +293,8 @@ export function calculateRecommendation(
   const candidates: { name: string; score: number }[] = [];
 
   // Claude score (lower is better - using 5h as primary metric)
-  if (!claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
+  // Exclude from recommendations when using z.ai provider (different quota system)
+  if (!isZaiProvider() && !claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
     candidates.push({ name: 'claude', score: claudeUsage.fiveHourPercent });
   }
 

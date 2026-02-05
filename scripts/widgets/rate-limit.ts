@@ -1,11 +1,14 @@
 /**
  * Rate limit widgets - displays 5h and 7d usage limits
+ * Note: These widgets return null when using z.ai provider,
+ * allowing zaiUsage widget to display instead.
  */
 
 import type { Widget } from './base.js';
 import type { WidgetContext, RateLimitData, UsageLimits } from '../types.js';
 import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
+import { isZaiProvider } from '../utils/provider.js';
 
 type LabelKey = '5h' | '7d_all' | '7d_sonnet';
 type LimitKey = keyof UsageLimits;
@@ -34,6 +37,13 @@ function getLimitData(limits: UsageLimits | null | undefined, key: LimitKey): Ra
 }
 
 /**
+ * Check if Anthropic rate limits should be hidden (z.ai uses different quota system)
+ */
+function shouldHideAnthropicLimits(): boolean {
+  return isZaiProvider();
+}
+
+/**
  * 5-hour rate limit widget
  */
 export const rateLimit5hWidget: Widget<RateLimitData> = {
@@ -41,6 +51,7 @@ export const rateLimit5hWidget: Widget<RateLimitData> = {
   name: '5h Rate Limit',
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
+    if (shouldHideAnthropicLimits()) return null;
     const data = getLimitData(ctx.rateLimits, 'five_hour');
     // Show warning if API failed (only in this widget to avoid duplicates)
     return data ?? { utilization: 0, resetsAt: null, isError: true };
@@ -59,6 +70,7 @@ export const rateLimit7dWidget: Widget<RateLimitData> = {
   name: '7d Rate Limit',
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
+    if (shouldHideAnthropicLimits()) return null;
     if (ctx.config.plan !== 'max') return null;
     return getLimitData(ctx.rateLimits, 'seven_day');
   },
@@ -76,6 +88,7 @@ export const rateLimit7dSonnetWidget: Widget<RateLimitData> = {
   name: '7d Sonnet Rate Limit',
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
+    if (shouldHideAnthropicLimits()) return null;
     if (ctx.config.plan !== 'max') return null;
     return getLimitData(ctx.rateLimits, 'seven_day_sonnet');
   },

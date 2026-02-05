@@ -8,17 +8,17 @@ import { homedir as homedir3 } from "os";
 // scripts/types.ts
 var DISPLAY_PRESETS = {
   compact: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"]
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"]
   ],
   normal: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
     ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
   ],
   detailed: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
     ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
-    ["codexUsage", "geminiUsage", "zaiUsage"]
+    ["codexUsage", "geminiUsage"]
   ]
 };
 var DEFAULT_CONFIG = {
@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.8.1";
+var VERSION = "1.9.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -642,10 +642,15 @@ function getLimitData(limits, key) {
     resetsAt: limit.resets_at
   };
 }
+function shouldHideAnthropicLimits() {
+  return isZaiProvider();
+}
 var rateLimit5hWidget = {
   id: "rateLimit5h",
   name: "5h Rate Limit",
   async getData(ctx) {
+    if (shouldHideAnthropicLimits())
+      return null;
     const data = getLimitData(ctx.rateLimits, "five_hour");
     return data ?? { utilization: 0, resetsAt: null, isError: true };
   },
@@ -657,6 +662,8 @@ var rateLimit7dWidget = {
   id: "rateLimit7d",
   name: "7d Rate Limit",
   async getData(ctx) {
+    if (shouldHideAnthropicLimits())
+      return null;
     if (ctx.config.plan !== "max")
       return null;
     return getLimitData(ctx.rateLimits, "seven_day");
@@ -669,6 +676,8 @@ var rateLimit7dSonnetWidget = {
   id: "rateLimit7dSonnet",
   name: "7d Sonnet Rate Limit",
   async getData(ctx) {
+    if (shouldHideAnthropicLimits())
+      return null;
     if (ctx.config.plan !== "max")
       return null;
     return getLimitData(ctx.rateLimits, "seven_day_sonnet");
@@ -2034,8 +2043,28 @@ var geminiUsageAllWidget = {
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
-function toSafePercent(value) {
-  return Math.min(100, Math.max(0, Math.round(value * 100)));
+function clampPercent(value) {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+function calculateUsagePercent(currentValue, remaining) {
+  const total = currentValue + remaining;
+  if (total <= 0) {
+    return null;
+  }
+  return clampPercent(currentValue / total * 100);
+}
+function parseUsagePercent(limit) {
+  if (limit.percentage !== void 0) {
+    return clampPercent(limit.percentage);
+  }
+  if (limit.usage !== void 0) {
+    const normalized = limit.usage > 1 ? limit.usage : limit.usage * 100;
+    return clampPercent(normalized);
+  }
+  if (limit.currentValue !== void 0 && limit.remaining !== void 0) {
+    return calculateUsagePercent(limit.currentValue, limit.remaining);
+  }
+  return null;
 }
 var zaiCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests5 = /* @__PURE__ */ new Map();
@@ -2123,21 +2152,16 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     let mcpPercent = null;
     let mcpResetAt = null;
     for (const limit of limits) {
+      const resetTime = limit.nextResetTime;
       if (limit.type === "TOKENS_LIMIT") {
-        if (limit.currentValue !== void 0) {
-          tokensPercent = toSafePercent(limit.currentValue);
-        }
-        if (limit.nextResetTime !== void 0) {
-          tokensResetAt = limit.nextResetTime;
+        tokensPercent = parseUsagePercent(limit);
+        if (resetTime !== void 0) {
+          tokensResetAt = resetTime;
         }
       } else if (limit.type === "TIME_LIMIT") {
-        if (limit.usage !== void 0) {
-          mcpPercent = toSafePercent(limit.usage);
-        } else if (limit.currentValue !== void 0) {
-          mcpPercent = toSafePercent(limit.currentValue);
-        }
-        if (limit.nextResetTime !== void 0) {
-          mcpResetAt = limit.nextResetTime;
+        mcpPercent = parseUsagePercent(limit);
+        if (resetTime !== void 0) {
+          mcpResetAt = resetTime;
         }
       }
     }

@@ -66,7 +66,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.8.1";
+var VERSION = "1.9.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -840,8 +840,28 @@ function getZaiApiBaseUrl() {
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
-function toSafePercent(value) {
-  return Math.min(100, Math.max(0, Math.round(value * 100)));
+function clampPercent(value) {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+function calculateUsagePercent(currentValue, remaining) {
+  const total = currentValue + remaining;
+  if (total <= 0) {
+    return null;
+  }
+  return clampPercent(currentValue / total * 100);
+}
+function parseUsagePercent(limit) {
+  if (limit.percentage !== void 0) {
+    return clampPercent(limit.percentage);
+  }
+  if (limit.usage !== void 0) {
+    const normalized = limit.usage > 1 ? limit.usage : limit.usage * 100;
+    return clampPercent(normalized);
+  }
+  if (limit.currentValue !== void 0 && limit.remaining !== void 0) {
+    return calculateUsagePercent(limit.currentValue, limit.remaining);
+  }
+  return null;
 }
 var zaiCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests4 = /* @__PURE__ */ new Map();
@@ -929,21 +949,16 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     let mcpPercent = null;
     let mcpResetAt = null;
     for (const limit of limits) {
+      const resetTime = limit.nextResetTime;
       if (limit.type === "TOKENS_LIMIT") {
-        if (limit.currentValue !== void 0) {
-          tokensPercent = toSafePercent(limit.currentValue);
-        }
-        if (limit.nextResetTime !== void 0) {
-          tokensResetAt = limit.nextResetTime;
+        tokensPercent = parseUsagePercent(limit);
+        if (resetTime !== void 0) {
+          tokensResetAt = resetTime;
         }
       } else if (limit.type === "TIME_LIMIT") {
-        if (limit.usage !== void 0) {
-          mcpPercent = toSafePercent(limit.usage);
-        } else if (limit.currentValue !== void 0) {
-          mcpPercent = toSafePercent(limit.currentValue);
-        }
-        if (limit.nextResetTime !== void 0) {
-          mcpResetAt = limit.nextResetTime;
+        mcpPercent = parseUsagePercent(limit);
+        if (resetTime !== void 0) {
+          mcpResetAt = resetTime;
         }
       }
     }
@@ -1301,7 +1316,7 @@ function renderZaiSection(usage, zaiData, t) {
 }
 function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, t) {
   const candidates = [];
-  if (!claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
+  if (!isZaiProvider() && !claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
     candidates.push({ name: "claude", score: claudeUsage.fiveHourPercent });
   }
   if (codexUsage && codexUsage.available && !codexUsage.error && codexUsage.fiveHourPercent !== null) {
