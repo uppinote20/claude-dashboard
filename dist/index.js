@@ -2057,12 +2057,11 @@ function parseUsagePercent(limit) {
   if (limit.percentage !== void 0) {
     return clampPercent(limit.percentage);
   }
-  if (limit.usage !== void 0) {
-    const normalized = limit.usage > 1 ? limit.usage : limit.usage * 100;
-    return clampPercent(normalized);
-  }
   if (limit.currentValue !== void 0 && limit.remaining !== void 0) {
     return calculateUsagePercent(limit.currentValue, limit.remaining);
+  }
+  if (limit.currentValue !== void 0 && limit.usage !== void 0 && limit.usage > 0) {
+    return clampPercent(limit.currentValue / limit.usage * 100);
   }
   return null;
 }

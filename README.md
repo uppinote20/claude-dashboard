@@ -51,16 +51,16 @@ Comprehensive status line plugin for Claude Code with context usage, API rate li
 
 > `*` after branch name indicates uncommitted changes in git
 
-**With z.ai/ZHIPU (4th line shows z.ai usage):**
+**With z.ai/ZHIPU (zaiUsage replaces rateLimit widgets on line 1):**
 
 ```
-🟠 GLM │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69%
+🟠 GLM │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 1m: 15% (25d3h)
 📁 project (main*) │ ⏱ 45m │ 🔥 351/min │ ⏳ ~2h30m │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
-🟠 GLM │ 5h: 42% (2h30m) │ 1m: 15% (25d3h)
+codexUsage, geminiUsage (if installed)
 ```
 
-> 🟠 indicates z.ai/ZHIPU provider. Shows 5-hour token usage and monthly MCP usage with reset countdown.
+> 🟠 indicates z.ai/ZHIPU provider. `zaiUsage` widget shows 5-hour token usage and monthly MCP usage with reset countdown, replacing `rateLimit*` widgets.
 
 ## Installation
 
@@ -151,9 +151,11 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 
 | Mode | Lines | Line 1 | Line 2 | Line 3 | Line 4 |
 |------|-------|--------|--------|--------|--------|
-| `compact` | 1 | model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet | - | - | - |
+| `compact` | 1 | model, context, cost, rateLimit5h*, rateLimit7d*, rateLimit7dSonnet*, zaiUsage* | - | - | - |
 | `normal` | 2 | (same as compact) | projectInfo, sessionDuration, burnRate, todoProgress | - | - |
-| `detailed` | 4 | (same as compact) | projectInfo, sessionDuration, burnRate, depletionTime, todoProgress | configCounts, toolActivity, agentStatus, cacheHit | codexUsage, geminiUsage, zaiUsage |
+| `detailed` | 4 | (same as normal) | (same as normal) + depletionTime | configCounts, toolActivity, agentStatus, cacheHit | codexUsage, geminiUsage |
+
+> \* `zaiUsage` and `rateLimit*` widgets are mutually exclusive based on provider detection
 
 ### Configuration File
 

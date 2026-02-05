@@ -31,29 +31,33 @@ function calculateUsagePercent(currentValue: number, remaining: number): number 
 
 /**
  * Parse usage percentage from a limit object
- * Priority: percentage > usage > calculated from currentValue/remaining
+ * Priority: percentage > currentValue/remaining > currentValue/usage
+ *
+ * Note: `usage` field is the total limit (not percentage), per CodexBar reference impl:
+ * - usage: total limit (한도)
+ * - currentValue: current usage amount
+ * - remaining: remaining amount
+ * - percentage: API-returned percentage (0-100)
  */
 function parseUsagePercent(limit: {
   percentage?: number;
-  usage?: number;
+  usage?: number;  // usage = total limit, NOT percentage
   currentValue?: number;
   remaining?: number;
 }): number | null {
-  // Prefer direct percentage field
+  // 1. Prefer direct percentage field
   if (limit.percentage !== undefined) {
     return clampPercent(limit.percentage);
   }
 
-  // Fallback to usage field
-  // Heuristic: values <= 1 are treated as fractions (0-1), values > 1 as percentages (0-100)
-  if (limit.usage !== undefined) {
-    const normalized = limit.usage > 1 ? limit.usage : limit.usage * 100;
-    return clampPercent(normalized);
-  }
-
-  // Calculate from currentValue and remaining
+  // 2. Calculate from currentValue and remaining
   if (limit.currentValue !== undefined && limit.remaining !== undefined) {
     return calculateUsagePercent(limit.currentValue, limit.remaining);
+  }
+
+  // 3. Calculate from currentValue and usage (usage = total limit)
+  if (limit.currentValue !== undefined && limit.usage !== undefined && limit.usage > 0) {
+    return clampPercent((limit.currentValue / limit.usage) * 100);
   }
 
   return null;
