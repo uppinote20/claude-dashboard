@@ -70,5 +70,17 @@ describe('zai-api-client', () => {
     it('should return null when usage is 0 (division by zero)', () => {
       expect(parseUsagePercent({ currentValue: 50, usage: 0 })).toBeNull();
     });
+
+    it('should return null when usage is negative', () => {
+      expect(parseUsagePercent({ currentValue: 50, usage: -100 })).toBeNull();
+    });
+
+    it('should prefer percentage over currentValue/remaining', () => {
+      expect(parseUsagePercent({
+        percentage: 80,
+        currentValue: 30,
+        remaining: 70,
+      })).toBe(80);
+    });
   });
 });
