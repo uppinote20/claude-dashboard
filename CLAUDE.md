@@ -87,7 +87,7 @@ interface Widget<T extends WidgetData> {
 
 | Widget ID | Data Source | Description |
 |-----------|-------------|-------------|
-| `model` | stdin | Model name with emoji |
+| `model` | stdin + settings | Model name with emoji, effort level for Opus (H/M/L) |
 | `context` | stdin | Progress bar, %, tokens |
 | `cost` | stdin | Session cost |
 | `rateLimit5h` | API | 5-hour rate limit |

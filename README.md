@@ -11,7 +11,7 @@ Comprehensive status line plugin for Claude Code with context usage, API rate li
 
 ## Features
 
-- 🤖 **Model Display**: Shows current model (Opus, Sonnet, Haiku)
+- 🤖 **Model Display**: Shows current model (Opus, Sonnet, Haiku) with effort level for Opus
 - 📊 **Progress Bar**: Color-coded context usage (green → yellow → red)
 - 📈 **Token Count**: Current/total tokens in K/M format
 - 💰 **Cost Tracking**: Cumulative session cost in USD
@@ -119,7 +119,7 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 
 | Widget | Description |
 |--------|-------------|
-| `model` | Model name with emoji |
+| `model` | Model name with emoji, effort level for Opus (H/M/L) |
 | `context` | Progress bar, percentage, tokens |
 | `cost` | Session cost in USD |
 | `rateLimit5h` | 5-hour rate limit |

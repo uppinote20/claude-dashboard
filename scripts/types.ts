@@ -200,9 +200,12 @@ export interface WidgetContext {
 /**
  * Widget data types for each widget
  */
+export type EffortLevel = 'high' | 'medium' | 'low';
+
 export interface ModelData {
   id: string;
   displayName: string;
+  effortLevel: EffortLevel;
 }
 
 export interface ContextData {

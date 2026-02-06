@@ -91,7 +91,7 @@ describe('widgets', () => {
     it('should return default values when model data is missing', async () => {
       const ctx = createContext({ model: undefined as any });
       const data = await modelWidget.getData(ctx);
-      expect(data).toEqual({ id: '', displayName: '-' });
+      expect(data).toEqual({ id: '', displayName: '-', effortLevel: 'high' });
     });
 
     it('should extract model data', async () => {
@@ -105,7 +105,7 @@ describe('widgets', () => {
 
     it('should render shortened model name', () => {
       const ctx = createContext();
-      const data = { id: 'claude-sonnet', displayName: 'Claude 3.5 Sonnet' };
+      const data = { id: 'claude-sonnet', displayName: 'Claude 3.5 Sonnet', effortLevel: 'high' as const };
       const result = modelWidget.render(data, ctx);
 
       expect(result).toContain('Sonnet');
@@ -114,7 +114,7 @@ describe('widgets', () => {
 
     it('should shorten Opus model name', () => {
       const ctx = createContext();
-      const data = { id: 'claude-opus', displayName: 'Claude Opus 4' };
+      const data = { id: 'claude-opus', displayName: 'Claude Opus 4', effortLevel: 'high' as const };
       const result = modelWidget.render(data, ctx);
 
       expect(result).toContain('Opus');
