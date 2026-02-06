@@ -2,7 +2,7 @@
  * Model widget - displays current Claude model name with effort level
  */
 
-import { readFile } from 'fs/promises';
+import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 import type { Widget } from './base.js';
@@ -11,30 +11,38 @@ import { COLORS, RESET } from '../utils/colors.js';
 import { shortenModelName } from '../utils/formatters.js';
 import { isZaiProvider } from '../utils/provider.js';
 
-const VALID_NON_DEFAULT_EFFORTS = new Set<EffortLevel>(['medium', 'low']);
+const EFFORT_LEVELS = new Set<string>(['high', 'medium', 'low']);
 
-function isNonDefaultEffort(value: unknown): value is EffortLevel {
-  return VALID_NON_DEFAULT_EFFORTS.has(value as EffortLevel);
+function isEffortLevel(value: unknown): value is EffortLevel {
+  return typeof value === 'string' && EFFORT_LEVELS.has(value);
 }
 
+let settingsCache: { mtime: number; effortLevel: EffortLevel } | null = null;
+
 async function getEffortLevel(): Promise<EffortLevel> {
-  // 1. settings.json
+  const settingsPath = join(homedir(), '.claude', 'settings.json');
+
   try {
-    const settingsPath = join(homedir(), '.claude', 'settings.json');
+    const fileStat = await stat(settingsPath);
+    if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
+      return settingsCache.effortLevel;
+    }
     const content = await readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(content);
-    if (isNonDefaultEffort(settings.effortLevel)) {
-      return settings.effortLevel;
-    }
-  } catch { /* file may not exist */ }
+    const level: EffortLevel = isEffortLevel(settings.effortLevel)
+      ? settings.effortLevel
+      : 'high';
+    settingsCache = { mtime: fileStat.mtimeMs, effortLevel: level };
+    return level;
+  } catch {
+    settingsCache = null;
+  }
 
-  // 2. Environment variable
   const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
-  if (isNonDefaultEffort(envEffort)) {
+  if (isEffortLevel(envEffort)) {
     return envEffort;
   }
 
-  // 3. Default
   return 'high';
 }
 

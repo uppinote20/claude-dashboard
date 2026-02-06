@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile8, stat as stat7 } from "fs/promises";
+import { readFile as readFile8, stat as stat8 } from "fs/promises";
 import { join as join5 } from "path";
 import { homedir as homedir4 } from "os";
 
@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.9.0";
+var VERSION = "1.9.1";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -433,7 +433,7 @@ function debugLog(context, message, error) {
 }
 
 // scripts/widgets/model.ts
-import { readFile as readFile3 } from "fs/promises";
+import { readFile as readFile3, stat as stat3 } from "fs/promises";
 import { join as join2 } from "path";
 import { homedir as homedir2 } from "os";
 
@@ -534,22 +534,28 @@ function getZaiApiBaseUrl() {
 }
 
 // scripts/widgets/model.ts
-var VALID_NON_DEFAULT_EFFORTS = /* @__PURE__ */ new Set(["medium", "low"]);
-function isNonDefaultEffort(value) {
-  return VALID_NON_DEFAULT_EFFORTS.has(value);
+var EFFORT_LEVELS = /* @__PURE__ */ new Set(["high", "medium", "low"]);
+function isEffortLevel(value) {
+  return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
+var settingsCache = null;
 async function getEffortLevel() {
+  const settingsPath = join2(homedir2(), ".claude", "settings.json");
   try {
-    const settingsPath = join2(homedir2(), ".claude", "settings.json");
+    const fileStat = await stat3(settingsPath);
+    if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
+      return settingsCache.effortLevel;
+    }
     const content = await readFile3(settingsPath, "utf-8");
     const settings = JSON.parse(content);
-    if (isNonDefaultEffort(settings.effortLevel)) {
-      return settings.effortLevel;
-    }
+    const level = isEffortLevel(settings.effortLevel) ? settings.effortLevel : "high";
+    settingsCache = { mtime: fileStat.mtimeMs, effortLevel: level };
+    return level;
   } catch {
+    settingsCache = null;
   }
   const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
-  if (isNonDefaultEffort(envEffort)) {
+  if (isEffortLevel(envEffort)) {
     return envEffort;
   }
   return "high";
@@ -874,7 +880,7 @@ var configCountsWidget = {
 };
 
 // scripts/utils/session.ts
-import { readFile as readFile4, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat3 } from "fs/promises";
+import { readFile as readFile4, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat4 } from "fs/promises";
 import { join as join4 } from "path";
 import { homedir as homedir3 } from "os";
 var SESSION_DIR = join4(homedir3(), ".cache", "claude-dashboard", "sessions");
@@ -981,7 +987,7 @@ async function cleanupExpiredSessions() {
         continue;
       try {
         const filePath = join4(SESSION_DIR, file);
-        const fileStat = await stat3(filePath);
+        const fileStat = await stat4(filePath);
         if (fileStat.mtimeMs < cutoffTime) {
           await unlink2(filePath);
           debugLog("session", `Cleaned up expired session: ${file}`);
@@ -1010,7 +1016,7 @@ var sessionDurationWidget = {
 };
 
 // scripts/utils/transcript-parser.ts
-import { readFile as readFile5, stat as stat4 } from "fs/promises";
+import { readFile as readFile5, stat as stat5 } from "fs/promises";
 var cachedTranscript = null;
 function parseJsonlLine(line) {
   try {
@@ -1021,7 +1027,7 @@ function parseJsonlLine(line) {
 }
 async function parseTranscript(transcriptPath) {
   try {
-    const fileStat = await stat4(transcriptPath);
+    const fileStat = await stat5(transcriptPath);
     const mtime = fileStat.mtimeMs;
     if (cachedTranscript?.path === transcriptPath && cachedTranscript.mtime === mtime) {
       return cachedTranscript.data;
@@ -1341,7 +1347,7 @@ var cacheHitWidget = {
 };
 
 // scripts/utils/codex-client.ts
-import { readFile as readFile6, stat as stat5, writeFile as writeFile2, mkdir as mkdir3 } from "fs/promises";
+import { readFile as readFile6, stat as stat6, writeFile as writeFile2, mkdir as mkdir3 } from "fs/promises";
 import { execFileSync as execFileSync3 } from "child_process";
 import os2 from "os";
 import path2 from "path";
@@ -1358,7 +1364,7 @@ function isValidCodexApiResponse(data) {
 }
 async function isCodexInstalled() {
   try {
-    await stat5(CODEX_AUTH_PATH);
+    await stat6(CODEX_AUTH_PATH);
     return true;
   } catch {
     return false;
@@ -1366,7 +1372,7 @@ async function isCodexInstalled() {
 }
 async function getCodexAuth() {
   try {
-    const fileStat = await stat5(CODEX_AUTH_PATH);
+    const fileStat = await stat6(CODEX_AUTH_PATH);
     if (cachedAuth && cachedAuth.mtime === fileStat.mtimeMs) {
       return cachedAuth.data;
     }
@@ -1395,7 +1401,7 @@ async function getModelFromConfig() {
 }
 async function getConfigMtime() {
   try {
-    const fileStat = await stat5(CODEX_CONFIG_PATH);
+    const fileStat = await stat6(CODEX_CONFIG_PATH);
     return fileStat.mtimeMs;
   } catch {
     return 0;
@@ -1604,7 +1610,7 @@ var codexUsageWidget = {
 };
 
 // scripts/utils/gemini-client.ts
-import { readFile as readFile7, writeFile as writeFile3, stat as stat6 } from "fs/promises";
+import { readFile as readFile7, writeFile as writeFile3, stat as stat7 } from "fs/promises";
 import { execFileSync as execFileSync4 } from "child_process";
 import os3 from "os";
 import path3 from "path";
@@ -1635,7 +1641,7 @@ async function isGeminiInstalled() {
       return true;
     }
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    await stat6(oauthPath);
+    await stat7(oauthPath);
     return true;
   } catch {
     return false;
@@ -1670,7 +1676,7 @@ async function getTokenFromKeychain() {
 async function getCredentialsFromFile2() {
   try {
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    const fileStat = await stat6(oauthPath);
+    const fileStat = await stat7(oauthPath);
     if (cachedCredentials && cachedCredentials.mtime === fileStat.mtimeMs) {
       return cachedCredentials.data;
     }
@@ -1804,7 +1810,7 @@ var PROJECT_ID_CACHE_TTL_MS = 5 * 60 * 1e3;
 async function getGeminiSettings() {
   try {
     const settingsPath = path3.join(getGeminiDir(), SETTINGS_FILE);
-    const fileStat = await stat6(settingsPath);
+    const fileStat = await stat7(settingsPath);
     if (cachedSettings && cachedSettings.mtime === fileStat.mtimeMs) {
       return cachedSettings.data;
     }
@@ -2375,7 +2381,7 @@ async function readStdin() {
 }
 async function loadConfig() {
   try {
-    const fileStat = await stat7(CONFIG_PATH);
+    const fileStat = await stat8(CONFIG_PATH);
     const mtime = fileStat.mtimeMs;
     if (configCache?.mtime === mtime) {
       return configCache.config;

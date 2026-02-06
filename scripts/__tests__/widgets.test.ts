@@ -91,7 +91,7 @@ describe('widgets', () => {
     it('should return default values when model data is missing', async () => {
       const ctx = createContext({ model: undefined as any });
       const data = await modelWidget.getData(ctx);
-      expect(data).toEqual({ id: '', displayName: '-' });
+      expect(data).toEqual({ id: '', displayName: '-', effortLevel: 'high' });
     });
 
     it('should extract model data', async () => {
