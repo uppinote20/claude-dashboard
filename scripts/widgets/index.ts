@@ -30,6 +30,7 @@ import { cacheHitWidget } from './cache-hit.js';
 import { codexUsageWidget } from './codex-usage.js';
 import { geminiUsageWidget, geminiUsageAllWidget } from './gemini-usage.js';
 import { zaiUsageWidget } from './zai-usage.js';
+import { sessionIdWidget, sessionIdFullWidget } from './session-id.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -54,6 +55,8 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['geminiUsage', geminiUsageWidget],
   ['geminiUsageAll', geminiUsageAllWidget],
   ['zaiUsage', zaiUsageWidget],
+  ['sessionId', sessionIdWidget],
+  ['sessionIdFull', sessionIdFullWidget],
 ] as [WidgetId, Widget][]);
 
 /**

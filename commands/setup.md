@@ -47,6 +47,8 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
 | `projectInfo` | Directory name + git branch |
 | `configCounts` | CLAUDE.md, rules, MCPs, hooks counts |
+| `sessionId` | Session ID (short 8 chars) |
+| `sessionIdFull` | Session ID (full UUID) |
 | `sessionDuration` | Session duration |
 | `toolActivity` | Running/completed tools |
 | `agentStatus` | Subagent progress |

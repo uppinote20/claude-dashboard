@@ -42,6 +42,8 @@ export type WidgetId =
   | 'projectInfo'
   | 'configCounts'
   | 'sessionDuration'
+  | 'sessionId'
+  | 'sessionIdFull'
   | 'toolActivity'
   | 'agentStatus'
   | 'todoProgress'
@@ -71,11 +73,11 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
   ],
   normal: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
-    ['projectInfo', 'sessionDuration', 'burnRate', 'todoProgress'],
+    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'todoProgress'],
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
-    ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
+    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
     ['codexUsage', 'geminiUsage'],
   ],
@@ -94,6 +96,8 @@ export interface Config {
   cache: {
     ttlSeconds: number;
   };
+  /** Terminal app for session resume: 'auto' (detect), specific name, or custom app */
+  terminal?: 'auto' | 'terminal' | 'iterm2' | 'warp' | 'cmd' | 'powershell' | string;
 }
 
 /**
@@ -147,6 +151,17 @@ export interface Translations {
     burnRate: string;
     cache: string;
     toLimit: string;
+  };
+  /** Sessions command labels */
+  sessions: {
+    title: string;
+    messages: string;
+    modified: string;
+    noSessions: string;
+    open: string;
+    copied: string;
+    serverStarted: string;
+    serverStopping: string;
   };
   /** Check-usage command labels */
   checkUsage: {
@@ -365,6 +380,48 @@ export interface GeminiUsageAllData {
 }
 
 /**
+ * Session ID widget data
+ */
+export interface SessionIdData {
+  sessionId: string;
+  shortId: string;
+}
+
+/**
+ * Session entry from sessions-index.json
+ */
+export interface SessionEntry {
+  sessionId: string;
+  fullPath?: string;
+  fileMtime?: number;
+  firstPrompt?: string;
+  summary: string;
+  messageCount: number;
+  created: string;
+  modified: string;
+  gitBranch?: string;
+  projectPath?: string;
+  isSidechain?: boolean;
+}
+
+/**
+ * Sessions index file structure
+ */
+export interface SessionsIndex {
+  version: number;
+  entries: SessionEntry[];
+  originalPath?: string;
+}
+
+/**
+ * Sessions grouped by project path
+ */
+export interface ProjectSessions {
+  projectPath: string;
+  sessions: SessionEntry[];
+}
+
+/**
  * z.ai/ZHIPU usage widget data
  */
 export interface ZaiUsageData {
@@ -393,6 +450,7 @@ export type WidgetData =
   | ProjectInfoData
   | ConfigCountsData
   | SessionDurationData
+  | SessionIdData
   | ToolActivityData
   | AgentStatusData
   | TodoProgressData

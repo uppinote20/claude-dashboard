@@ -19,6 +19,7 @@ Comprehensive status line plugin for Claude Code with context usage, API rate li
 - 📁 **Project Info**: Directory name with git branch (* for uncommitted changes)
 - 🔧 **Config Counts**: CLAUDE.md, rules, MCPs, hooks counts
 - ⚙️ **Tool Activity**: Running/completed tools tracking
+- 🔑 **Session ID**: Current session identifier (short/full UUID)
 - ⏱️ **Session Duration**: Session time tracking
 - 🤖 **Agent Status**: Subagent progress tracking
 - ✓ **Todo Progress**: Task completion rate
@@ -127,6 +128,8 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
 | `projectInfo` | Directory name + git branch (* if dirty) |
 | `configCounts` | CLAUDE.md, rules, MCPs, hooks |
+| `sessionId` | Session ID (short 8-char) |
+| `sessionIdFull` | Session ID (full UUID) |
 | `sessionDuration` | Session duration |
 | `toolActivity` | Running/completed tools |
 | `agentStatus` | Subagent progress |
@@ -152,7 +155,7 @@ Run `/claude-dashboard:setup` without arguments to use interactive mode:
 | Mode | Lines | Line 1 | Line 2 | Line 3 | Line 4 |
 |------|-------|--------|--------|--------|--------|
 | `compact` | 1 | model, context, cost, rateLimit5h*, rateLimit7d*, rateLimit7dSonnet*, zaiUsage* | - | - | - |
-| `normal` | 2 | (same as compact) | projectInfo, sessionDuration, burnRate, todoProgress | - | - |
+| `normal` | 2 | (same as compact) | projectInfo, sessionId, sessionDuration, burnRate, todoProgress | - | - |
 | `detailed` | 4 | (same as normal) | (same as normal) + depletionTime | configCounts, toolActivity, agentStatus, cacheHit | codexUsage, geminiUsage |
 
 > \* `zaiUsage` and `rateLimit*` widgets are mutually exclusive based on provider detection

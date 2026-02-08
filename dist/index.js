@@ -12,11 +12,11 @@ var DISPLAY_PRESETS = {
   ],
   normal: [
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
-    ["projectInfo", "sessionDuration", "burnRate", "todoProgress"]
+    ["projectInfo", "sessionId", "sessionDuration", "burnRate", "todoProgress"]
   ],
   detailed: [
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
-    ["projectInfo", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
+    ["projectInfo", "sessionId", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit"],
     ["codexUsage", "geminiUsage"]
   ]
@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.9.1";
+var VERSION = "1.10.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -2292,6 +2292,33 @@ var zaiUsageWidget = {
   }
 };
 
+// scripts/widgets/session-id.ts
+async function getSessionIdData(ctx) {
+  const sessionId = ctx.stdin.session_id;
+  if (!sessionId)
+    return null;
+  return {
+    sessionId,
+    shortId: sessionId.slice(0, 8)
+  };
+}
+var sessionIdWidget = {
+  id: "sessionId",
+  name: "Session ID (Short)",
+  getData: getSessionIdData,
+  render(data) {
+    return colorize(`\u{1F511} ${data.shortId}`, COLORS.dim);
+  }
+};
+var sessionIdFullWidget = {
+  id: "sessionIdFull",
+  name: "Session ID (Full)",
+  getData: getSessionIdData,
+  render(data) {
+    return colorize(`\u{1F511} ${data.sessionId}`, COLORS.dim);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -2312,7 +2339,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["codexUsage", codexUsageWidget],
   ["geminiUsage", geminiUsageWidget],
   ["geminiUsageAll", geminiUsageAllWidget],
-  ["zaiUsage", zaiUsageWidget]
+  ["zaiUsage", zaiUsageWidget],
+  ["sessionId", sessionIdWidget],
+  ["sessionIdFull", sessionIdFullWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);
