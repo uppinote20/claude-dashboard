@@ -1236,7 +1236,7 @@ var todoProgressWidget = {
       return null;
     }
     const progress = extractTodoProgress(transcript);
-    return progress || { total: 0, completed: 0, current: null };
+    return progress || { total: 0, completed: 0 };
   },
   render(data, ctx) {
     const { translations: t } = ctx;

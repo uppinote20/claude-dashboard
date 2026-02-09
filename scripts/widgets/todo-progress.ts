@@ -26,7 +26,7 @@ export const todoProgressWidget: Widget<TodoProgressData> = {
     const progress = extractTodoProgress(transcript);
 
     // Return default data if no TodoWrite calls yet
-    return progress || { total: 0, completed: 0, current: null };
+    return progress || { total: 0, completed: 0 };
   },
 
   render(data: TodoProgressData, ctx: WidgetContext): string {
