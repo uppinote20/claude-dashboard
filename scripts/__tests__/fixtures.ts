@@ -57,4 +57,5 @@ export const MOCK_STDIN: StdinInput = {
     },
   },
   cost: { total_cost_usd: 0.75 },
+  session_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
 };
