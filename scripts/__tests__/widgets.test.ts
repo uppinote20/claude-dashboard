@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget } from '../widgets/model.js';
 import { contextWidget } from '../widgets/context.js';
 import { costWidget } from '../widgets/cost.js';
@@ -16,67 +16,23 @@ import { sessionDurationWidget } from '../widgets/session-duration.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
-import type { WidgetContext, StdinInput, Config, Translations } from '../types.js';
+import type { WidgetContext, StdinInput } from '../types.js';
+import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 // Mock version module for codex-client
 vi.mock('../version.js', () => ({
   VERSION: '1.0.0-test',
 }));
 
-// Mock translations
-const mockTranslations: Translations = {
-  model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S', codex: 'Codex' },
-  time: { days: 'd', hours: 'h', minutes: 'm', seconds: 's' },
-  errors: { no_context: 'No context yet' },
-  widgets: {
-    tools: 'Tools',
-    done: 'done',
-    running: 'running',
-    agent: 'Agent',
-    todos: 'Todos',
-    claudeMd: 'CLAUDE.md',
-    rules: 'Rules',
-    mcps: 'MCP',
-    hooks: 'Hooks',
-    burnRate: 'Rate',
-    cache: 'Cache',
-    toLimit: 'to',
-  },
-};
-
-const mockConfig: Config = {
-  language: 'en',
-  plan: 'max',
-  displayMode: 'compact',
-  cache: { ttlSeconds: 60 },
-};
-
 function createStdin(overrides: Partial<StdinInput> = {}): StdinInput {
-  return {
-    model: { id: 'claude-sonnet-3.5', display_name: 'Claude 3.5 Sonnet' },
-    workspace: { current_dir: '/test/project' },
-    context_window: {
-      total_input_tokens: 5000,
-      total_output_tokens: 2000,
-      context_window_size: 200000,
-      current_usage: {
-        input_tokens: 5000,
-        output_tokens: 2000,
-        cache_creation_input_tokens: 1000,
-        cache_read_input_tokens: 500,
-      },
-    },
-    cost: { total_cost_usd: 0.75 },
-    ...overrides,
-  };
+  return { ...MOCK_STDIN, ...overrides };
 }
 
 function createContext(stdinOverrides: Partial<StdinInput> = {}): WidgetContext {
   return {
     stdin: createStdin(stdinOverrides),
-    config: mockConfig,
-    translations: mockTranslations,
+    config: MOCK_CONFIG,
+    translations: MOCK_TRANSLATIONS,
     rateLimits: null,
   };
 }

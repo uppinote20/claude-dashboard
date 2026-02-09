@@ -11,40 +11,10 @@ import type {
   UsageLimits,
   CodexUsageLimits,
   GeminiUsageLimits,
-  Translations,
   CLIUsageInfo,
 } from '../types.js';
 import type { ZaiUsageLimits } from '../utils/zai-api-client.js';
-
-const mockTranslations: Translations = {
-  model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S', '1m': '1m' },
-  time: { days: 'd', hours: 'h', minutes: 'm', seconds: 's' },
-  errors: { no_context: 'No context yet' },
-  widgets: {
-    tools: 'Tools',
-    done: 'done',
-    running: 'running',
-    agent: 'Agent',
-    todos: 'Todos',
-    claudeMd: 'CLAUDE.md',
-    rules: 'Rules',
-    mcps: 'MCP',
-    hooks: 'Hooks',
-    burnRate: 'Burn',
-    cache: 'Cache',
-    toLimit: 'to limit',
-  },
-  checkUsage: {
-    title: 'CLI Usage Dashboard',
-    recommendation: 'Recommendation',
-    lowestUsage: 'Lowest usage',
-    used: 'used',
-    notInstalled: 'Not installed',
-    errorFetching: 'Error fetching',
-    noData: 'No data available',
-  },
-};
+import { MOCK_TRANSLATIONS } from './fixtures.js';
 
 describe('normalizeToISO', () => {
   it('should return null for null input', () => {
@@ -299,9 +269,9 @@ describe('calculateRecommendation', () => {
 
   it('should return noData when no CLIs have valid data', () => {
     const claude = createUsage({ name: 'Claude', error: true });
-    const result = calculateRecommendation(claude, null, null, null, mockTranslations);
+    const result = calculateRecommendation(claude, null, null, null, MOCK_TRANSLATIONS);
     expect(result.name).toBeNull();
-    expect(result.reason).toBe('No data available');
+    expect(result.reason).toBe('No usage data available');
   });
 
   it('should recommend CLI with lowest 5h usage', () => {
@@ -309,7 +279,7 @@ describe('calculateRecommendation', () => {
     const codex = createUsage({ name: 'Codex', fiveHourPercent: 30 });
     const gemini = createUsage({ name: 'Gemini', fiveHourPercent: 40 });
 
-    const result = calculateRecommendation(claude, codex, gemini, null, mockTranslations);
+    const result = calculateRecommendation(claude, codex, gemini, null, MOCK_TRANSLATIONS);
     expect(result.name).toBe('codex');
     expect(result.reason).toContain('30%');
   });
@@ -318,7 +288,7 @@ describe('calculateRecommendation', () => {
     const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
     const codex = createUsage({ name: 'Codex', available: false, fiveHourPercent: 10 });
 
-    const result = calculateRecommendation(claude, codex, null, null, mockTranslations);
+    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
@@ -326,7 +296,7 @@ describe('calculateRecommendation', () => {
     const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
     const codex = createUsage({ name: 'Codex', error: true, fiveHourPercent: 10 });
 
-    const result = calculateRecommendation(claude, codex, null, null, mockTranslations);
+    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
@@ -334,7 +304,7 @@ describe('calculateRecommendation', () => {
     const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
     const codex = createUsage({ name: 'Codex', fiveHourPercent: null });
 
-    const result = calculateRecommendation(claude, codex, null, null, mockTranslations);
+    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
@@ -342,7 +312,7 @@ describe('calculateRecommendation', () => {
     const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
     const zai = createUsage({ name: 'z.ai', fiveHourPercent: 5 });
 
-    const result = calculateRecommendation(claude, null, null, zai, mockTranslations);
+    const result = calculateRecommendation(claude, null, null, zai, MOCK_TRANSLATIONS);
     expect(result.name).toBe('z.ai');
     expect(result.reason).toContain('5%');
   });
@@ -353,7 +323,7 @@ describe('calculateRecommendation', () => {
     const gemini = createUsage({ name: 'Gemini', fiveHourPercent: 25 });
     const zai = createUsage({ name: 'z.ai', fiveHourPercent: 25 });
 
-    const result = calculateRecommendation(claude, codex, gemini, zai, mockTranslations);
+    const result = calculateRecommendation(claude, codex, gemini, zai, MOCK_TRANSLATIONS);
     // Should pick first one alphabetically after sort (all have same score)
     expect(result.name).not.toBeNull();
     expect(result.reason).toContain('25%');

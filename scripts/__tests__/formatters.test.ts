@@ -7,25 +7,7 @@ import {
   calculatePercent,
   formatDuration,
 } from '../utils/formatters.js';
-import type { Translations } from '../types.js';
-
-const mockTranslations: Translations = {
-  model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S' },
-  time: { hours: 'h', minutes: 'm', seconds: 's' },
-  errors: { no_context: 'No context yet' },
-  widgets: {
-    tools: 'Tools',
-    done: 'done',
-    running: 'running',
-    agent: 'Agent',
-    todos: 'Todos',
-    claudeMd: 'CLAUDE.md',
-    rules: 'Rules',
-    mcps: 'MCP',
-    hooks: 'Hooks',
-  },
-};
+import { MOCK_TRANSLATIONS } from './fixtures.js';
 
 describe('formatters', () => {
   describe('formatTokens', () => {
@@ -63,24 +45,24 @@ describe('formatters', () => {
   describe('formatTimeRemaining', () => {
     it('should return 0m for past times', () => {
       const pastTime = new Date(Date.now() - 60000);
-      expect(formatTimeRemaining(pastTime, mockTranslations)).toBe('0m');
+      expect(formatTimeRemaining(pastTime, MOCK_TRANSLATIONS)).toBe('0m');
     });
 
     it('should format minutes only', () => {
       const futureTime = new Date(Date.now() + 45 * 60 * 1000);
-      const result = formatTimeRemaining(futureTime, mockTranslations);
+      const result = formatTimeRemaining(futureTime, MOCK_TRANSLATIONS);
       expect(result).toMatch(/^\d+m$/);
     });
 
     it('should format hours and minutes', () => {
       const futureTime = new Date(Date.now() + 2.5 * 60 * 60 * 1000);
-      const result = formatTimeRemaining(futureTime, mockTranslations);
+      const result = formatTimeRemaining(futureTime, MOCK_TRANSLATIONS);
       expect(result).toMatch(/^\d+h\d+m$/);
     });
 
     it('should accept ISO string', () => {
       const futureTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-      const result = formatTimeRemaining(futureTime, mockTranslations);
+      const result = formatTimeRemaining(futureTime, MOCK_TRANSLATIONS);
       expect(result).toMatch(/^\d+m$/);
     });
   });

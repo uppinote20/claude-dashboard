@@ -4,60 +4,15 @@ import {
   rateLimit7dWidget,
   rateLimit7dSonnetWidget,
 } from '../widgets/rate-limit.js';
-import type { WidgetContext, UsageLimits, Translations, Config, StdinInput } from '../types.js';
-
-// Mock translations
-const mockTranslations: Translations = {
-  model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S' },
-  time: { hours: 'h', minutes: 'm', seconds: 's' },
-  errors: { no_context: 'No context yet' },
-  widgets: {
-    tools: 'Tools',
-    done: 'done',
-    running: 'running',
-    agent: 'Agent',
-    todos: 'Todos',
-    claudeMd: 'CLAUDE.md',
-    rules: 'Rules',
-    mcps: 'MCP',
-    hooks: 'Hooks',
-  },
-};
-
-// Mock config
-const mockConfig: Config = {
-  language: 'en',
-  plan: 'max',
-  displayMode: 'compact',
-  cache: { ttlSeconds: 60 },
-};
-
-// Mock stdin (minimal)
-const mockStdin: StdinInput = {
-  model: { id: 'claude-sonnet', display_name: 'Claude Sonnet' },
-  workspace: { current_dir: '/test' },
-  context_window: {
-    total_input_tokens: 1000,
-    total_output_tokens: 500,
-    context_window_size: 200000,
-    current_usage: {
-      input_tokens: 1000,
-      output_tokens: 500,
-      cache_creation_input_tokens: 0,
-      cache_read_input_tokens: 0,
-    },
-  },
-  cost: { total_cost_usd: 0.5 },
-  transcript_path: '/test/transcript.jsonl',
-};
+import type { WidgetContext, UsageLimits, Config } from '../types.js';
+import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 // Helper to create widget context
 function createContext(rateLimits: UsageLimits | null | undefined, config?: Partial<Config>): WidgetContext {
   return {
-    stdin: mockStdin,
-    config: { ...mockConfig, ...config },
-    translations: mockTranslations,
+    stdin: MOCK_STDIN,
+    config: { ...MOCK_CONFIG, ...config },
+    translations: MOCK_TRANSLATIONS,
     rateLimits,
   };
 }
