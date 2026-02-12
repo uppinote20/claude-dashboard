@@ -65,7 +65,7 @@ export type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
  *
  * compact: Essential metrics - 1 line
  * normal: Essential + project/session/todo - 2 lines
- * detailed: Normal + config/tools/agents (additive) - 3 lines
+ * detailed: Normal + config/tools/agents (additive) - 4 lines
  */
 export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][]> = {
   compact: [

@@ -16,9 +16,9 @@ Configure the claude-dashboard status line plugin with widget system support.
 ### Direct Mode Arguments
 
 - `$1`: Display mode
-  - `compact` (default): 1 line (model, context, cost, rate limits)
-  - `normal`: 2 lines (+ project info, session, tools, todos)
-  - `detailed`: 3 lines (+ config counts, agent status)
+  - `compact` (default): 1 line (model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage)
+  - `normal`: 2 lines (+ projectInfo, sessionId, sessionDuration, burnRate, todoProgress)
+  - `detailed`: 4 lines (+ depletionTime, configCounts, toolActivity, agentStatus, cacheHit, codexUsage, geminiUsage)
   - `custom`: Custom widget configuration (requires `$4`)
 
 - `$2`: Language preference
@@ -142,13 +142,13 @@ Display what the status line will look like based on their configuration:
 **Normal (2 lines):**
 ```
 🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main) │ ⏱ 45m │ ✓ 3/5
+📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
 ```
 
 **Detailed (4 lines):**
 ```
 🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main) │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
+📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
 🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m) │ 🟠 GLM │ 5h: 23% │ 1m: 45%
 ```
