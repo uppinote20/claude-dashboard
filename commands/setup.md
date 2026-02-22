@@ -79,6 +79,14 @@ Use AskUserQuestion to ask the user:
    - Ask if they want to add Line 3
    - Continue until they say no (no line limit)
 
+3. Theme selection
+   - Options: default (recommended), minimal, catppuccin, dracula, gruvbox
+
+4. Disabled widgets (optional)
+   - Ask if they want to hide any widgets
+   - If yes, multi-select from available widgets
+   - Selected widgets will be added to `disabledWidgets` array
+
 **If arguments provided (direct mode):**
 
 Use the provided arguments directly.
