@@ -6,7 +6,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, RateLimitData, UsageLimits } from '../types.js';
-import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
+import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
 import { isZaiProvider } from '../utils/provider.js';
 
@@ -15,7 +15,7 @@ type LimitKey = keyof UsageLimits;
 
 function renderRateLimit(data: RateLimitData, ctx: WidgetContext, labelKey: LabelKey): string {
   if (data.isError) {
-    return colorize('⚠️', COLORS.yellow);
+    return colorize('⚠️', getTheme().warning);
   }
 
   const { translations: t } = ctx;

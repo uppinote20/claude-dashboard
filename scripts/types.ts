@@ -84,6 +84,11 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
 };
 
 /**
+ * Theme identifiers
+ */
+export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox';
+
+/**
  * User configuration stored in ~/.claude/claude-dashboard.local.json
  */
 export interface Config {
@@ -93,6 +98,10 @@ export interface Config {
   displayMode: DisplayMode;
   /** Custom line configuration (only used when displayMode is 'custom') */
   lines?: WidgetId[][];
+  /** Widget IDs to disable from display presets */
+  disabledWidgets?: WidgetId[];
+  /** Color theme */
+  theme?: ThemeId;
   cache: {
     ttlSeconds: number;
   };
@@ -232,6 +241,10 @@ export interface RateLimitData {
 export interface ProjectInfoData {
   dirName: string;
   gitBranch?: string;
+  /** Commits ahead of upstream */
+  ahead?: number;
+  /** Commits behind upstream */
+  behind?: number;
 }
 
 export interface ConfigCountsData {

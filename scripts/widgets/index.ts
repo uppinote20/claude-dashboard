@@ -10,7 +10,7 @@ import type {
   DisplayMode,
 } from '../types.js';
 import { DISPLAY_PRESETS } from '../types.js';
-import { COLORS, RESET } from '../utils/colors.js';
+import { getSeparator } from '../utils/colors.js';
 import { debugLog } from '../utils/debug.js';
 
 // Widget imports
@@ -74,15 +74,23 @@ export function getAllWidgets(): Widget[] {
 }
 
 /**
- * Get lines configuration based on display mode
+ * Get lines configuration based on display mode, with disabled widgets filtered out
  */
 export function getLines(config: Config): WidgetId[][] {
-  if (config.displayMode === 'custom' && config.lines) {
-    return config.lines;
+  const lines = config.displayMode === 'custom' && config.lines
+    ? config.lines
+    : DISPLAY_PRESETS[config.displayMode as keyof typeof DISPLAY_PRESETS] || DISPLAY_PRESETS.compact;
+
+  // Filter out disabled widgets
+  const disabled = config.disabledWidgets;
+  if (!disabled || disabled.length === 0) {
+    return lines;
   }
 
-  // Use single source of truth from types.ts
-  return DISPLAY_PRESETS[config.displayMode as keyof typeof DISPLAY_PRESETS] || DISPLAY_PRESETS.compact;
+  const disabledSet = new Set(disabled);
+  return lines
+    .map((line) => line.filter((id) => !disabledSet.has(id)))
+    .filter((line) => line.length > 0);
 }
 
 /**
@@ -123,7 +131,7 @@ async function renderLine(
     widgetIds.map((id) => renderWidget(id, ctx))
   );
 
-  const separator = ` ${COLORS.dim}│${RESET} `;
+  const separator = getSeparator();
   const outputs = results
     .filter((r): r is WidgetRenderResult => r !== null && r.output.length > 0)
     .map((r) => r.output);

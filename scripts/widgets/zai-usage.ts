@@ -5,7 +5,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, ZaiUsageData, Translations } from '../types.js';
-import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
+import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { isZaiInstalled, fetchZaiUsage } from '../utils/zai-api-client.js';
 import { debugLog } from '../utils/debug.js';
 
@@ -86,8 +86,10 @@ export const zaiUsageWidget: Widget<ZaiUsageData> = {
     parts.push(`🟠 ${data.model}`);
 
     // Show error indicator or usage percentages
+    const theme = getTheme();
+
     if (data.isError) {
-      parts.push(colorize('⚠️', COLORS.yellow));
+      parts.push(colorize('⚠️', theme.warning));
     } else {
       // 5-hour token usage
       if (data.tokensPercent !== null) {
@@ -108,6 +110,6 @@ export const zaiUsageWidget: Widget<ZaiUsageData> = {
       }
     }
 
-    return parts.join(` ${colorize('│', COLORS.dim)} `);
+    return parts.join(` ${colorize('│', theme.dim)} `);
   },
 };

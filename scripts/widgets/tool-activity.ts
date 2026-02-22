@@ -4,7 +4,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, ToolActivityData } from '../types.js';
-import { COLORS, colorize } from '../utils/colors.js';
+import { colorize, getTheme } from '../utils/colors.js';
 import {
   parseTranscript,
   getRunningTools,
@@ -35,11 +35,13 @@ export const toolActivityWidget: Widget<ToolActivityData> = {
   render(data: ToolActivityData, ctx: WidgetContext): string {
     const { translations: t } = ctx;
 
+    const theme = getTheme();
+
     if (data.running.length === 0) {
       // No running tools, just show completed count
       return colorize(
         `${t.widgets.tools}: ${data.completed} ${t.widgets.done}`,
-        COLORS.dim
+        theme.secondary
       );
     }
 
@@ -50,6 +52,6 @@ export const toolActivityWidget: Widget<ToolActivityData> = {
       .join(', ');
     const more = data.running.length > 2 ? ` +${data.running.length - 2}` : '';
 
-    return `${colorize('⚙️', COLORS.yellow)} ${runningNames}${more} (${data.completed} ${t.widgets.done})`;
+    return `${colorize('⚙️', theme.warning)} ${runningNames}${more} (${data.completed} ${t.widgets.done})`;
   },
 };

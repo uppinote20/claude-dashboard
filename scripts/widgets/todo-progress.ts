@@ -4,7 +4,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, TodoProgressData } from '../types.js';
-import { COLORS, colorize, getColorForPercent } from '../utils/colors.js';
+import { colorize, getColorForPercent, getTheme } from '../utils/colors.js';
 import { parseTranscript, extractTodoProgress } from '../utils/transcript-parser.js';
 import { calculatePercent } from '../utils/formatters.js';
 
@@ -33,8 +33,10 @@ export const todoProgressWidget: Widget<TodoProgressData> = {
     const { translations: t } = ctx;
 
     // Show placeholder when no todos exist
+    const theme = getTheme();
+
     if (data.total === 0) {
-      return colorize(`${t.widgets.todos}: -`, COLORS.dim);
+      return colorize(`${t.widgets.todos}: -`, theme.dim);
     }
 
     const percent = calculatePercent(data.completed, data.total);
@@ -46,13 +48,13 @@ export const todoProgressWidget: Widget<TodoProgressData> = {
         data.current.content.length > 15
           ? data.current.content.slice(0, 15) + '...'
           : data.current.content;
-      return `${colorize('✓', COLORS.pastelGreen)} ${taskName} [${data.completed}/${data.total}]`;
+      return `${colorize('✓', theme.safe)} ${taskName} [${data.completed}/${data.total}]`;
     }
 
     // All done or no current task
     return colorize(
       `${t.widgets.todos}: ${data.completed}/${data.total}`,
-      data.completed === data.total ? COLORS.pastelGreen : color
+      data.completed === data.total ? theme.safe : color
     );
   },
 };

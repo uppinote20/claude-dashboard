@@ -6,7 +6,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, GeminiUsageData, GeminiUsageAllData, Translations } from '../types.js';
-import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
+import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { isGeminiInstalled, fetchGeminiUsage } from '../utils/gemini-client.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
 import { debugLog } from '../utils/debug.js';
@@ -66,17 +66,19 @@ export const geminiUsageWidget: Widget<GeminiUsageData> = {
     const { translations: t } = ctx;
     const parts: string[] = [];
 
+    const theme = getTheme();
+
     // Gemini icon (diamond) + model name
-    parts.push(`${colorize('💎', COLORS.cyan)} ${data.model}`);
+    parts.push(`${colorize('💎', theme.info)} ${data.model}`);
 
     // Show error indicator or usage percentage
     if (data.isError) {
-      parts.push(colorize('⚠️', COLORS.yellow));
+      parts.push(colorize('⚠️', theme.warning));
     } else if (data.usedPercent !== null) {
       parts.push(formatUsage(data.usedPercent, data.resetAt, t));
     }
 
-    return parts.join(` ${colorize('│', COLORS.dim)} `);
+    return parts.join(` ${colorize('│', theme.dim)} `);
   },
 };
 
@@ -115,23 +117,25 @@ export const geminiUsageAllWidget: Widget<GeminiUsageAllData> = {
   render(data: GeminiUsageAllData, ctx: WidgetContext): string {
     const { translations: t } = ctx;
 
+    const theme = getTheme();
+
     if (data.isError) {
-      return `${colorize('💎', COLORS.cyan)} Gemini ${colorize('⚠️', COLORS.yellow)}`;
+      return `${colorize('💎', theme.info)} Gemini ${colorize('⚠️', theme.warning)}`;
     }
 
     if (data.buckets.length === 0) {
-      return `${colorize('💎', COLORS.cyan)} Gemini ${colorize('--', COLORS.dim)}`;
+      return `${colorize('💎', theme.info)} Gemini ${colorize('--', theme.secondary)}`;
     }
 
     // Render each bucket as "model: X% (reset)"
     const parts = data.buckets.map(bucket => {
       const modelShort = bucket.modelId.replace('gemini-', '');
       if (bucket.usedPercent !== null) {
-        return `${colorize(modelShort, COLORS.dim)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
+        return `${colorize(modelShort, theme.secondary)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
       }
-      return `${colorize(modelShort, COLORS.dim)}: ${colorize('--', COLORS.dim)}`;
+      return `${colorize(modelShort, theme.secondary)}: ${colorize('--', theme.secondary)}`;
     });
 
-    return `${colorize('💎', COLORS.cyan)} ${parts.join(' │ ')}`;
+    return `${colorize('💎', theme.info)} ${parts.join(' │ ')}`;
   },
 };

@@ -10,7 +10,7 @@ import { join } from 'path';
 import { homedir } from 'os';
 import type { Widget } from './base.js';
 import type { WidgetContext, ModelData, EffortLevel } from '../types.js';
-import { COLORS, RESET } from '../utils/colors.js';
+import { RESET, getTheme } from '../utils/colors.js';
 import { shortenModelName } from '../utils/formatters.js';
 import { isZaiProvider } from '../utils/provider.js';
 
@@ -86,6 +86,6 @@ export const modelWidget: Widget<ModelData> = {
     // Fast mode indicator (Opus 4.6 exclusive)
     const fastIndicator = shortName === 'Opus' && data.fastMode ? ' ↯' : '';
 
-    return `${COLORS.pastelCyan}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
+    return `${getTheme().model}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
   },
 };

@@ -4,7 +4,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, ContextData } from '../types.js';
-import { COLORS, RESET, getColorForPercent, colorize } from '../utils/colors.js';
+import { getColorForPercent, colorize, getSeparator } from '../utils/colors.js';
 import { formatTokens, calculatePercent } from '../utils/formatters.js';
 import { renderProgressBar } from '../utils/progress-bar.js';
 
@@ -45,7 +45,7 @@ export const contextWidget: Widget<ContextData> = {
     };
   },
 
-  render(data: ContextData): string {
+  render(data: ContextData, ctx: WidgetContext): string {
     const parts: string[] = [];
 
     // Progress bar
@@ -60,7 +60,6 @@ export const contextWidget: Widget<ContextData> = {
       `${formatTokens(data.inputTokens)}/${formatTokens(data.contextSize)}`
     );
 
-    const separator = ` ${COLORS.dim}│${RESET} `;
-    return parts.join(separator);
+    return parts.join(getSeparator());
   },
 };

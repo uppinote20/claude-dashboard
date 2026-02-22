@@ -4,7 +4,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, AgentStatusData } from '../types.js';
-import { COLORS, colorize } from '../utils/colors.js';
+import { colorize, getTheme } from '../utils/colors.js';
 import { parseTranscript, extractAgentStatus } from '../utils/transcript-parser.js';
 
 export const agentStatusWidget: Widget<AgentStatusData> = {
@@ -35,11 +35,13 @@ export const agentStatusWidget: Widget<AgentStatusData> = {
   render(data: AgentStatusData, ctx: WidgetContext): string {
     const { translations: t } = ctx;
 
+    const theme = getTheme();
+
     if (data.active.length === 0) {
       // No active agents, show completed count
       return colorize(
         `${t.widgets.agent}: ${data.completed} ${t.widgets.done}`,
-        COLORS.dim
+        theme.secondary
       );
     }
 
@@ -51,6 +53,6 @@ export const agentStatusWidget: Widget<AgentStatusData> = {
 
     const more = data.active.length > 1 ? ` +${data.active.length - 1}` : '';
 
-    return `${colorize('🤖', COLORS.cyan)} ${t.widgets.agent}: ${agentText}${more}`;
+    return `${colorize('🤖', theme.info)} ${t.widgets.agent}: ${agentText}${more}`;
   },
 };

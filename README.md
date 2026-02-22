@@ -57,7 +57,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `cost` | Session cost in USD |
-| | `projectInfo` | Directory name + git branch (`*` if dirty) |
+| | `projectInfo` | Directory + git branch + ahead/behind (↑↓) |
 | **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
 | | `rateLimit7d` | 7-day rate limit (Max only) |
 | | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
@@ -125,9 +125,15 @@ i18n: English and Korean supported (auto-detect or set via setup).
     ["model", "context", "cost", "rateLimit5h"],
     ["projectInfo", "todoProgress"]
   ],
+  "theme": "default",
+  "disabledWidgets": [],
   "cache": { "ttlSeconds": 60 }
 }
 ```
+
+**Themes:** `default` (pastel) / `minimal` (monochrome) / `catppuccin` / `dracula` / `gruvbox`
+
+**Widget Toggle:** Add widget IDs to `disabledWidgets` to hide them from any display mode.
 
 **Color Legend:** 🟢 0-50% Safe / 🟡 51-80% Warning / 🔴 81-100% Critical
 

@@ -11,7 +11,7 @@ import { homedir } from 'os';
 
 import type { StdinInput, Config, WidgetContext } from './types.js';
 import { DEFAULT_CONFIG } from './types.js';
-import { COLORS, colorize } from './utils/colors.js';
+import { COLORS, colorize, setTheme } from './utils/colors.js';
 import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput } from './widgets/index.js';
@@ -65,11 +65,6 @@ async function loadConfig(): Promise<Config> {
       ...userConfig,
     };
 
-    // Ensure displayMode exists (backward compatibility)
-    if (!config.displayMode) {
-      config.displayMode = 'compact';
-    }
-
     // Cache result
     configCache = { config, mtime };
     return config;
@@ -84,6 +79,9 @@ async function loadConfig(): Promise<Config> {
 async function main(): Promise<void> {
   // Load configuration
   const config = await loadConfig();
+
+  // Initialize theme
+  setTheme(config.theme);
 
   // Get translations
   const translations = getTranslations(config);

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile8, stat as stat8 } from "fs/promises";
+import { readFile as readFile7, stat as stat8 } from "fs/promises";
 import { join as join5 } from "path";
 import { homedir as homedir4 } from "os";
 
@@ -31,13 +31,190 @@ var DEFAULT_CONFIG = {
 };
 
 // scripts/utils/colors.ts
+var THEMES = {
+  default: {
+    dim: "\x1B[2m",
+    bold: "\x1B[1m",
+    model: "\x1B[38;5;117m",
+    // pastelCyan
+    folder: "\x1B[38;5;222m",
+    // pastelYellow
+    branch: "\x1B[38;5;218m",
+    // pastelPink
+    safe: "\x1B[38;5;151m",
+    // pastelGreen
+    warning: "\x1B[38;5;222m",
+    // pastelYellow
+    danger: "\x1B[38;5;210m",
+    // pastelRed
+    secondary: "\x1B[38;5;249m",
+    // pastelGray
+    accent: "\x1B[38;5;222m",
+    // pastelYellow
+    info: "\x1B[38;5;117m",
+    // pastelCyan
+    barFilled: "\x1B[32m",
+    // green
+    barEmpty: "\x1B[90m",
+    // gray
+    red: "\x1B[31m",
+    green: "\x1B[32m",
+    yellow: "\x1B[33m",
+    blue: "\x1B[34m",
+    magenta: "\x1B[35m",
+    cyan: "\x1B[36m",
+    white: "\x1B[37m",
+    gray: "\x1B[90m"
+  },
+  minimal: {
+    dim: "\x1B[2m",
+    bold: "\x1B[1m",
+    model: "\x1B[37m",
+    // white
+    folder: "\x1B[37m",
+    // white
+    branch: "\x1B[37m",
+    // white
+    safe: "\x1B[90m",
+    // gray
+    warning: "\x1B[37m",
+    // white
+    danger: "\x1B[1;37m",
+    // bold white
+    secondary: "\x1B[90m",
+    // gray
+    accent: "\x1B[37m",
+    // white
+    info: "\x1B[37m",
+    // white
+    barFilled: "\x1B[37m",
+    // white
+    barEmpty: "\x1B[90m",
+    // gray
+    red: "\x1B[37m",
+    green: "\x1B[37m",
+    yellow: "\x1B[37m",
+    blue: "\x1B[37m",
+    magenta: "\x1B[37m",
+    cyan: "\x1B[37m",
+    white: "\x1B[37m",
+    gray: "\x1B[90m"
+  },
+  catppuccin: {
+    dim: "\x1B[2m",
+    bold: "\x1B[1m",
+    model: "\x1B[38;2;137;180;250m",
+    // #89b4fa blue
+    folder: "\x1B[38;2;249;226;175m",
+    // #f9e2af yellow
+    branch: "\x1B[38;2;245;194;231m",
+    // #f5c2e7 pink
+    safe: "\x1B[38;2;166;227;161m",
+    // #a6e3a1 green
+    warning: "\x1B[38;2;250;179;135m",
+    // #fab387 peach
+    danger: "\x1B[38;2;243;139;168m",
+    // #f38ba8 red
+    secondary: "\x1B[38;2;127;132;156m",
+    // #7f849c overlay1
+    accent: "\x1B[38;2;250;179;135m",
+    // #fab387 peach
+    info: "\x1B[38;2;116;199;236m",
+    // #74c7ec sapphire
+    barFilled: "\x1B[38;2;166;227;161m",
+    // #a6e3a1 green
+    barEmpty: "\x1B[38;2;88;91;112m",
+    // #585b70 surface2
+    red: "\x1B[38;2;243;139;168m",
+    green: "\x1B[38;2;166;227;161m",
+    yellow: "\x1B[38;2;249;226;175m",
+    blue: "\x1B[38;2;137;180;250m",
+    magenta: "\x1B[38;2;203;166;247m",
+    cyan: "\x1B[38;2;148;226;213m",
+    white: "\x1B[38;2;205;214;244m",
+    gray: "\x1B[38;2;127;132;156m"
+  },
+  gruvbox: {
+    dim: "\x1B[2m",
+    bold: "\x1B[1m",
+    model: "\x1B[38;2;215;153;33m",
+    // #d79921 yellow
+    folder: "\x1B[38;2;250;189;47m",
+    // #fabd2f bright yellow
+    branch: "\x1B[38;2;211;134;155m",
+    // #d3869b purple
+    safe: "\x1B[38;2;184;187;38m",
+    // #b8bb26 green
+    warning: "\x1B[38;2;250;189;47m",
+    // #fabd2f yellow
+    danger: "\x1B[38;2;204;36;29m",
+    // #cc241d red
+    secondary: "\x1B[38;2;168;153;132m",
+    // #a89984 gray
+    accent: "\x1B[38;2;250;189;47m",
+    // #fabd2f yellow
+    info: "\x1B[38;2;131;165;152m",
+    // #83a598 blue
+    barFilled: "\x1B[38;2;184;187;38m",
+    // #b8bb26 green
+    barEmpty: "\x1B[38;2;80;73;69m",
+    // #504945 dark gray
+    red: "\x1B[38;2;204;36;29m",
+    green: "\x1B[38;2;184;187;38m",
+    yellow: "\x1B[38;2;250;189;47m",
+    blue: "\x1B[38;2;131;165;152m",
+    magenta: "\x1B[38;2;211;134;155m",
+    cyan: "\x1B[38;2;142;192;124m",
+    white: "\x1B[38;2;235;219;178m",
+    gray: "\x1B[38;2;168;153;132m"
+  },
+  dracula: {
+    dim: "\x1B[2m",
+    bold: "\x1B[1m",
+    model: "\x1B[38;2;189;147;249m",
+    // #bd93f9 purple
+    folder: "\x1B[38;2;255;184;108m",
+    // #ffb86c orange
+    branch: "\x1B[38;2;255;121;198m",
+    // #ff79c6 pink
+    safe: "\x1B[38;2;80;250;123m",
+    // #50fa7b green
+    warning: "\x1B[38;2;241;250;140m",
+    // #f1fa8c yellow
+    danger: "\x1B[38;2;255;85;85m",
+    // #ff5555 red
+    secondary: "\x1B[38;2;98;114;164m",
+    // #6272a4 comment
+    accent: "\x1B[38;2;255;184;108m",
+    // #ffb86c orange
+    info: "\x1B[38;2;139;233;253m",
+    // #8be9fd cyan
+    barFilled: "\x1B[38;2;80;250;123m",
+    // #50fa7b green
+    barEmpty: "\x1B[38;2;68;71;90m",
+    // #44475a current line
+    red: "\x1B[38;2;255;85;85m",
+    green: "\x1B[38;2;80;250;123m",
+    yellow: "\x1B[38;2;241;250;140m",
+    blue: "\x1B[38;2;189;147;249m",
+    magenta: "\x1B[38;2;255;121;198m",
+    cyan: "\x1B[38;2;139;233;253m",
+    white: "\x1B[38;2;248;248;242m",
+    gray: "\x1B[38;2;98;114;164m"
+  }
+};
+var activeTheme = THEMES.default;
+function setTheme(themeId) {
+  activeTheme = THEMES[themeId ?? "default"] ?? THEMES.default;
+}
+function getTheme() {
+  return activeTheme;
+}
+var RESET = "\x1B[0m";
 var COLORS = {
-  // Reset
-  reset: "\x1B[0m",
-  // Styles
+  reset: RESET,
   dim: "\x1B[2m",
   bold: "\x1B[1m",
-  // Foreground colors (standard ANSI 16)
   red: "\x1B[31m",
   green: "\x1B[32m",
   yellow: "\x1B[33m",
@@ -46,37 +223,31 @@ var COLORS = {
   cyan: "\x1B[36m",
   white: "\x1B[37m",
   gray: "\x1B[90m",
-  // Bright variants
   brightRed: "\x1B[91m",
   brightGreen: "\x1B[92m",
   brightYellow: "\x1B[93m",
   brightCyan: "\x1B[96m",
-  // Pastel colors (256-color mode)
   pastelYellow: "\x1B[38;5;222m",
-  // Cream/soft yellow - for folders, cost
   pastelCyan: "\x1B[38;5;117m",
-  // Soft cyan - for model
   pastelPink: "\x1B[38;5;218m",
-  // Soft pink - for git branch
   pastelGreen: "\x1B[38;5;151m",
-  // Mint green - for positive/safe status
   pastelOrange: "\x1B[38;5;216m",
-  // Soft orange - for warning status
   pastelRed: "\x1B[38;5;210m",
-  // Soft coral - for danger status
   pastelGray: "\x1B[38;5;249m"
-  // Light gray - for secondary info
 };
-var RESET = COLORS.reset;
 function getColorForPercent(percent) {
+  const theme = getTheme();
   if (percent <= 50)
-    return COLORS.pastelGreen;
+    return theme.safe;
   if (percent <= 80)
-    return COLORS.pastelYellow;
-  return COLORS.pastelRed;
+    return theme.warning;
+  return theme.danger;
 }
 function colorize(text, color) {
   return `${color}${text}${RESET}`;
+}
+function getSeparator() {
+  return ` ${getTheme().dim}\u2502${RESET} `;
 }
 
 // scripts/utils/api-client.ts
@@ -145,7 +316,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.11.0";
+var VERSION = "1.12.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -581,7 +752,7 @@ var modelWidget = {
     const supportsEffort = shortName === "Opus" || shortName === "Sonnet";
     const effortSuffix = supportsEffort ? `(${data.effortLevel[0].toUpperCase()})` : "";
     const fastIndicator = shortName === "Opus" && data.fastMode ? " \u21AF" : "";
-    return `${COLORS.pastelCyan}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
+    return `${getTheme().model}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
   }
 };
 
@@ -632,7 +803,7 @@ var contextWidget = {
       percentage
     };
   },
-  render(data) {
+  render(data, ctx) {
     const parts = [];
     parts.push(renderProgressBar(data.percentage));
     const percentColor = getColorForPercent(data.percentage);
@@ -640,8 +811,7 @@ var contextWidget = {
     parts.push(
       `${formatTokens(data.inputTokens)}/${formatTokens(data.contextSize)}`
     );
-    const separator = ` ${COLORS.dim}\u2502${RESET} `;
-    return parts.join(separator);
+    return parts.join(getSeparator());
   }
 };
 
@@ -656,14 +826,14 @@ var costWidget = {
     };
   },
   render(data) {
-    return colorize(formatCost(data.totalCostUsd), COLORS.pastelYellow);
+    return colorize(formatCost(data.totalCostUsd), getTheme().accent);
   }
 };
 
 // scripts/widgets/rate-limit.ts
 function renderRateLimit(data, ctx, labelKey) {
   if (data.isError) {
-    return colorize("\u26A0\uFE0F", COLORS.yellow);
+    return colorize("\u26A0\uFE0F", getTheme().warning);
   }
   const { translations: t } = ctx;
   const color = getColorForPercent(data.utilization);
@@ -727,34 +897,51 @@ var rateLimit7dSonnetWidget = {
 };
 
 // scripts/widgets/project-info.ts
-import { execFileSync as execFileSync2 } from "child_process";
+import { execFile } from "child_process";
 import { basename } from "path";
-function getGitBranch(cwd) {
-  try {
-    const result = execFileSync2("git", ["--no-optional-locks", "rev-parse", "--abbrev-ref", "HEAD"], {
+function execGit(args, cwd, timeout) {
+  return new Promise((resolve, reject) => {
+    execFile("git", ["--no-optional-locks", ...args], {
       cwd,
       encoding: "utf-8",
-      timeout: 500,
-      // 500ms timeout to prevent blocking
-      stdio: ["pipe", "pipe", "pipe"]
+      timeout
+    }, (error, stdout) => {
+      if (error)
+        reject(error);
+      else
+        resolve(stdout);
     });
+  });
+}
+async function getGitBranch(cwd) {
+  try {
+    const result = await execGit(["rev-parse", "--abbrev-ref", "HEAD"], cwd, 500);
     return result.trim() || void 0;
   } catch {
     return void 0;
   }
 }
-function isGitDirty(cwd) {
+async function isGitDirty(cwd) {
   try {
-    const result = execFileSync2("git", ["--no-optional-locks", "status", "--porcelain"], {
-      cwd,
-      encoding: "utf-8",
-      timeout: 1e3,
-      // 1s timeout
-      stdio: ["pipe", "pipe", "pipe"]
-    });
+    const result = await execGit(["status", "--porcelain"], cwd, 1e3);
     return result.trim().length > 0;
   } catch {
     return false;
+  }
+}
+async function getAheadBehind(cwd) {
+  try {
+    const result = await execGit(["rev-list", "--left-right", "--count", "@{u}...HEAD"], cwd, 500);
+    const parts = result.trim().split(/\s+/);
+    if (parts.length === 2) {
+      return {
+        behind: parseInt(parts[0], 10) || 0,
+        ahead: parseInt(parts[1], 10) || 0
+      };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }
 var projectInfoWidget = {
@@ -766,22 +953,41 @@ var projectInfoWidget = {
       return null;
     }
     const dirName = basename(currentDir);
-    const branch = getGitBranch(currentDir);
+    const [branch, dirty, ab] = await Promise.all([
+      getGitBranch(currentDir),
+      isGitDirty(currentDir),
+      getAheadBehind(currentDir)
+    ]);
     let gitBranch;
+    let ahead;
+    let behind;
     if (branch) {
-      const dirty = isGitDirty(currentDir);
       gitBranch = dirty ? `${branch}*` : branch;
+      if (ab) {
+        ahead = ab.ahead;
+        behind = ab.behind;
+      }
     }
     return {
       dirName,
-      gitBranch
+      gitBranch,
+      ahead,
+      behind
     };
   },
   render(data) {
+    const theme = getTheme();
     const parts = [];
-    parts.push(colorize(`\u{1F4C1} ${data.dirName}`, COLORS.pastelYellow));
+    parts.push(colorize(`\u{1F4C1} ${data.dirName}`, theme.folder));
     if (data.gitBranch) {
-      parts.push(colorize(`(${data.gitBranch})`, COLORS.pastelPink));
+      let branchStr = data.gitBranch;
+      const aheadStr = (data.ahead ?? 0) > 0 ? `\u2191${data.ahead}` : "";
+      const behindStr = (data.behind ?? 0) > 0 ? `\u2193${data.behind}` : "";
+      const indicators = `${aheadStr}${behindStr}`;
+      if (indicators) {
+        branchStr += ` ${indicators}`;
+      }
+      parts.push(colorize(`(${branchStr})`, theme.branch));
     }
     return parts.join(" ");
   }
@@ -823,7 +1029,7 @@ async function countClaudeMd(projectDir) {
   return count;
 }
 async function countMcps(projectDir) {
-  const { readFile: readFile9 } = await import("fs/promises");
+  const { readFile: readFile8 } = await import("fs/promises");
   const homeDir = process.env.HOME || "";
   const mcpPaths = [
     { path: join3(projectDir, ".claude", "mcp.json"), key: "mcpServers" },
@@ -834,7 +1040,7 @@ async function countMcps(projectDir) {
   for (const { path: path4, key } of mcpPaths) {
     if (await pathExists(path4)) {
       try {
-        const content = await readFile9(path4, "utf-8");
+        const content = await readFile8(path4, "utf-8");
         const config = JSON.parse(content);
         totalCount += Object.keys(config[key] || {}).length;
       } catch {
@@ -880,7 +1086,7 @@ var configCountsWidget = {
     if (data.hooks > 0) {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
     }
-    return colorize(parts.join(", "), COLORS.dim);
+    return colorize(parts.join(", "), getTheme().secondary);
   }
 };
 
@@ -1016,68 +1222,84 @@ var sessionDurationWidget = {
   render(data, ctx) {
     const { translations: t } = ctx;
     const duration = formatDuration(data.elapsedMs, t.time);
-    return colorize(`\u23F1 ${duration}`, COLORS.dim);
+    return colorize(`\u23F1 ${duration}`, getTheme().secondary);
   }
 };
 
 // scripts/utils/transcript-parser.ts
-import { readFile as readFile5, stat as stat5 } from "fs/promises";
+import { open as open2, stat as stat5 } from "fs/promises";
 var cachedTranscript = null;
-function parseJsonlLine(line) {
+function parseJsonlContent(content) {
+  const entries = [];
+  for (const line of content.split("\n")) {
+    if (!line)
+      continue;
+    try {
+      entries.push(JSON.parse(line));
+    } catch {
+    }
+  }
+  return entries;
+}
+function processEntries(entries, existing) {
+  for (const entry of entries) {
+    existing.entries.push(entry);
+    if (!existing.sessionStartTime && entry.timestamp) {
+      existing.sessionStartTime = new Date(entry.timestamp).getTime();
+    }
+    if (entry.type === "assistant" && entry.message?.content) {
+      for (const block of entry.message.content) {
+        if (block.type === "tool_use" && block.id && block.name) {
+          existing.toolUses.set(block.id, {
+            name: block.name,
+            timestamp: entry.timestamp
+          });
+        }
+      }
+    }
+    if (entry.type === "user" && entry.message?.content) {
+      for (const block of entry.message.content) {
+        if (block.type === "tool_result" && block.tool_use_id) {
+          existing.toolResults.add(block.tool_use_id);
+        }
+      }
+    }
+  }
+}
+async function readFromOffset(filePath, offset, fileSize) {
+  const bytesToRead = fileSize - offset;
+  if (bytesToRead <= 0)
+    return "";
+  const fd = await open2(filePath, "r");
   try {
-    return JSON.parse(line);
-  } catch {
-    return null;
+    const buffer = Buffer.alloc(bytesToRead);
+    await fd.read(buffer, 0, bytesToRead, offset);
+    return buffer.toString("utf-8");
+  } finally {
+    await fd.close();
   }
 }
 async function parseTranscript(transcriptPath) {
   try {
     const fileStat = await stat5(transcriptPath);
-    const mtime = fileStat.mtimeMs;
-    if (cachedTranscript?.path === transcriptPath && cachedTranscript.mtime === mtime) {
+    const fileSize = fileStat.size;
+    if (cachedTranscript?.path === transcriptPath && cachedTranscript.size <= fileSize) {
+      if (cachedTranscript.size === fileSize) {
+        return cachedTranscript.data;
+      }
+      const newContent = await readFromOffset(transcriptPath, cachedTranscript.size, fileSize);
+      processEntries(parseJsonlContent(newContent), cachedTranscript.data);
+      cachedTranscript.size = fileSize;
       return cachedTranscript.data;
     }
-    const content = await readFile5(transcriptPath, "utf-8");
-    const lines = content.trim().split("\n").filter(Boolean);
-    const entries = [];
-    for (const line of lines) {
-      const entry = parseJsonlLine(line);
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-    const toolUses = /* @__PURE__ */ new Map();
-    const toolResults = /* @__PURE__ */ new Set();
-    let sessionStartTime;
-    for (const entry of entries) {
-      if (!sessionStartTime && entry.timestamp) {
-        sessionStartTime = new Date(entry.timestamp).getTime();
-      }
-      if (entry.type === "assistant" && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === "tool_use" && block.id && block.name) {
-            toolUses.set(block.id, {
-              name: block.name,
-              timestamp: entry.timestamp
-            });
-          }
-        }
-      }
-      if (entry.type === "user" && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === "tool_result" && block.tool_use_id) {
-            toolResults.add(block.tool_use_id);
-          }
-        }
-      }
-    }
+    const content = await readFromOffset(transcriptPath, 0, fileSize);
     const data = {
-      entries,
-      toolUses,
-      toolResults,
-      sessionStartTime
+      entries: [],
+      toolUses: /* @__PURE__ */ new Map(),
+      toolResults: /* @__PURE__ */ new Set()
     };
-    cachedTranscript = { path: transcriptPath, mtime, data };
+    processEntries(parseJsonlContent(content), data);
+    cachedTranscript = { path: transcriptPath, size: fileSize, data };
     return data;
   } catch {
     return null;
@@ -1181,15 +1403,16 @@ var toolActivityWidget = {
   },
   render(data, ctx) {
     const { translations: t } = ctx;
+    const theme = getTheme();
     if (data.running.length === 0) {
       return colorize(
         `${t.widgets.tools}: ${data.completed} ${t.widgets.done}`,
-        COLORS.dim
+        theme.secondary
       );
     }
     const runningNames = data.running.slice(0, 2).map((r) => r.name).join(", ");
     const more = data.running.length > 2 ? ` +${data.running.length - 2}` : "";
-    return `${colorize("\u2699\uFE0F", COLORS.yellow)} ${runningNames}${more} (${data.completed} ${t.widgets.done})`;
+    return `${colorize("\u2699\uFE0F", theme.warning)} ${runningNames}${more} (${data.completed} ${t.widgets.done})`;
   }
 };
 
@@ -1214,16 +1437,17 @@ var agentStatusWidget = {
   },
   render(data, ctx) {
     const { translations: t } = ctx;
+    const theme = getTheme();
     if (data.active.length === 0) {
       return colorize(
         `${t.widgets.agent}: ${data.completed} ${t.widgets.done}`,
-        COLORS.dim
+        theme.secondary
       );
     }
     const activeAgent = data.active[0];
     const agentText = activeAgent.description ? `${activeAgent.name}: ${activeAgent.description.slice(0, 20)}${activeAgent.description.length > 20 ? "..." : ""}` : activeAgent.name;
     const more = data.active.length > 1 ? ` +${data.active.length - 1}` : "";
-    return `${colorize("\u{1F916}", COLORS.cyan)} ${t.widgets.agent}: ${agentText}${more}`;
+    return `${colorize("\u{1F916}", theme.info)} ${t.widgets.agent}: ${agentText}${more}`;
   }
 };
 
@@ -1245,18 +1469,19 @@ var todoProgressWidget = {
   },
   render(data, ctx) {
     const { translations: t } = ctx;
+    const theme = getTheme();
     if (data.total === 0) {
-      return colorize(`${t.widgets.todos}: -`, COLORS.dim);
+      return colorize(`${t.widgets.todos}: -`, theme.dim);
     }
     const percent = calculatePercent(data.completed, data.total);
     const color = getColorForPercent(100 - percent);
     if (data.current) {
       const taskName = data.current.content.length > 15 ? data.current.content.slice(0, 15) + "..." : data.current.content;
-      return `${colorize("\u2713", COLORS.pastelGreen)} ${taskName} [${data.completed}/${data.total}]`;
+      return `${colorize("\u2713", theme.safe)} ${taskName} [${data.completed}/${data.total}]`;
     }
     return colorize(
       `${t.widgets.todos}: ${data.completed}/${data.total}`,
-      data.completed === data.total ? COLORS.pastelGreen : color
+      data.completed === data.total ? theme.safe : color
     );
   }
 };
@@ -1322,7 +1547,7 @@ var depletionTimeWidget = {
   },
   render(data, ctx) {
     const duration = formatDuration(data.minutesToLimit * 60 * 1e3, ctx.translations.time);
-    return colorize(`\u23F3 ~${duration} to ${data.limitType}`, COLORS.yellow);
+    return colorize(`\u23F3 ~${duration} to ${data.limitType}`, getTheme().warning);
   }
 };
 
@@ -1352,8 +1577,8 @@ var cacheHitWidget = {
 };
 
 // scripts/utils/codex-client.ts
-import { readFile as readFile6, stat as stat6, writeFile as writeFile2, mkdir as mkdir3 } from "fs/promises";
-import { execFileSync as execFileSync3 } from "child_process";
+import { readFile as readFile5, stat as stat6, writeFile as writeFile2, mkdir as mkdir3 } from "fs/promises";
+import { execFileSync as execFileSync2 } from "child_process";
 import os2 from "os";
 import path2 from "path";
 var API_TIMEOUT_MS2 = 5e3;
@@ -1381,7 +1606,7 @@ async function getCodexAuth() {
     if (cachedAuth && cachedAuth.mtime === fileStat.mtimeMs) {
       return cachedAuth.data;
     }
-    const raw = await readFile6(CODEX_AUTH_PATH, "utf-8");
+    const raw = await readFile5(CODEX_AUTH_PATH, "utf-8");
     const json = JSON.parse(raw);
     const accessToken = json?.tokens?.access_token;
     const accountId = json?.tokens?.account_id;
@@ -1397,7 +1622,7 @@ async function getCodexAuth() {
 }
 async function getModelFromConfig() {
   try {
-    const raw = await readFile6(CODEX_CONFIG_PATH, "utf-8");
+    const raw = await readFile5(CODEX_CONFIG_PATH, "utf-8");
     const match = raw.match(/^model\s*=\s*["']([^"']+)["']\s*(?:#.*)?$/m);
     return match ? match[1] : null;
   } catch {
@@ -1414,7 +1639,7 @@ async function getConfigMtime() {
 }
 async function getCachedModel(currentMtime) {
   try {
-    const raw = await readFile6(MODEL_CACHE_PATH, "utf-8");
+    const raw = await readFile5(MODEL_CACHE_PATH, "utf-8");
     const cache = JSON.parse(raw);
     if (cache.configMtime === currentMtime && cache.model) {
       debugLog("codex", "getCachedModel: cache hit", cache.model);
@@ -1439,7 +1664,7 @@ async function saveModelCache(model, configMtime) {
 function detectModelFromCodexExec() {
   try {
     debugLog("codex", "detectModelFromCodexExec: running codex exec...");
-    const output = execFileSync3("codex", ["exec", "1+1="], {
+    const output = execFileSync2("codex", ["exec", "1+1="], {
       encoding: "utf-8",
       timeout: 1e4,
       stdio: ["pipe", "pipe", "pipe"]
@@ -1599,9 +1824,10 @@ var codexUsageWidget = {
   render(data, ctx) {
     const { translations: t } = ctx;
     const parts = [];
-    parts.push(`${colorize("\u{1F537}", COLORS.blue)} ${data.model}`);
+    const theme = getTheme();
+    parts.push(`${colorize("\u{1F537}", theme.info)} ${data.model}`);
     if (data.isError) {
-      parts.push(colorize("\u26A0\uFE0F", COLORS.yellow));
+      parts.push(colorize("\u26A0\uFE0F", theme.warning));
     } else {
       if (data.primaryPercent !== null) {
         parts.push(formatRateLimit(t.labels["5h"], data.primaryPercent, data.primaryResetAt, t));
@@ -1610,13 +1836,13 @@ var codexUsageWidget = {
         parts.push(formatRateLimit(t.labels["7d"], data.secondaryPercent, data.secondaryResetAt, t));
       }
     }
-    return parts.join(` ${colorize("\u2502", COLORS.dim)} `);
+    return parts.join(` ${colorize("\u2502", theme.dim)} `);
   }
 };
 
 // scripts/utils/gemini-client.ts
-import { readFile as readFile7, writeFile as writeFile3, stat as stat7 } from "fs/promises";
-import { execFileSync as execFileSync4 } from "child_process";
+import { readFile as readFile6, writeFile as writeFile3, stat as stat7 } from "fs/promises";
+import { execFileSync as execFileSync3 } from "child_process";
 import os3 from "os";
 import path3 from "path";
 var API_TIMEOUT_MS3 = 5e3;
@@ -1657,7 +1883,7 @@ async function getTokenFromKeychain() {
     return null;
   }
   try {
-    const result = execFileSync4(
+    const result = execFileSync3(
       "security",
       ["find-generic-password", "-s", KEYCHAIN_SERVICE_NAME, "-a", MAIN_ACCOUNT_KEY, "-w"],
       { encoding: "utf-8", timeout: 3e3, stdio: ["pipe", "pipe", "pipe"] }
@@ -1685,7 +1911,7 @@ async function getCredentialsFromFile2() {
     if (cachedCredentials && cachedCredentials.mtime === fileStat.mtimeMs) {
       return cachedCredentials.data;
     }
-    const raw = await readFile7(oauthPath, "utf-8");
+    const raw = await readFile6(oauthPath, "utf-8");
     const json = JSON.parse(raw);
     const accessToken = json?.access_token;
     if (!accessToken) {
@@ -1776,7 +2002,7 @@ async function saveCredentialsToFile(credentials, rawResponse) {
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
     let existingData = {};
     try {
-      const raw = await readFile7(oauthPath, "utf-8");
+      const raw = await readFile6(oauthPath, "utf-8");
       existingData = JSON.parse(raw);
     } catch {
     }
@@ -1819,7 +2045,7 @@ async function getGeminiSettings() {
     if (cachedSettings && cachedSettings.mtime === fileStat.mtimeMs) {
       return cachedSettings.data;
     }
-    const raw = await readFile7(settingsPath, "utf-8");
+    const raw = await readFile6(settingsPath, "utf-8");
     const json = JSON.parse(raw);
     const data = {
       cloudaicompanionProject: json?.cloudaicompanionProject,
@@ -2027,13 +2253,14 @@ var geminiUsageWidget = {
   render(data, ctx) {
     const { translations: t } = ctx;
     const parts = [];
-    parts.push(`${colorize("\u{1F48E}", COLORS.cyan)} ${data.model}`);
+    const theme = getTheme();
+    parts.push(`${colorize("\u{1F48E}", theme.info)} ${data.model}`);
     if (data.isError) {
-      parts.push(colorize("\u26A0\uFE0F", COLORS.yellow));
+      parts.push(colorize("\u26A0\uFE0F", theme.warning));
     } else if (data.usedPercent !== null) {
       parts.push(formatUsage(data.usedPercent, data.resetAt, t));
     }
-    return parts.join(` ${colorize("\u2502", COLORS.dim)} `);
+    return parts.join(` ${colorize("\u2502", theme.dim)} `);
   }
 };
 var geminiUsageAllWidget = {
@@ -2063,20 +2290,21 @@ var geminiUsageAllWidget = {
   },
   render(data, ctx) {
     const { translations: t } = ctx;
+    const theme = getTheme();
     if (data.isError) {
-      return `${colorize("\u{1F48E}", COLORS.cyan)} Gemini ${colorize("\u26A0\uFE0F", COLORS.yellow)}`;
+      return `${colorize("\u{1F48E}", theme.info)} Gemini ${colorize("\u26A0\uFE0F", theme.warning)}`;
     }
     if (data.buckets.length === 0) {
-      return `${colorize("\u{1F48E}", COLORS.cyan)} Gemini ${colorize("--", COLORS.dim)}`;
+      return `${colorize("\u{1F48E}", theme.info)} Gemini ${colorize("--", theme.secondary)}`;
     }
     const parts = data.buckets.map((bucket) => {
       const modelShort = bucket.modelId.replace("gemini-", "");
       if (bucket.usedPercent !== null) {
-        return `${colorize(modelShort, COLORS.dim)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
+        return `${colorize(modelShort, theme.secondary)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, t)}`;
       }
-      return `${colorize(modelShort, COLORS.dim)}: ${colorize("--", COLORS.dim)}`;
+      return `${colorize(modelShort, theme.secondary)}: ${colorize("--", theme.secondary)}`;
     });
-    return `${colorize("\u{1F48E}", COLORS.cyan)} ${parts.join(" \u2502 ")}`;
+    return `${colorize("\u{1F48E}", theme.info)} ${parts.join(" \u2502 ")}`;
   }
 };
 
@@ -2275,8 +2503,9 @@ var zaiUsageWidget = {
     const { translations: t } = ctx;
     const parts = [];
     parts.push(`\u{1F7E0} ${data.model}`);
+    const theme = getTheme();
     if (data.isError) {
-      parts.push(colorize("\u26A0\uFE0F", COLORS.yellow));
+      parts.push(colorize("\u26A0\uFE0F", theme.warning));
     } else {
       if (data.tokensPercent !== null) {
         let tokenPart = `${t.labels["5h"]}: ${formatPercent(data.tokensPercent)}`;
@@ -2293,7 +2522,7 @@ var zaiUsageWidget = {
         parts.push(mcpPart);
       }
     }
-    return parts.join(` ${colorize("\u2502", COLORS.dim)} `);
+    return parts.join(` ${colorize("\u2502", theme.dim)} `);
   }
 };
 
@@ -2312,7 +2541,7 @@ var sessionIdWidget = {
   name: "Session ID (Short)",
   getData: getSessionIdData,
   render(data) {
-    return colorize(`\u{1F511} ${data.shortId}`, COLORS.dim);
+    return colorize(`\u{1F511} ${data.shortId}`, getTheme().secondary);
   }
 };
 var sessionIdFullWidget = {
@@ -2320,7 +2549,7 @@ var sessionIdFullWidget = {
   name: "Session ID (Full)",
   getData: getSessionIdData,
   render(data) {
-    return colorize(`\u{1F511} ${data.sessionId}`, COLORS.dim);
+    return colorize(`\u{1F511} ${data.sessionId}`, getTheme().secondary);
   }
 };
 
@@ -2352,10 +2581,13 @@ function getWidget(id) {
   return widgetRegistry.get(id);
 }
 function getLines(config) {
-  if (config.displayMode === "custom" && config.lines) {
-    return config.lines;
+  const lines = config.displayMode === "custom" && config.lines ? config.lines : DISPLAY_PRESETS[config.displayMode] || DISPLAY_PRESETS.compact;
+  const disabled = config.disabledWidgets;
+  if (!disabled || disabled.length === 0) {
+    return lines;
   }
-  return DISPLAY_PRESETS[config.displayMode] || DISPLAY_PRESETS.compact;
+  const disabledSet = new Set(disabled);
+  return lines.map((line) => line.filter((id) => !disabledSet.has(id))).filter((line) => line.length > 0);
 }
 async function renderWidget(widgetId, ctx) {
   const widget = getWidget(widgetId);
@@ -2378,7 +2610,7 @@ async function renderLine(widgetIds, ctx) {
   const results = await Promise.all(
     widgetIds.map((id) => renderWidget(id, ctx))
   );
-  const separator = ` ${COLORS.dim}\u2502${RESET} `;
+  const separator = getSeparator();
   const outputs = results.filter((r) => r !== null && r.output.length > 0).map((r) => r.output);
   return outputs.join(separator);
 }
@@ -2420,15 +2652,12 @@ async function loadConfig() {
     if (configCache?.mtime === mtime) {
       return configCache.config;
     }
-    const content = await readFile8(CONFIG_PATH, "utf-8");
+    const content = await readFile7(CONFIG_PATH, "utf-8");
     const userConfig = JSON.parse(content);
     const config = {
       ...DEFAULT_CONFIG,
       ...userConfig
     };
-    if (!config.displayMode) {
-      config.displayMode = "compact";
-    }
     configCache = { config, mtime };
     return config;
   } catch {
@@ -2437,6 +2666,7 @@ async function loadConfig() {
 }
 async function main() {
   const config = await loadConfig();
+  setTheme(config.theme);
   const translations = getTranslations(config);
   const stdin = await readStdin();
   if (!stdin) {

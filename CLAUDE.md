@@ -50,7 +50,7 @@ claude-dashboard/
 │       ├── gemini-client.ts # Gemini CLI API client
 │       ├── zai-api-client.ts # z.ai/ZHIPU API client
 │       ├── provider.ts      # Provider detection (anthropic/zai/zhipu)
-│       ├── colors.ts        # ANSI color codes
+│       ├── colors.ts        # ANSI color codes + theme system
 │       ├── credentials.ts   # Keychain/credentials extraction
 │       ├── debug.ts         # Debug utilities
 │       ├── formatters.ts    # Token/cost/time/duration formatting
@@ -93,7 +93,7 @@ interface Widget<T extends WidgetData> {
 | `rateLimit5h` | API | 5-hour rate limit |
 | `rateLimit7d` | API | 7-day rate limit (Max) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max) |
-| `projectInfo` | stdin + git | Directory + branch |
+| `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓) |
 | `configCounts` | filesystem | CLAUDE.md, rules, MCPs, hooks |
 | `sessionDuration` | file | Session duration |
 | `toolActivity` | transcript | Tool tracking |
@@ -115,20 +115,37 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 // Additive approach: each mode adds lines, widgets stay in same position
 const DISPLAY_PRESETS = {
   compact: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
   ],
   normal: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ['projectInfo', 'sessionDuration', 'todoProgress'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'todoProgress'],
   ],
   detailed: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet'],
-    ['projectInfo', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
-    ['codexUsage', 'geminiUsage', 'zaiUsage'],
+    ['codexUsage', 'geminiUsage'],
   ],
 };
 ```
+
+### Theme System
+
+Color themes via `getTheme()` semantic roles. Set `"theme"` in config.
+
+| Theme | Style |
+|-------|-------|
+| `default` | Pastel colors (cyan, yellow, pink, green) |
+| `minimal` | Monochrome (white + gray) |
+| `catppuccin` | Catppuccin Mocha palette |
+| `dracula` | Dracula palette |
+| `gruvbox` | Gruvbox palette |
+
+### Widget Toggle
+
+`"disabledWidgets"` in config filters widgets from any display mode (preset or custom).
+Empty lines after filtering are automatically removed.
 
 ## Development Workflow
 
@@ -167,6 +184,8 @@ Before committing:
 - [ ] Korean/English switching works
 - [ ] API error shows ⚠️ instead of crash
 - [ ] Missing data gracefully hides widgets
+- [ ] Theme switching works (default/minimal/catppuccin/dracula/gruvbox)
+- [ ] `disabledWidgets` correctly filters widgets
 
 ## Common Tasks
 
@@ -212,10 +231,10 @@ Before committing:
 2. **File cache** - Persists across process restarts
 3. **API fetch** - Falls back when cache misses
 
-### Transcript Caching
+### Transcript Caching (Incremental)
 
-- Transcript parser caches parsed data with mtime check
-- Re-parses only when file changes
+- Transcript parser tracks byte offset, only reads new bytes since last parse
+- Full re-parse only on first load or file truncation
 - Shared across tool/agent/todo widgets
 
 ### Cleanup Behavior

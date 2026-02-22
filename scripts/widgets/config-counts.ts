@@ -7,7 +7,7 @@ import { join } from 'path';
 import { constants } from 'fs';
 import type { Widget } from './base.js';
 import type { WidgetContext, ConfigCountsData } from '../types.js';
-import { COLORS, colorize } from '../utils/colors.js';
+import { colorize, getTheme } from '../utils/colors.js';
 
 /**
  * Cache TTL for config counts (30 seconds)
@@ -158,6 +158,6 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
     }
 
-    return colorize(parts.join(', '), COLORS.dim);
+    return colorize(parts.join(', '), getTheme().secondary);
   },
 };

@@ -45,7 +45,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `rateLimit5h` | 5-hour rate limit |
 | `rateLimit7d` | 7-day rate limit (Max only) |
 | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
-| `projectInfo` | Directory name + git branch |
+| `projectInfo` | Directory name + git branch + ahead/behind (↑↓) |
 | `configCounts` | CLAUDE.md, rules, MCPs, hooks counts |
 | `sessionId` | Session ID (short 8 chars) |
 | `sessionIdFull` | Session ID (full UUID) |
@@ -93,6 +93,7 @@ Create `~/.claude/claude-dashboard.local.json`:
   "language": "$2 or auto",
   "plan": "$3 or max",
   "displayMode": "$1 or normal",
+  "theme": "default",
   "cache": {
     "ttlSeconds": 60
   }
@@ -109,11 +110,17 @@ Create `~/.claude/claude-dashboard.local.json`:
     ["widget1", "widget2"],
     ["widget3", "widget4"]
   ],
+  "theme": "default",
   "cache": {
     "ttlSeconds": 60
   }
 }
 ```
+
+### Optional Config Fields
+
+- `"theme"`: Color theme — `"default"` | `"minimal"` | `"catppuccin"` | `"dracula"` | `"gruvbox"`
+- `"disabledWidgets"`: Array of widget IDs to hide — e.g. `["codexUsage", "cacheHit"]`
 
 ### 3. Update settings.json
 
@@ -142,13 +149,13 @@ Display what the status line will look like based on their configuration:
 **Normal (2 lines):**
 ```
 🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
+📁 project (main ↑3) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
 ```
 
 **Detailed (4 lines):**
 ```
 🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
+📁 project (main ↑3↓1) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
 🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m) │ 🟠 GLM │ 5h: 23% │ 1m: 45%
 ```

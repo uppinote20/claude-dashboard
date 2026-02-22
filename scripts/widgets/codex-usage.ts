@@ -5,7 +5,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, CodexUsageData, Translations } from '../types.js';
-import { COLORS, getColorForPercent, colorize } from '../utils/colors.js';
+import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { isCodexInstalled, fetchCodexUsage } from '../utils/codex-client.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
 import { debugLog } from '../utils/debug.js';
@@ -72,11 +72,12 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
     const { translations: t } = ctx;
     const parts: string[] = [];
 
-    parts.push(`${colorize('🔷', COLORS.blue)} ${data.model}`);
+    const theme = getTheme();
+    parts.push(`${colorize('🔷', theme.info)} ${data.model}`);
 
     // Show error indicator or usage percentages
     if (data.isError) {
-      parts.push(colorize('⚠️', COLORS.yellow));
+      parts.push(colorize('⚠️', theme.warning));
     } else {
       if (data.primaryPercent !== null) {
         parts.push(formatRateLimit(t.labels['5h'], data.primaryPercent, data.primaryResetAt, t));
@@ -87,6 +88,6 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
       }
     }
 
-    return parts.join(` ${colorize('│', COLORS.dim)} `);
+    return parts.join(` ${colorize('│', theme.dim)} `);
   },
 };

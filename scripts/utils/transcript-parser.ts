@@ -1,104 +1,131 @@
 /**
  * Transcript parser - parses Claude Code transcript.jsonl files
+ * Uses incremental parsing: remembers last byte offset and only parses new content
  */
 
-import { readFile, stat } from 'fs/promises';
+import { open, stat } from 'fs/promises';
 import type { TranscriptEntry, ParsedTranscript } from '../types.js';
 
 /**
- * Cached transcript data to avoid re-parsing on every invocation
+ * Cached transcript data with incremental parsing state
  */
 let cachedTranscript: {
   path: string;
-  mtime: number;
+  /** File size at last parse (used as byte offset for next read) */
+  size: number;
   data: ParsedTranscript;
 } | null = null;
 
 /**
- * Parse a single JSONL line
+ * Parse JSONL content into transcript entries, skipping malformed lines
  */
-function parseJsonlLine(line: string): TranscriptEntry | null {
+function parseJsonlContent(content: string): TranscriptEntry[] {
+  const entries: TranscriptEntry[] = [];
+  for (const line of content.split('\n')) {
+    if (!line) continue;
+    try {
+      entries.push(JSON.parse(line) as TranscriptEntry);
+    } catch {
+      // Skip malformed lines
+    }
+  }
+  return entries;
+}
+
+/**
+ * Process entries and merge into existing parsed transcript data
+ */
+function processEntries(
+  entries: TranscriptEntry[],
+  existing: ParsedTranscript
+): void {
+  for (const entry of entries) {
+    existing.entries.push(entry);
+
+    // Track session start time from first entry
+    if (!existing.sessionStartTime && entry.timestamp) {
+      existing.sessionStartTime = new Date(entry.timestamp).getTime();
+    }
+
+    // Extract tool_use blocks
+    if (entry.type === 'assistant' && entry.message?.content) {
+      for (const block of entry.message.content) {
+        if (block.type === 'tool_use' && block.id && block.name) {
+          existing.toolUses.set(block.id, {
+            name: block.name,
+            timestamp: entry.timestamp,
+          });
+        }
+      }
+    }
+
+    // Extract tool_result blocks (they come as user messages with tool_result content)
+    if (entry.type === 'user' && entry.message?.content) {
+      for (const block of entry.message.content) {
+        if (block.type === 'tool_result' && block.tool_use_id) {
+          existing.toolResults.add(block.tool_use_id);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Read bytes from file starting at offset
+ */
+async function readFromOffset(
+  filePath: string,
+  offset: number,
+  fileSize: number
+): Promise<string> {
+  const bytesToRead = fileSize - offset;
+  if (bytesToRead <= 0) return '';
+
+  const fd = await open(filePath, 'r');
   try {
-    return JSON.parse(line) as TranscriptEntry;
-  } catch {
-    return null;
+    const buffer = Buffer.alloc(bytesToRead);
+    await fd.read(buffer, 0, bytesToRead, offset);
+    return buffer.toString('utf-8');
+  } finally {
+    await fd.close();
   }
 }
 
 /**
  * Parse transcript JSONL file
- * Uses caching based on file mtime to avoid re-parsing
+ * Uses incremental parsing: only reads new bytes since last parse
  */
 export async function parseTranscript(
   transcriptPath: string
 ): Promise<ParsedTranscript | null> {
   try {
-    // Check file mtime for cache invalidation
     const fileStat = await stat(transcriptPath);
-    const mtime = fileStat.mtimeMs;
+    const fileSize = fileStat.size;
 
-    // Return cached if path and mtime match
-    if (
-      cachedTranscript?.path === transcriptPath &&
-      cachedTranscript.mtime === mtime
-    ) {
+    // Incremental parse: reuse existing data if file only grew
+    if (cachedTranscript?.path === transcriptPath && cachedTranscript.size <= fileSize) {
+      if (cachedTranscript.size === fileSize) {
+        return cachedTranscript.data;
+      }
+
+      const newContent = await readFromOffset(transcriptPath, cachedTranscript.size, fileSize);
+      processEntries(parseJsonlContent(newContent), cachedTranscript.data);
+      cachedTranscript.size = fileSize;
+
       return cachedTranscript.data;
     }
 
-    // Parse JSONL (one JSON object per line)
-    const content = await readFile(transcriptPath, 'utf-8');
-    const lines = content.trim().split('\n').filter(Boolean);
-    const entries: TranscriptEntry[] = [];
-
-    for (const line of lines) {
-      const entry = parseJsonlLine(line);
-      if (entry) {
-        entries.push(entry);
-      }
-    }
-
-    // Extract tool uses and results
-    const toolUses = new Map<string, { name: string; timestamp?: string }>();
-    const toolResults = new Set<string>();
-    let sessionStartTime: number | undefined;
-
-    for (const entry of entries) {
-      // Track session start time from first entry
-      if (!sessionStartTime && entry.timestamp) {
-        sessionStartTime = new Date(entry.timestamp).getTime();
-      }
-
-      // Extract tool_use blocks
-      if (entry.type === 'assistant' && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === 'tool_use' && block.id && block.name) {
-            toolUses.set(block.id, {
-              name: block.name,
-              timestamp: entry.timestamp,
-            });
-          }
-        }
-      }
-
-      // Extract tool_result blocks (they come as user messages with tool_result content)
-      if (entry.type === 'user' && entry.message?.content) {
-        for (const block of entry.message.content) {
-          if (block.type === 'tool_result' && block.tool_use_id) {
-            toolResults.add(block.tool_use_id);
-          }
-        }
-      }
-    }
-
+    // Full parse (first time or different/truncated file)
+    const content = await readFromOffset(transcriptPath, 0, fileSize);
     const data: ParsedTranscript = {
-      entries,
-      toolUses,
-      toolResults,
-      sessionStartTime,
+      entries: [],
+      toolUses: new Map(),
+      toolResults: new Set(),
     };
 
-    // Update cache
-    cachedTranscript = { path: transcriptPath, mtime, data };
+    processEntries(parseJsonlContent(content), data);
+
+    cachedTranscript = { path: transcriptPath, size: fileSize, data };
 
     return data;
   } catch {

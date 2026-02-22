@@ -4,7 +4,7 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, CostData } from '../types.js';
-import { COLORS, colorize } from '../utils/colors.js';
+import { colorize, getTheme } from '../utils/colors.js';
 import { formatCost } from '../utils/formatters.js';
 
 export const costWidget: Widget<CostData> = {
@@ -20,6 +20,6 @@ export const costWidget: Widget<CostData> = {
   },
 
   render(data: CostData): string {
-    return colorize(formatCost(data.totalCostUsd), COLORS.pastelYellow);
+    return colorize(formatCost(data.totalCostUsd), getTheme().accent);
   },
 };
