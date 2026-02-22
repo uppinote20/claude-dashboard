@@ -16,7 +16,7 @@ import { sessionDurationWidget } from '../widgets/session-duration.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
-import type { WidgetContext, StdinInput } from '../types.js';
+import type { WidgetContext, StdinInput, ModelData } from '../types.js';
 import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 // Mock version module for codex-client
@@ -37,6 +37,16 @@ function createContext(stdinOverrides: Partial<StdinInput> = {}): WidgetContext 
   };
 }
 
+function createModelData(overrides: Partial<ModelData> = {}): ModelData {
+  return {
+    id: 'claude-opus-4-6',
+    displayName: 'Claude Opus 4.6',
+    effortLevel: 'high',
+    fastMode: false,
+    ...overrides,
+  };
+}
+
 describe('widgets', () => {
   describe('modelWidget', () => {
     it('should have correct id and name', () => {
@@ -47,7 +57,7 @@ describe('widgets', () => {
     it('should return default values when model data is missing', async () => {
       const ctx = createContext({ model: undefined as any });
       const data = await modelWidget.getData(ctx);
-      expect(data).toEqual({ id: '', displayName: '-', effortLevel: 'high' });
+      expect(data).toEqual({ id: '', displayName: '-', effortLevel: 'high', fastMode: expect.any(Boolean) });
     });
 
     it('should extract model data', async () => {
@@ -59,21 +69,95 @@ describe('widgets', () => {
       expect(data?.displayName).toBe('Claude 3.5 Sonnet');
     });
 
-    it('should render shortened model name', () => {
+    it('should render shortened model name with effort for Sonnet', () => {
       const ctx = createContext();
-      const data = { id: 'claude-sonnet', displayName: 'Claude 3.5 Sonnet', effortLevel: 'high' as const };
-      const result = modelWidget.render(data, ctx);
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-sonnet', displayName: 'Claude 3.5 Sonnet' }),
+        ctx,
+      );
 
       expect(result).toContain('Sonnet');
       expect(result).toContain('🤖');
+      expect(result).toContain('(H)');
     });
 
-    it('should shorten Opus model name', () => {
+    it('should shorten Opus model name with effort', () => {
       const ctx = createContext();
-      const data = { id: 'claude-opus', displayName: 'Claude Opus 4', effortLevel: 'high' as const };
-      const result = modelWidget.render(data, ctx);
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-opus', displayName: 'Claude Opus 4' }),
+        ctx,
+      );
 
       expect(result).toContain('Opus');
+      expect(result).toContain('(H)');
+    });
+
+    it('should show effort level for Sonnet', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', effortLevel: 'low' }),
+        ctx,
+      );
+
+      expect(result).toContain('Sonnet');
+      expect(result).toContain('(L)');
+    });
+
+    it('should not show effort level for Haiku', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-haiku', displayName: 'Claude 4.5 Haiku' }),
+        ctx,
+      );
+
+      expect(result).toContain('Haiku');
+      expect(result).not.toContain('(H)');
+      expect(result).not.toContain('(M)');
+      expect(result).not.toContain('(L)');
+    });
+
+    it('should show fast mode indicator for Opus', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ effortLevel: 'medium', fastMode: true }),
+        ctx,
+      );
+
+      expect(result).toContain('Opus');
+      expect(result).toContain('(M)');
+      expect(result).toContain('↯');
+    });
+
+    it('should not show fast mode indicator for Sonnet', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', fastMode: true }),
+        ctx,
+      );
+
+      expect(result).toContain('Sonnet');
+      expect(result).toContain('(H)');
+      expect(result).not.toContain('↯');
+    });
+
+    it('should not show fast mode indicator for Haiku', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-haiku', displayName: 'Claude 4.5 Haiku', fastMode: true }),
+        ctx,
+      );
+
+      expect(result).toContain('Haiku');
+      expect(result).not.toContain('↯');
+    });
+
+    it('should not show fast mode indicator when fast mode is off', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(createModelData(), ctx);
+
+      expect(result).toContain('Opus');
+      expect(result).toContain('(H)');
+      expect(result).not.toContain('↯');
     });
   });
 

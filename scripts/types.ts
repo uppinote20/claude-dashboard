@@ -208,6 +208,7 @@ export interface ModelData {
   id: string;
   displayName: string;
   effortLevel: EffortLevel;
+  fastMode: boolean;
 }
 
 export interface ContextData {

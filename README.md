@@ -54,7 +54,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 
 | Category | Widget | Description |
 |----------|--------|-------------|
-| **Core** | `model` | Model name with emoji, effort level for Opus (H/M/L) |
+| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `cost` | Session cost in USD |
 | | `projectInfo` | Directory name + git branch (`*` if dirty) |

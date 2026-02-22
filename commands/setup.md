@@ -39,7 +39,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 
 | Widget | Description |
 |--------|-------------|
-| `model` | Model name with emoji |
+| `model` | Model name with emoji, effort level (Opus/Sonnet), fast mode (Opus) |
 | `context` | Progress bar, percentage, tokens |
 | `cost` | Session cost in USD |
 | `rateLimit5h` | 5-hour rate limit |
@@ -136,18 +136,18 @@ Display what the status line will look like based on their configuration:
 
 **Compact (1 line) - Default:**
 ```
-🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
+🤖 Opus(H) │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
 ```
 
 **Normal (2 lines):**
 ```
-🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
+🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
 📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
 ```
 
 **Detailed (4 lines):**
 ```
-🤖 Opus │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
+🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
 📁 project (main) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
 🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m) │ 🟠 GLM │ 5h: 23% │ 1m: 45%

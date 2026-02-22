@@ -145,7 +145,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.10.1";
+var VERSION = "1.11.0";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -538,45 +538,50 @@ var EFFORT_LEVELS = /* @__PURE__ */ new Set(["high", "medium", "low"]);
 function isEffortLevel(value) {
   return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
+var DEFAULT_SETTINGS = { effortLevel: "high", fastMode: false };
 var settingsCache = null;
-async function getEffortLevel() {
+async function getModelSettings() {
   const settingsPath = join2(homedir2(), ".claude", "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
     if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
-      return settingsCache.effortLevel;
+      return { effortLevel: settingsCache.effortLevel, fastMode: settingsCache.fastMode };
     }
     const content = await readFile3(settingsPath, "utf-8");
     const settings = JSON.parse(content);
-    const level = isEffortLevel(settings.effortLevel) ? settings.effortLevel : "high";
-    settingsCache = { mtime: fileStat.mtimeMs, effortLevel: level };
-    return level;
+    const effortLevel = isEffortLevel(settings.effortLevel) ? settings.effortLevel : "high";
+    const fastMode = settings.fastMode === true;
+    settingsCache = { mtime: fileStat.mtimeMs, effortLevel, fastMode };
+    return { effortLevel, fastMode };
   } catch {
     settingsCache = null;
   }
   const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
   if (isEffortLevel(envEffort)) {
-    return envEffort;
+    return { effortLevel: envEffort, fastMode: false };
   }
-  return "high";
+  return DEFAULT_SETTINGS;
 }
 var modelWidget = {
   id: "model",
   name: "Model",
   async getData(ctx) {
     const { model } = ctx.stdin;
-    const effortLevel = await getEffortLevel();
+    const { effortLevel, fastMode } = await getModelSettings();
     return {
       id: model?.id || "",
       displayName: model?.display_name || "-",
-      effortLevel
+      effortLevel,
+      fastMode
     };
   },
   render(data) {
     const shortName = shortenModelName(data.displayName);
     const icon = isZaiProvider() ? "\u{1F7E0}" : "\u{1F916}";
-    const effortSuffix = shortName === "Opus" ? `(${data.effortLevel[0].toUpperCase()})` : "";
-    return `${COLORS.pastelCyan}${icon} ${shortName}${effortSuffix}${RESET}`;
+    const supportsEffort = shortName === "Opus" || shortName === "Sonnet";
+    const effortSuffix = supportsEffort ? `(${data.effortLevel[0].toUpperCase()})` : "";
+    const fastIndicator = shortName === "Opus" && data.fastMode ? " \u21AF" : "";
+    return `${COLORS.pastelCyan}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
   }
 };
 
