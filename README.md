@@ -157,6 +157,20 @@ Check usage limits for all AI CLIs (Claude, Codex, Gemini, z.ai) at once and get
 
 ![check-usage](images/check-usage.png)
 
+### `/claude-dashboard:setup-alias`
+
+Add a `check-ai` shell alias to quickly check all AI CLI usage from your terminal. Supports macOS/Linux (zsh/bash) and Windows (PowerShell).
+
+```bash
+/claude-dashboard:setup-alias
+```
+
+After setup:
+```bash
+check-ai          # Pretty output
+check-ai --json   # JSON output for scripting
+```
+
 ### `/claude-dashboard:update`
 
 Update the plugin and refresh the statusLine path in settings. Run after updating via git pull or marketplace.
