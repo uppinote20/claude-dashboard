@@ -69,19 +69,44 @@ Configure the claude-dashboard status line plugin with widget system support.
 
 Use AskUserQuestion to ask the user. Batch independent questions into a single AskUserQuestion call (max 4 per call) to minimize back-and-forth.
 
-**Turn 1** — Ask all 3 questions in a single AskUserQuestion call:
-1. Display mode: compact (recommended), normal, detailed, custom
-2. Theme: default (recommended), minimal, catppuccin, dracula, gruvbox
-3. Hide widgets?: No (recommended), Yes
+**Turn 1** — Ask all 4 questions in a single AskUserQuestion call:
+1. Display mode — MUST include `markdown` field on each option for visual preview:
+   - compact (recommended), markdown:
+     ```
+     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ```
+   - normal, markdown:
+     ```
+     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
+     ```
+   - detailed, markdown:
+     ```
+     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h │ ✓ 3/5
+     CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
+     🔷 codex │ 5h: 15% │ 💎 gemini │ 0%
+     ```
+   - custom, markdown:
+     ```
+     Choose exactly which widgets appear on each line.
+     Full control over layout and ordering.
+     ```
+2. Language: auto (recommended), en, ko
+3. Plan: max (recommended), pro
+4. Theme: default (recommended), minimal, catppuccin, "dracula / gruvbox"
+   - If "dracula / gruvbox" selected: ask in next turn which one (dracula or gruvbox)
 
-**Turn 2** — Conditional follow-ups (only if needed):
-- If display mode = "custom": ask for each line's widgets
-  - Line 1 widgets (multi-select from available widgets)
-  - Ask if they want to add Line 2
-  - If yes, Line 2 widgets (multi-select)
-  - Continue until they say no (no line limit)
-- If hide widgets = "Yes": ask which widgets to hide (multi-select from available widgets)
-- If both are needed, ask them together in a single AskUserQuestion call
+**Turn 2** — If display mode = "custom", ask for each line's widgets:
+- Show available widgets table for reference
+- Line 1 widgets (comma-separated text input with suggested combinations)
+- Ask if they want to add Line 2
+- If yes, Line 2 widgets
+- Continue until they say no (no line limit)
+
+**Turn 3** — Ask: "Do you want to hide any widgets?"
+- Options: No (recommended), Yes
+- If "Yes": ask which widgets to hide (multi-select from available widgets)
 
 **If arguments provided (direct mode):**
 
@@ -139,29 +164,6 @@ This command:
 2. Updates `statusLine` in settings.json with the correct path
 
 **IMPORTANT**: After updating the plugin via `/plugin update claude-dashboard`, run `/claude-dashboard:update` to update the statusLine path to the latest version.
-
-### 4. Show example output
-
-Display what the status line will look like based on their configuration:
-
-**Compact (1 line) - Default:**
-```
-🤖 Opus(H) │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-```
-
-**Normal (2 lines):**
-```
-🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main ↑3) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
-```
-
-**Detailed (4 lines):**
-```
-🤖 Opus(H) ↯ │ ████████░░ 80% │ 160K/200K │ $1.25 │ 5h: 42% (2h30m) │ 7d: 69% │ 7d-S: 2%
-📁 project (main ↑3↓1) │ 🔑 abc12345 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h15m │ ✓ 3/5
-CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85%
-🔷 gpt-5.2-codex │ 5h: 15% │ 7d: 5% │ 💎 gemini-2.0-flash │ 0% (23h59m) │ 🟠 GLM │ 5h: 23% │ 1m: 45%
-```
 
 ## Examples
 
