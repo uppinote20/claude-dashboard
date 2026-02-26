@@ -377,7 +377,7 @@ async function getGeminiSettings(): Promise<GeminiSettings | null> {
 
     const data: GeminiSettings = {
       cloudaicompanionProject: json?.cloudaicompanionProject,
-      selectedModel: json?.selectedModel || json?.model,
+      selectedModel: json?.selectedModel || json?.model?.name,
       auth: json?.auth,
     };
 

@@ -316,7 +316,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.13.0";
+var VERSION = "1.13.1";
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
@@ -2049,7 +2049,7 @@ async function getGeminiSettings() {
     const json = JSON.parse(raw);
     const data = {
       cloudaicompanionProject: json?.cloudaicompanionProject,
-      selectedModel: json?.selectedModel || json?.model,
+      selectedModel: json?.selectedModel || json?.model?.name,
       auth: json?.auth
     };
     cachedSettings = { data, mtime: fileStat.mtimeMs };
