@@ -53,7 +53,11 @@ export type WidgetId =
   | 'codexUsage'
   | 'geminiUsage'
   | 'geminiUsageAll'
-  | 'zaiUsage';
+  | 'zaiUsage'
+  | 'tokenBreakdown'
+  | 'performance'
+  | 'forecast'
+  | 'budget';
 
 /**
  * Display mode for status line output
@@ -78,15 +82,20 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
-    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit'],
-    ['codexUsage', 'geminiUsage'],
+    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
+    ['tokenBreakdown', 'forecast', 'budget', 'codexUsage', 'geminiUsage'],
   ],
 };
 
 /**
  * Theme identifiers
  */
-export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox';
+export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
+
+/**
+ * Separator styles for widget dividers
+ */
+export type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow' | 'powerline';
 
 /**
  * User configuration stored in ~/.claude/claude-dashboard.local.json
@@ -102,11 +111,68 @@ export interface Config {
   disabledWidgets?: WidgetId[];
   /** Color theme */
   theme?: ThemeId;
+  /** Separator style between widgets. Default: 'pipe' */
+  separator?: SeparatorStyle;
+  /**
+   * Preset shorthand string for quick widget layout.
+   * Each character maps to a widget, '|' separates lines.
+   * Example: "MC$R|PSD" → Line 1: Model, Context, Cost, RateLimit5h; Line 2: ProjectInfo, SessionDuration, DepletionTime
+   * When set, overrides displayMode with 'custom' and generates lines from the string.
+   */
+  preset?: string;
   /** Reserved width for right-side content (Claude Code notifications). Default: 25 */
   rightReserve?: number;
+  /** Daily budget limit in USD. Enables budget tracking widget. */
+  dailyBudget?: number;
   cache: {
     ttlSeconds: number;
   };
+}
+
+/**
+ * Mapping of single characters to widget IDs for preset shortcuts.
+ * Used to convert compact preset strings like "MC$R" into widget arrays.
+ */
+export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
+  M: 'model',
+  C: 'context',
+  $: 'cost',
+  R: 'rateLimit5h',
+  '7': 'rateLimit7d',
+  S: 'rateLimit7dSonnet',
+  P: 'projectInfo',
+  I: 'sessionId',
+  D: 'sessionDuration',
+  T: 'toolActivity',
+  A: 'agentStatus',
+  O: 'todoProgress',
+  B: 'burnRate',
+  E: 'depletionTime',
+  H: 'cacheHit',
+  X: 'codexUsage',
+  G: 'geminiUsage',
+  Z: 'zaiUsage',
+  K: 'configCounts',
+  N: 'tokenBreakdown',
+  F: 'performance',
+  W: 'forecast',
+  U: 'budget',
+};
+
+/**
+ * Parse a preset shorthand string into widget line arrays.
+ * Characters are mapped via PRESET_CHAR_MAP, '|' separates lines.
+ * Unknown characters are silently skipped.
+ */
+export function parsePreset(preset: string): WidgetId[][] {
+  return preset
+    .split('|')
+    .map((line) =>
+      [...line]
+        .map((ch) => PRESET_CHAR_MAP[ch])
+        .filter((id): id is WidgetId => id !== undefined)
+    )
+    .filter((line) => line.length > 0);
 }
 
 /**
@@ -160,6 +226,10 @@ export interface Translations {
     burnRate: string;
     cache: string;
     toLimit: string;
+    forecast: string;
+    budget: string;
+    performance: string;
+    tokenBreakdown: string;
   };
   /** Check-usage command labels */
   checkUsage: {
@@ -411,6 +481,54 @@ export interface ZaiUsageData {
 }
 
 /**
+ * Token breakdown data - input/output/cache_write/cache_read
+ */
+export interface TokenBreakdownData {
+  inputTokens: number;
+  outputTokens: number;
+  cacheWriteTokens: number;
+  cacheReadTokens: number;
+}
+
+/**
+ * Performance badge data - composite efficiency score
+ * @invariant score is in range [0, 100]
+ */
+export interface PerformanceData {
+  /** Composite score 0-100 (higher = better efficiency) */
+  score: number;
+  /** Cache hit rate percentage */
+  cacheHitRate: number;
+  /** Output token ratio percentage */
+  outputRatio: number;
+}
+
+/**
+ * Cost forecast data - estimated hourly cost
+ */
+export interface ForecastData {
+  /** Current session total cost */
+  currentCost: number;
+  /** Estimated hourly cost extrapolated from session rate */
+  hourlyCost: number;
+  /** Cost per minute */
+  costPerMinute: number;
+}
+
+/**
+ * Budget tracking data - daily spending vs limit
+ * @invariant utilization is in range [0, 1]
+ */
+export interface BudgetData {
+  /** Total cost accumulated today */
+  dailyTotal: number;
+  /** User-configured daily budget limit */
+  dailyBudget: number;
+  /** Utilization ratio (0-1) */
+  utilization: number;
+}
+
+/**
  * Union type of all widget data
  */
 export type WidgetData =
@@ -431,7 +549,11 @@ export type WidgetData =
   | CodexUsageData
   | GeminiUsageData
   | GeminiUsageAllData
-  | ZaiUsageData;
+  | ZaiUsageData
+  | TokenBreakdownData
+  | PerformanceData
+  | ForecastData
+  | BudgetData;
 
 /**
  * Transcript entry from JSONL file

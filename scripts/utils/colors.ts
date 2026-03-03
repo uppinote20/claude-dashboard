@@ -2,7 +2,7 @@
  * ANSI color codes for terminal output with theme support
  */
 
-import type { ThemeId } from '../types.js';
+import type { ThemeId, SeparatorStyle } from '../types.js';
 
 /**
  * Semantic color roles used by widgets
@@ -176,6 +176,87 @@ const THEMES: Record<ThemeId, ThemeColors> = {
     white: '\x1b[38;2;248;248;242m',
     gray: '\x1b[38;2;98;114;164m',
   },
+
+  nord: {
+    dim: '\x1b[2m',
+    bold: '\x1b[1m',
+
+    model: '\x1b[38;2;136;192;208m',     // #88c0d0 frost cyan
+    folder: '\x1b[38;2;235;203;139m',    // #ebcb8b yellow
+    branch: '\x1b[38;2;180;142;173m',    // #b48ead purple
+    safe: '\x1b[38;2;163;190;140m',      // #a3be8c green
+    warning: '\x1b[38;2;235;203;139m',   // #ebcb8b yellow
+    danger: '\x1b[38;2;191;97;106m',     // #bf616a red
+    secondary: '\x1b[38;2;76;86;106m',   // #4c566a polar night
+    accent: '\x1b[38;2;208;135;112m',    // #d08770 orange
+    info: '\x1b[38;2;129;161;193m',      // #81a1c1 frost blue
+
+    barFilled: '\x1b[38;2;163;190;140m',  // #a3be8c green
+    barEmpty: '\x1b[38;2;67;76;94m',      // #434c5e polar night
+
+    red: '\x1b[38;2;191;97;106m',
+    green: '\x1b[38;2;163;190;140m',
+    yellow: '\x1b[38;2;235;203;139m',
+    blue: '\x1b[38;2;129;161;193m',
+    magenta: '\x1b[38;2;180;142;173m',
+    cyan: '\x1b[38;2;136;192;208m',
+    white: '\x1b[38;2;236;239;244m',
+    gray: '\x1b[38;2;76;86;106m',
+  },
+
+  tokyoNight: {
+    dim: '\x1b[2m',
+    bold: '\x1b[1m',
+
+    model: '\x1b[38;2;122;162;247m',     // #7aa2f7 blue
+    folder: '\x1b[38;2;224;175;104m',    // #e0af68 yellow
+    branch: '\x1b[38;2;187;154;247m',    // #bb9af7 purple
+    safe: '\x1b[38;2;158;206;106m',      // #9ece6a green
+    warning: '\x1b[38;2;224;175;104m',   // #e0af68 yellow
+    danger: '\x1b[38;2;247;118;142m',    // #f7768e red
+    secondary: '\x1b[38;2;86;95;137m',   // #565f89 comment
+    accent: '\x1b[38;2;255;158;100m',    // #ff9e64 orange
+    info: '\x1b[38;2;125;207;255m',      // #7dcfff cyan
+
+    barFilled: '\x1b[38;2;158;206;106m',  // #9ece6a green
+    barEmpty: '\x1b[38;2;59;66;97m',      // #3b4261 dark
+
+    red: '\x1b[38;2;247;118;142m',
+    green: '\x1b[38;2;158;206;106m',
+    yellow: '\x1b[38;2;224;175;104m',
+    blue: '\x1b[38;2;122;162;247m',
+    magenta: '\x1b[38;2;187;154;247m',
+    cyan: '\x1b[38;2;125;207;255m',
+    white: '\x1b[38;2;169;177;214m',
+    gray: '\x1b[38;2;86;95;137m',
+  },
+
+  solarized: {
+    dim: '\x1b[2m',
+    bold: '\x1b[1m',
+
+    model: '\x1b[38;2;38;139;210m',      // #268bd2 blue
+    folder: '\x1b[38;2;181;137;0m',      // #b58900 yellow
+    branch: '\x1b[38;2;211;54;130m',     // #d33682 magenta
+    safe: '\x1b[38;2;133;153;0m',        // #859900 green
+    warning: '\x1b[38;2;181;137;0m',     // #b58900 yellow
+    danger: '\x1b[38;2;220;50;47m',      // #dc322f red
+    secondary: '\x1b[38;2;88;110;117m',  // #586e75 base01
+    accent: '\x1b[38;2;203;75;22m',      // #cb4b16 orange
+    info: '\x1b[38;2;42;161;152m',       // #2aa198 cyan
+
+    barFilled: '\x1b[38;2;133;153;0m',    // #859900 green
+    barEmpty: '\x1b[38;2;7;54;66m',       // #073642 base02
+
+    red: '\x1b[38;2;220;50;47m',
+    green: '\x1b[38;2;133;153;0m',
+    yellow: '\x1b[38;2;181;137;0m',
+    blue: '\x1b[38;2;38;139;210m',
+    magenta: '\x1b[38;2;211;54;130m',
+    cyan: '\x1b[38;2;42;161;152m',
+    white: '\x1b[38;2;253;246;227m',
+    gray: '\x1b[38;2;88;110;117m',
+  },
 };
 
 /**
@@ -292,10 +373,35 @@ export function getVisualWidth(str: string): number {
 }
 
 /**
- * Get the pipe separator string using active theme
+ * Separator characters for each style
+ */
+const SEPARATOR_CHARS: Record<SeparatorStyle, string> = {
+  pipe: '│',
+  space: ' ',
+  dot: '·',
+  arrow: '›',
+  powerline: '',
+};
+
+/**
+ * Active separator style (set once at startup)
+ */
+let activeSeparatorStyle: SeparatorStyle = 'pipe';
+
+/**
+ * Set the active separator style
+ */
+export function setSeparatorStyle(style: SeparatorStyle | undefined): void {
+  activeSeparatorStyle = style && style in SEPARATOR_CHARS ? style : 'pipe';
+}
+
+/**
+ * Get the separator string using active theme and style
  */
 export function getSeparator(): string {
-  return ` ${getTheme().dim}│${RESET} `;
+  const char = SEPARATOR_CHARS[activeSeparatorStyle];
+  if (activeSeparatorStyle === 'space') return '  ';
+  return ` ${getTheme().dim}${char}${RESET} `;
 }
 
 /** Regex to match a single ANSI escape sequence */

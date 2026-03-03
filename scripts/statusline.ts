@@ -10,8 +10,8 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 import type { StdinInput, Config, WidgetContext } from './types.js';
-import { DEFAULT_CONFIG } from './types.js';
-import { COLORS, colorize, setTheme } from './utils/colors.js';
+import { DEFAULT_CONFIG, parsePreset } from './types.js';
+import { COLORS, colorize, setTheme, setSeparatorStyle } from './utils/colors.js';
 import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput } from './widgets/index.js';
@@ -65,6 +65,15 @@ async function loadConfig(): Promise<Config> {
       ...userConfig,
     };
 
+    // Apply preset shorthand if configured
+    if (config.preset) {
+      const lines = parsePreset(config.preset);
+      if (lines.length > 0) {
+        config.displayMode = 'custom';
+        config.lines = lines;
+      }
+    }
+
     // Cache result
     configCache = { config, mtime };
     return config;
@@ -80,8 +89,9 @@ async function main(): Promise<void> {
   // Load configuration
   const config = await loadConfig();
 
-  // Initialize theme
+  // Initialize theme and separator
   setTheme(config.theme);
+  setSeparatorStyle(config.separator);
 
   // Get translations
   const translations = getTranslations(config);
