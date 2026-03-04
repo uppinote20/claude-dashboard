@@ -18,7 +18,8 @@ var DISPLAY_PRESETS = {
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
     ["projectInfo", "sessionId", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
-    ["tokenBreakdown", "forecast", "budget", "codexUsage", "geminiUsage"]
+    ["tokenBreakdown", "forecast", "budget"],
+    ["codexUsage", "geminiUsage"]
   ]
 };
 var PRESET_CHAR_MAP = {
@@ -382,8 +383,7 @@ var SEPARATOR_CHARS = {
   pipe: "\u2502",
   space: " ",
   dot: "\xB7",
-  arrow: "\u203A",
-  powerline: ""
+  arrow: "\u203A"
 };
 var activeSeparatorStyle = "pipe";
 function setSeparatorStyle(style) {

@@ -69,7 +69,7 @@ export type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
  *
  * compact: Essential metrics - 1 line
  * normal: Essential + project/session/todo - 2 lines
- * detailed: Normal + config/tools/agents (additive) - 4 lines
+ * detailed: Normal + config/tools/agents (additive) - 5 lines
  */
 export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][]> = {
   compact: [
@@ -83,7 +83,8 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
-    ['tokenBreakdown', 'forecast', 'budget', 'codexUsage', 'geminiUsage'],
+    ['tokenBreakdown', 'forecast', 'budget'],
+    ['codexUsage', 'geminiUsage'],
   ],
 };
 
@@ -95,7 +96,7 @@ export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbo
 /**
  * Separator styles for widget dividers
  */
-export type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow' | 'powerline';
+export type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow';
 
 /**
  * User configuration stored in ~/.claude/claude-dashboard.local.json

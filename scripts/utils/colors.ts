@@ -338,7 +338,6 @@ const SEPARATOR_CHARS: Record<SeparatorStyle, string> = {
   space: ' ',
   dot: '·',
   arrow: '›',
-  powerline: '',
 };
 
 /**
