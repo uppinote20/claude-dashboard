@@ -68,6 +68,20 @@ function hashToken(token) {
 // scripts/version.ts
 var VERSION = "1.16.0";
 
+// scripts/utils/debug.ts
+var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
+function debugLog(context, message, error) {
+  if (!DEBUG)
+    return;
+  const timestamp = (/* @__PURE__ */ new Date()).toISOString();
+  const prefix = `[claude-dashboard:${context}]`;
+  if (error) {
+    console.error(`${timestamp} ${prefix} ${message}`, error);
+  } else {
+    console.log(`${timestamp} ${prefix} ${message}`);
+  }
+}
+
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
 var MAX_RETRY_AFTER_MS = 3e3;
@@ -95,7 +109,7 @@ function isCacheValid(tokenHash, ttlSeconds) {
   const ageSeconds = (Date.now() - cache.timestamp) / 1e3;
   return ageSeconds < ttlSeconds;
 }
-async function fetchUsageLimits(ttlSeconds = 60) {
+async function fetchUsageLimits(ttlSeconds = 300) {
   const token = await getCredentials();
   if (!token) {
     if (lastTokenHash) {
@@ -166,8 +180,11 @@ async function fetchFromApi(token, tokenHash) {
     if (response.status === 429) {
       const retryAfter = parseInt(response.headers.get("retry-after") ?? "", 10);
       if (!isNaN(retryAfter) && retryAfter * 1e3 <= MAX_RETRY_AFTER_MS) {
+        debugLog("api", `429 received, retrying after ${retryAfter}s`);
         await new Promise((r) => setTimeout(r, retryAfter * 1e3));
         response = await makeRequest(token);
+      } else {
+        debugLog("api", `429 received, retry-after ${retryAfter}s exceeds limit, skipping`);
       }
     }
     if (!response.ok) {
@@ -248,22 +265,6 @@ import { readFile as readFile3, stat as stat3, writeFile as writeFile2, mkdir as
 import { execFileSync as execFileSync2 } from "child_process";
 import os2 from "os";
 import path2 from "path";
-
-// scripts/utils/debug.ts
-var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
-function debugLog(context, message, error) {
-  if (!DEBUG)
-    return;
-  const timestamp = (/* @__PURE__ */ new Date()).toISOString();
-  const prefix = `[claude-dashboard:${context}]`;
-  if (error) {
-    console.error(`${timestamp} ${prefix} ${message}`, error);
-  } else {
-    console.log(`${timestamp} ${prefix} ${message}`);
-  }
-}
-
-// scripts/utils/codex-client.ts
 var API_TIMEOUT_MS2 = 5e3;
 var CODEX_AUTH_PATH = path2.join(os2.homedir(), ".codex", "auth.json");
 var CODEX_CONFIG_PATH = path2.join(os2.homedir(), ".codex", "config.toml");

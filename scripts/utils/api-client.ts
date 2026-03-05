@@ -11,6 +11,7 @@ import type { UsageLimits, CacheEntry } from '../types.js';
 import { getCredentials } from './credentials.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
+import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
 const MAX_RETRY_AFTER_MS = 3000;
@@ -74,7 +75,7 @@ function isCacheValid(tokenHash: string, ttlSeconds: number): boolean {
  * @param ttlSeconds - Cache TTL in seconds (default: 300)
  * @returns Usage limits or null if failed
  */
-export async function fetchUsageLimits(ttlSeconds: number = 60): Promise<UsageLimits | null> {
+export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageLimits | null> {
   // Get token first to determine cache key
   const token = await getCredentials();
 
@@ -168,8 +169,11 @@ async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimi
     if (response.status === 429) {
       const retryAfter = parseInt(response.headers.get('retry-after') ?? '', 10);
       if (!isNaN(retryAfter) && retryAfter * 1000 <= MAX_RETRY_AFTER_MS) {
+        debugLog('api', `429 received, retrying after ${retryAfter}s`);
         await new Promise((r) => setTimeout(r, retryAfter * 1000));
         response = await makeRequest(token);
+      } else {
+        debugLog('api', `429 received, retry-after ${retryAfter}s exceeds limit, skipping`);
       }
     }
 
