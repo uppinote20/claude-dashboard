@@ -73,6 +73,34 @@ claude-dashboard/
 └── package.json
 ```
 
+## Engineering Handbook
+
+구현 패턴, 아키텍처 결정, 코딩 컨벤션은 [`docs/ENGINEERING_HANDBOOK.md`](docs/ENGINEERING_HANDBOOK.md) 참조.
+
+**양방향 링크 시스템:**
+- 코드의 `@handbook 3.1` → ENGINEERING_HANDBOOK 섹션 참조
+- 문서의 `<!-- @code -->` 마커 → 소스 파일 참조
+- 변경 시 양쪽 동기화 필요
+- 마커 검색: `grep -r "@handbook" scripts/`
+
+| 찾는 것 | HANDBOOK 섹션 |
+|---------|--------------|
+| 코딩 컨벤션 | 2 |
+| 위젯 아키텍처 | 3 |
+| 캐싱 아키텍처 | 4 |
+| 테마 & i18n | 5 |
+| 에러 핸들링 | 6 |
+| API 클라이언트 | 7 |
+| 테스트 | 8 |
+
+| 패턴 | 참고 파일 |
+|------|----------|
+| 위젯 구현 (기본) | `scripts/widgets/cost.ts` |
+| 위젯 구현 (API) | `scripts/widgets/rate-limit.ts` |
+| 위젯 구현 (transcript) | `scripts/widgets/tool-activity.ts` |
+| API 클라이언트 | `scripts/utils/api-client.ts` |
+| 포매팅 유틸리티 | `scripts/utils/formatters.ts` |
+
 ## Widget Architecture
 
 ### Widget Interface

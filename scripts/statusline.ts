@@ -3,6 +3,8 @@
 /**
  * Claude Dashboard Status Line
  * Displays model info, context usage, rate limits, and more
+ * @handbook 2.2-import-order
+ * @handbook 4.6-config-caching
  */
 
 import { readFile, stat } from 'fs/promises';

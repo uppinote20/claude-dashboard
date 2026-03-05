@@ -1,5 +1,6 @@
 /**
  * Rate limit widgets - displays 5h and 7d usage limits
+ * @handbook 6.2-stale-while-error
  * Note: These widgets return null when using z.ai provider,
  * allowing zaiUsage widget to display instead.
  */

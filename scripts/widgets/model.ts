@@ -1,5 +1,6 @@
 /**
  * Model widget - displays current Claude model name with effort level and fast mode
+ * @handbook 2.1-naming-conventions
  *
  * Effort level: Shown for Opus and Sonnet (H/M/L), hidden for Haiku
  * Fast mode: Opus 4.6 exclusive feature, indicated by ↯ symbol

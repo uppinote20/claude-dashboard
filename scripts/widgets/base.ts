@@ -1,5 +1,6 @@
 /**
  * Base widget interface and types
+ * @handbook 3.1-widget-interface
  */
 
 import type { WidgetContext, WidgetData, WidgetId } from '../types.js';

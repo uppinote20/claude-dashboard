@@ -1,3 +1,7 @@
+/**
+ * Internationalization - language detection and translation loading
+ * @handbook 5.4-i18n-structure
+ */
 import type { Translations, Config } from '../types.js';
 
 // Import locale files

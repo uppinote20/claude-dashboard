@@ -1,3 +1,7 @@
+/**
+ * OAuth credential extraction with platform-specific caching
+ * @handbook 4.4-credential-caching
+ */
 import { execFileSync } from 'child_process';
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';

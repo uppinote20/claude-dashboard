@@ -1,5 +1,7 @@
 /**
  * Widget registry and orchestrator
+ * @handbook 3.2-widget-lifecycle
+ * @handbook 3.4-widget-registration
  */
 
 import type { Widget, WidgetRenderResult } from './base.js';

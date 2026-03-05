@@ -1,5 +1,6 @@
 /**
  * Debug utilities for claude-dashboard
+ * @handbook 6.3-debug-mode
  *
  * Enable debug logging by setting DEBUG=claude-dashboard or DEBUG=1
  */

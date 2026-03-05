@@ -1,5 +1,6 @@
 /**
  * Transcript parser - parses Claude Code transcript.jsonl files
+ * @handbook 4.5-transcript-incremental-parsing
  * Uses incremental parsing: remembers last byte offset and only parses new content
  */
 
