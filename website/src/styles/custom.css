@@ -1,0 +1,62 @@
+/* claude-dashboard docs — custom theme overrides */
+
+:root {
+  /* Brand colors — inspired by terminal aesthetics */
+  --sl-color-accent-low: #1a1b26;
+  --sl-color-accent: #7aa2f7;
+  --sl-color-accent-high: #c0caf5;
+
+  /* Text */
+  --sl-color-white: #c9d1d9;
+  --sl-color-gray-1: #e6edf3;
+  --sl-color-gray-2: #8b949e;
+  --sl-color-gray-3: #6e7681;
+  --sl-color-gray-4: #484f58;
+  --sl-color-gray-5: #30363d;
+  --sl-color-gray-6: #21262d;
+  --sl-color-black: #0d1117;
+
+  /* Font stack — monospace-first for developer docs */
+  --sl-font: 'Pretendard Variable', 'Pretendard', -apple-system,
+    BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI',
+    'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --sl-font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas',
+    monospace;
+}
+
+/* Light mode overrides */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #dbeafe;
+  --sl-color-accent: #2563eb;
+  --sl-color-accent-high: #1e3a5f;
+
+  --sl-color-white: #1b1b1f;
+  --sl-color-gray-1: #24292f;
+  --sl-color-gray-2: #57606a;
+  --sl-color-gray-3: #8c959f;
+  --sl-color-gray-4: #d0d7de;
+  --sl-color-gray-5: #e8ecf0;
+  --sl-color-gray-6: #f6f8fa;
+  --sl-color-black: #ffffff;
+}
+
+/* Hero section refinements */
+.hero {
+  padding-block: 2rem;
+}
+
+/* Code blocks — terminal feel */
+pre {
+  border: 1px solid var(--sl-color-gray-5);
+  border-radius: 0.5rem;
+}
+
+/* Card styling */
+.card {
+  border-radius: 0.75rem;
+}
+
+/* Sidebar active state */
+[data-current='true'] > a {
+  font-weight: 600;
+}
