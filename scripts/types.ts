@@ -514,8 +514,6 @@ export interface ForecastData {
   currentCost: number;
   /** Estimated hourly cost extrapolated from session rate */
   hourlyCost: number;
-  /** Cost per minute */
-  costPerMinute: number;
 }
 
 /**

@@ -272,6 +272,7 @@ let activeTheme: ThemeColors = THEMES.default;
  */
 export function setTheme(themeId: ThemeId | undefined): void {
   activeTheme = THEMES[themeId ?? 'default'] ?? THEMES.default;
+  cachedSeparator = null;
 }
 
 /**
@@ -347,20 +348,23 @@ const SEPARATOR_CHARS: Record<SeparatorStyle, string> = {
  * Active separator style (set once at startup)
  */
 let activeSeparatorStyle: SeparatorStyle = 'pipe';
+let cachedSeparator: string | null = null;
 
 /**
  * Set the active separator style
  */
 export function setSeparatorStyle(style: SeparatorStyle | undefined): void {
   activeSeparatorStyle = style && style in SEPARATOR_CHARS ? style : 'pipe';
+  cachedSeparator = null;
 }
 
 /**
  * Get the separator string using active theme and style
  */
 export function getSeparator(): string {
+  if (cachedSeparator !== null) return cachedSeparator;
   const char = SEPARATOR_CHARS[activeSeparatorStyle];
-  if (activeSeparatorStyle === 'space') return '  ';
-  return ` ${getTheme().dim}${char}${RESET} `;
+  cachedSeparator = activeSeparatorStyle === 'space' ? '  ' : ` ${getTheme().dim}${char}${RESET} `;
+  return cachedSeparator;
 }
 

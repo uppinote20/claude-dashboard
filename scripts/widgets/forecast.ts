@@ -27,7 +27,6 @@ export const forecastWidget: Widget<ForecastData> = {
     return {
       currentCost: totalCost,
       hourlyCost,
-      costPerMinute,
     };
   },
 
@@ -43,6 +42,6 @@ export const forecastWidget: Widget<ForecastData> = {
       hourlyColor = theme.safe;
     }
 
-    return `📈 ${colorize(`${formatCost(data.currentCost)}`, theme.accent)} → ${colorize(`~${formatCost(data.hourlyCost)}/h`, hourlyColor)}`;
+    return `📈 ${colorize(formatCost(data.currentCost), theme.accent)} → ${colorize(`~${formatCost(data.hourlyCost)}/h`, hourlyColor)}`;
   },
 };

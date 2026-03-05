@@ -339,6 +339,7 @@ var THEMES = {
 var activeTheme = THEMES.default;
 function setTheme(themeId) {
   activeTheme = THEMES[themeId ?? "default"] ?? THEMES.default;
+  cachedSeparator = null;
 }
 function getTheme() {
   return activeTheme;
@@ -386,14 +387,17 @@ var SEPARATOR_CHARS = {
   arrow: "\u203A"
 };
 var activeSeparatorStyle = "pipe";
+var cachedSeparator = null;
 function setSeparatorStyle(style) {
   activeSeparatorStyle = style && style in SEPARATOR_CHARS ? style : "pipe";
+  cachedSeparator = null;
 }
 function getSeparator() {
+  if (cachedSeparator !== null)
+    return cachedSeparator;
   const char = SEPARATOR_CHARS[activeSeparatorStyle];
-  if (activeSeparatorStyle === "space")
-    return "  ";
-  return ` ${getTheme().dim}${char}${RESET} `;
+  cachedSeparator = activeSeparatorStyle === "space" ? "  " : ` ${getTheme().dim}${char}${RESET} `;
+  return cachedSeparator;
 }
 
 // scripts/utils/api-client.ts
@@ -2783,7 +2787,7 @@ var performanceWidget = {
     const elapsedMinutes = await getSessionElapsedMinutes(ctx, 0);
     if (elapsedMinutes === null || elapsedMinutes === 0)
       return null;
-    const totalInput = usage.cache_read_input_tokens + usage.input_tokens + usage.cache_creation_input_tokens;
+    const totalInput = totalTokens - usage.output_tokens;
     const cacheHitRate = totalInput > 0 ? usage.cache_read_input_tokens / totalInput * 100 : 0;
     const outputRatio = usage.output_tokens / totalTokens * 100;
     const score = Math.min(100, Math.max(0, Math.round(cacheHitRate * 0.6 + outputRatio * 0.4)));
@@ -2828,8 +2832,7 @@ var forecastWidget = {
       return null;
     return {
       currentCost: totalCost,
-      hourlyCost,
-      costPerMinute
+      hourlyCost
     };
   },
   render(data, _ctx) {
@@ -2842,7 +2845,7 @@ var forecastWidget = {
     } else {
       hourlyColor = theme.safe;
     }
-    return `\u{1F4C8} ${colorize(`${formatCost(data.currentCost)}`, theme.accent)} \u2192 ${colorize(`~${formatCost(data.hourlyCost)}/h`, hourlyColor)}`;
+    return `\u{1F4C8} ${colorize(formatCost(data.currentCost), theme.accent)} \u2192 ${colorize(`~${formatCost(data.hourlyCost)}/h`, hourlyColor)}`;
   }
 };
 
@@ -2853,6 +2856,7 @@ import { homedir as homedir4 } from "os";
 var BUDGET_DIR = join5(homedir4(), ".cache", "claude-dashboard");
 var BUDGET_FILE = join5(BUDGET_DIR, "budget.json");
 var budgetCache = null;
+var dirEnsured = false;
 function getToday() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 }
@@ -2876,7 +2880,10 @@ async function loadBudgetState() {
 }
 async function saveBudgetState(state) {
   try {
-    await mkdir4(BUDGET_DIR, { recursive: true });
+    if (!dirEnsured) {
+      await mkdir4(BUDGET_DIR, { recursive: true });
+      dirEnsured = true;
+    }
     await writeFile4(BUDGET_FILE, JSON.stringify(state), "utf-8");
     budgetCache = state;
   } catch (error) {
@@ -2885,6 +2892,9 @@ async function saveBudgetState(state) {
 }
 async function recordCostAndGetDaily(sessionId, sessionCost) {
   const state = await loadBudgetState();
+  if (sessionCost <= 0 && !(sessionId in state.sessions)) {
+    return state.dailyTotal;
+  }
   const lastSeen = state.sessions[sessionId] ?? 0;
   const delta = Math.max(0, sessionCost - lastSeen);
   state.dailyTotal += delta;
