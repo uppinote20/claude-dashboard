@@ -167,13 +167,18 @@ async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimi
 
     // Retry once on 429 if retry-after is short enough
     if (response.status === 429) {
-      const retryAfter = parseInt(response.headers.get('retry-after') ?? '', 10);
-      if (!isNaN(retryAfter) && retryAfter * 1000 <= MAX_RETRY_AFTER_MS) {
-        debugLog('api', `429 received, retrying after ${retryAfter}s`);
-        await new Promise((r) => setTimeout(r, retryAfter * 1000));
-        response = await makeRequest(token);
+      const retryAfterHeader = response.headers.get('retry-after');
+      if (retryAfterHeader === null) {
+        debugLog('api', '429 received, no retry-after header, skipping');
       } else {
-        debugLog('api', `429 received, retry-after ${retryAfter}s exceeds limit, skipping`);
+        const retryAfter = parseInt(retryAfterHeader, 10);
+        if (!isNaN(retryAfter) && retryAfter * 1000 <= MAX_RETRY_AFTER_MS) {
+          debugLog('api', `429 received, retrying after ${retryAfter}s`);
+          await new Promise((r) => setTimeout(r, retryAfter * 1000));
+          response = await makeRequest(token);
+        } else {
+          debugLog('api', `429 received, retry-after ${retryAfter}s exceeds limit, skipping`);
+        }
       }
     }
 
@@ -194,7 +199,8 @@ async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimi
     await saveFileCache(tokenHash, limits);
 
     return limits;
-  } catch {
+  } catch (error) {
+    debugLog('api', 'Request failed', error);
     return null;
   }
 }
