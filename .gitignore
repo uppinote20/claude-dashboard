@@ -26,4 +26,9 @@ coverage/
 claude-dashboard.mov
 
 # Generated documentation (TypeDoc/JSDoc output)
-docs/
+/docs/
+
+# Website
+website/node_modules/
+website/dist/
+website/.astro/
