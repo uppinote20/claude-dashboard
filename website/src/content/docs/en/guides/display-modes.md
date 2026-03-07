@@ -25,7 +25,7 @@ Opus(H) | ---- 80% | $1.25 | 5h: 42% | 7d: 69%
 
 Adds project context, session tracking, and progress information on a second line.
 
-**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
+**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
 **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 
 ```
@@ -41,10 +41,10 @@ project (main) | abc123 | 45m | 5K/m | 3/5
 
 Shows all available widgets across five lines, including analytics, tool activity, multi-CLI usage, and insights.
 
-**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
-**Line 2:** projectInfo, sessionId, sessionDuration, burnRate, depletionTime, todoProgress
-**Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance
-**Line 4:** tokenBreakdown, forecast, budget
+**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
+**Line 2:** projectInfo, sessionId, sessionDuration, burnRate, depletionTime, todoProgress<br/>
+**Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
+**Line 4:** tokenBreakdown, forecast, budget<br/>
 **Line 5:** codexUsage, geminiUsage
 
 ```

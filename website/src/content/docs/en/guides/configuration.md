@@ -53,7 +53,7 @@ The configuration is stored at `~/.claude/claude-dashboard.local.json`. You can 
   "dailyBudget": 15,
   "disabledWidgets": [],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

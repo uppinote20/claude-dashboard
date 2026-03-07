@@ -84,7 +84,7 @@ sidebar:
   "separator": "dot",
   "dailyBudget": 15,
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

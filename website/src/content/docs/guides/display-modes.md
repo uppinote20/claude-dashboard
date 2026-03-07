@@ -31,7 +31,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 /claude-dashboard:setup normal
 ```
 
-**1줄:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
+**1줄:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
 **2줄:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 
 ```
@@ -47,10 +47,10 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 /claude-dashboard:setup detailed
 ```
 
-**1줄:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
-**2줄:** projectInfo, sessionId, sessionDuration, burnRate, depletionTime, todoProgress
-**3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance
-**4줄:** tokenBreakdown, forecast, budget
+**1줄:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
+**2줄:** projectInfo, sessionId, sessionDuration, burnRate, depletionTime, todoProgress<br/>
+**3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
+**4줄:** tokenBreakdown, forecast, budget<br/>
 **5줄:** codexUsage, geminiUsage
 
 ```

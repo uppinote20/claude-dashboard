@@ -81,7 +81,7 @@ The preset shorthand can be combined with theme, separator, and other configurat
   "plan": "max",
   "language": "auto",
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

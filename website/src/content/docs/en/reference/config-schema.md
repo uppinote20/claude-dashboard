@@ -20,7 +20,7 @@ The configuration file is located at `~/.claude/claude-dashboard.local.json`. Th
 | `separator` | `SeparatorStyle` | `"pipe"` | Character used between widgets on the same line. |
 | `preset` | `string` | -- | Preset shorthand string for quick layout. When set, overrides `displayMode` with `"custom"` and generates `lines` from the string. |
 | `dailyBudget` | `number` | -- | Daily budget limit in USD. Enables the `budget` widget. |
-| `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 60 }` | Cache settings. `ttlSeconds` controls how long API responses are cached. |
+| `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 300 }` | Cache settings. `ttlSeconds` controls how long API responses are cached. |
 
 ## DisplayMode
 
@@ -64,7 +64,7 @@ type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow';
 | `pipe` | `\|` | `Model \| Context \| Cost` |
 | `space` | ` ` | `Model  Context  Cost` |
 | `dot` | `·` | `Model · Context · Cost` |
-| `arrow` | `>` | `Model > Context > Cost` |
+| `arrow` | `›` | `Model › Context › Cost` |
 
 ## WidgetId
 
@@ -92,7 +92,7 @@ When no configuration file exists, the following defaults are used:
   "plan": "max",
   "displayMode": "compact",
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
@@ -113,7 +113,7 @@ When no configuration file exists, the following defaults are used:
   "dailyBudget": 15,
   "disabledWidgets": ["codexUsage"],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

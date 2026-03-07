@@ -56,7 +56,8 @@ sidebar:
 🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
 📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
-📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 🔷 codex │ 💎 gemini
+📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15
+🔷 codex │ 💎 gemini
 ```
 
 ## 언어 및 플랜 설정

@@ -67,7 +67,7 @@ sidebar:
   "dailyBudget": 15,
   "disabledWidgets": [],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

@@ -20,7 +20,7 @@ sidebar:
 | `separator` | `SeparatorStyle` | `'pipe'` | 위젯 간 구분선 스타일. |
 | `preset` | `string` | - | 프리셋 단축키 문자열. 설정 시 `displayMode`를 `'custom'`으로 변경합니다. |
 | `dailyBudget` | `number` | - | 일일 예산 한도 (USD). 설정 시 `budget` 위젯이 활성화됩니다. |
-| `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 60 }` | API 캐시 설정. |
+| `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 300 }` | API 캐시 설정. |
 
 ## DisplayMode
 
@@ -122,7 +122,7 @@ type WidgetId =
   "dailyBudget": 15,
   "disabledWidgets": ["geminiUsageAll"],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
@@ -140,7 +140,7 @@ type WidgetId =
   "separator": "arrow",
   "dailyBudget": 20,
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
@@ -155,7 +155,7 @@ type WidgetId =
   "plan": "max",
   "displayMode": "compact",
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
