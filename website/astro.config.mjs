@@ -17,11 +17,6 @@ export default defineConfig({
           label: 'GitHub',
           href: 'https://github.com/uppinote20/claude-dashboard',
         },
-        {
-          icon: 'blueSky',
-          label: 'Blog',
-          href: 'https://blog.uppinote.dev',
-        },
       ],
       defaultLocale: 'root',
       locales: {
@@ -69,9 +64,21 @@ export default defineConfig({
           translations: { en: 'Blog Posts' },
           items: [
             {
-              label: 'claude-dashboard 개발기',
-              translations: { en: 'Building claude-dashboard' },
-              link: 'https://blog.uppinote.dev/tag/claude-dashboard/',
+              label: 'claude-dashboard 플러그인 가이드',
+              translations: { en: 'claude-dashboard Plugin Guide' },
+              link: 'https://blog.uppinote.dev/claude-dashboard-plugin-guide/',
+              attrs: { target: '_blank' },
+            },
+            {
+              label: 'v1.10~v1.13 테마·성능·별칭',
+              translations: { en: 'v1.10–v1.13: Themes, Performance, Alias' },
+              link: 'https://blog.uppinote.dev/claude-dashboard-v1-10-to-v1-13-theme-performance-alias/',
+              attrs: { target: '_blank' },
+            },
+            {
+              label: 'Claude Code 공식 문서: Status Line',
+              translations: { en: 'Claude Code Docs: Status Line' },
+              link: 'https://code.claude.com/docs/en/statusline#display-multiple-lines',
               attrs: { target: '_blank' },
             },
           ],
@@ -85,6 +92,10 @@ export default defineConfig({
             property: 'og:image',
             content: '/og-image.png',
           },
+        },
+        {
+          tag: 'script',
+          content: `document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('.social-icons a, a[rel="me"]').forEach(a=>{if(a.hostname!==location.hostname)a.setAttribute('target','_blank')})})`,
         },
       ],
     }),
