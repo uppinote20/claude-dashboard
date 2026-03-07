@@ -27,7 +27,7 @@ interface ModelSettings {
 }
 
 function getDefaultEffort(modelId: string): EffortLevel {
-  if (modelId.includes('opus-4-6')) return 'medium';
+  if (modelId.includes('opus-4-6') || modelId.includes('sonnet-4-6')) return 'medium';
   return 'high';
 }
 

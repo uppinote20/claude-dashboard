@@ -897,7 +897,7 @@ function isEffortLevel(value) {
   return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
 function getDefaultEffort(modelId) {
-  if (modelId.includes("opus-4-6"))
+  if (modelId.includes("opus-4-6") || modelId.includes("sonnet-4-6"))
     return "medium";
   return "high";
 }
