@@ -331,9 +331,9 @@ describe('api-client', () => {
         JSON.stringify({ data: { five_hour: null, seven_day: null, seven_day_sonnet: null }, timestamp: Date.now() })
       );
 
-      // Set file mtime to 25 hours ago (older than CACHE_MAX_AGE_SECONDS = 86400)
-      const twentyFiveHoursAgo = new Date(Date.now() - 25 * 60 * 60 * 1000);
-      await utimes(oldCacheFile, twentyFiveHoursAgo, twentyFiveHoursAgo);
+      // Set file mtime to 2 hours ago (older than CACHE_CLEANUP_AGE_SECONDS = 3600)
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      await utimes(oldCacheFile, twoHoursAgo, twoHoursAgo);
 
       // Verify old file exists
       const filesBefore = await readdir(ACTUAL_CACHE_DIR);

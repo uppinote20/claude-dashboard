@@ -15,8 +15,9 @@ import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
 const MAX_RETRY_AFTER_MS = 3000;
+const STALE_FALLBACK_SECONDS = 3600;
 const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
-const CACHE_MAX_AGE_SECONDS = 86400;
+const CACHE_CLEANUP_AGE_SECONDS = 3600;
 const CLEANUP_INTERVAL_MS = 3600000;
 
 /**
@@ -84,7 +85,7 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
       const cached = usageCacheMap.get(lastTokenHash);
       if (cached) return cached.data;
 
-      const fileCache = await loadFileCache(lastTokenHash, Infinity);
+      const fileCache = await loadFileCache(lastTokenHash, STALE_FALLBACK_SECONDS);
       if (fileCache) return fileCache;
     }
     return null;
@@ -124,7 +125,7 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     const staleMemory = usageCacheMap.get(tokenHash);
     if (staleMemory) return staleMemory.data;
 
-    const staleFile = await loadFileCache(tokenHash, Infinity);
+    const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
     if (staleFile) return staleFile;
 
     return null;
@@ -281,7 +282,7 @@ async function cleanupExpiredCache(): Promise<void> {
         const fileStat = await stat(filePath);
         const ageSeconds = (now - fileStat.mtimeMs) / 1000;
 
-        if (ageSeconds > CACHE_MAX_AGE_SECONDS) {
+        if (ageSeconds > CACHE_CLEANUP_AGE_SECONDS) {
           await unlink(filePath);
         }
       } catch {
