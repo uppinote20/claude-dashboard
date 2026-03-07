@@ -1,6 +1,7 @@
 /**
  * Codex usage widget - displays OpenAI Codex CLI usage limits
  * Shows model, 5h and 7d usage in a single line
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

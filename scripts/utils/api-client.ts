@@ -3,6 +3,7 @@
  * @handbook 4.1-three-tier-cache
  * @handbook 4.2-request-deduplication
  * @handbook 4.3-429-retry
+ * @handbook 7.1-common-api-pattern
  */
 import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
 import os from 'os';

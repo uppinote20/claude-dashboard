@@ -1,5 +1,6 @@
 /**
  * Budget tracking widget - displays daily spending vs budget limit
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

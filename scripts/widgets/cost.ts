@@ -1,5 +1,6 @@
 /**
  * Cost widget - displays session cost in USD
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

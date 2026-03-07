@@ -1,3 +1,6 @@
+/**
+ * @handbook 5.3-usage-based-color
+ */
 import { getColorForPercent, RESET } from './colors.js';
 
 /**

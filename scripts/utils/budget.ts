@@ -6,6 +6,7 @@
  * We store per-session "last seen cost" to compute the delta (new spending since last check),
  * then add that delta to the daily total. This prevents double-counting when the
  * status line runs multiple times per session.
+ * @handbook 3.3-widget-data-sources
  */
 
 import { readFile, mkdir, writeFile } from 'fs/promises';

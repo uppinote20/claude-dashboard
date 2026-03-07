@@ -1,6 +1,8 @@
 /**
  * z.ai/ZHIPU API client
  * Fetches usage quota from z.ai or ZHIPU API
+ * @handbook 7.1-common-api-pattern
+ * @handbook 4.2-request-deduplication
  */
 
 import type { CacheEntry } from '../types.js';

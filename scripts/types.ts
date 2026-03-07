@@ -6,6 +6,8 @@
 
 /**
  * Stdin JSON input from Claude Code
+ * @handbook 2.1-naming-rules
+ * @handbook 3.5-display-modes-presets
  */
 export interface StdinInput {
   model: {

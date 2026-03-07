@@ -1,3 +1,6 @@
+/**
+ * @handbook 8.1-test-structure
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdir, writeFile, readFile, rm, readdir, stat, utimes, unlink } from 'fs/promises';
 import path from 'path';

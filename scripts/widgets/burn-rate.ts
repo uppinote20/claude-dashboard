@@ -1,5 +1,6 @@
 /**
  * Burn rate widget - displays tokens consumed per minute
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

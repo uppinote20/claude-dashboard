@@ -1,5 +1,6 @@
 /**
  * Config counts widget - displays counts of CLAUDE.md, rules, MCPs, hooks
+ * @handbook 3.3-widget-data-sources
  */
 
 import { readdir, access } from 'fs/promises';

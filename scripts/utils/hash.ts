@@ -1,3 +1,6 @@
+/**
+ * @handbook 4.1-three-tier-cache
+ */
 import { createHash } from 'crypto';
 
 /**

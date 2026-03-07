@@ -3,6 +3,11 @@ import { build } from 'esbuild';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 
 /**
+ * Build script for claude-dashboard
+ * @handbook 8.3-dist-commit
+ */
+
+/**
  * Read and parse JSON file with error handling
  */
 function readJsonFile(filePath, description) {

@@ -1,5 +1,6 @@
 /**
  * Session duration widget - displays how long the session has been running
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

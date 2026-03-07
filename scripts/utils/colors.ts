@@ -2,7 +2,7 @@
  * ANSI color codes for terminal output with theme support
  * @handbook 5.1-semantic-color-roles
  * @handbook 5.2-theme-singleton
- * @handbook 5.3-percent-color
+ * @handbook 5.3-usage-based-color
  */
 
 import type { ThemeId, SeparatorStyle } from '../types.js';

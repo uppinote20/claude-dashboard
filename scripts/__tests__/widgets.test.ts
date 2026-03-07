@@ -1,3 +1,6 @@
+/**
+ * @handbook 8.1-test-structure
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget } from '../widgets/model.js';
 import { contextWidget } from '../widgets/context.js';

@@ -1,5 +1,6 @@
 /**
  * Tool activity widget - displays running and completed tools
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

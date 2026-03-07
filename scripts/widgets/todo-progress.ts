@@ -1,5 +1,6 @@
 /**
  * Todo progress widget - displays current task and completion rate
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

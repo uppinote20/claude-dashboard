@@ -3,6 +3,7 @@
  * CLI Usage Dashboard
  * Displays usage limits for all AI CLIs (Claude, Codex, Gemini, z.ai)
  * and recommends the one with the most available capacity.
+ * @handbook 7.1-common-api-pattern
  */
 
 import { fetchUsageLimits } from './utils/api-client.js';

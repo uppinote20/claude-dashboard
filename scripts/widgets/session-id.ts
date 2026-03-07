@@ -1,5 +1,6 @@
 /**
  * Session ID widgets - display session identifier (short or full)
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

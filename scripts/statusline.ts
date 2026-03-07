@@ -5,6 +5,7 @@
  * Displays model info, context usage, rate limits, and more
  * @handbook 2.2-import-order
  * @handbook 4.6-config-caching
+ * @handbook 6.1-hierarchical-defense
  */
 
 import { readFile, stat } from 'fs/promises';

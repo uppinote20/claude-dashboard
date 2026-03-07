@@ -1,6 +1,8 @@
 /**
  * Codex CLI API client
  * Fetches usage limits from ChatGPT backend API
+ * @handbook 7.1-common-api-pattern
+ * @handbook 4.2-request-deduplication
  */
 
 import { readFile, stat, writeFile, mkdir } from 'fs/promises';

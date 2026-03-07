@@ -1,6 +1,7 @@
 /**
  * Shared test fixtures for widget and formatter tests.
  * Values match en.json locale to keep tests consistent with production.
+ * @handbook 8.2-test-data-pattern
  */
 
 import type { Translations, Config, StdinInput } from '../types.js';

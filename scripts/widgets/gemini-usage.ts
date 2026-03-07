@@ -2,6 +2,7 @@
  * Gemini usage widgets - displays Google Gemini CLI usage limits
  * - geminiUsageWidget: Shows current model usage in a single line (compact)
  * - geminiUsageAllWidget: Shows all model buckets (detailed)
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

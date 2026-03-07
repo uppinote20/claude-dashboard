@@ -1,3 +1,6 @@
+/**
+ * @handbook 8.1-test-structure
+ */
 import { describe, it, expect } from 'vitest';
 import {
   renderProgressBar,

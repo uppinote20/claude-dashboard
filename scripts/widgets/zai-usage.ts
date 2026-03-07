@@ -1,6 +1,7 @@
 /**
  * z.ai/ZHIPU usage widget - displays z.ai quota limits
  * Shows model, 5-hour token usage, and monthly MCP usage
+ * @handbook 3.3-widget-data-sources
  */
 
 import type { Widget } from './base.js';

@@ -1,5 +1,6 @@
 /**
  * Session utilities - shared session time management
+ * @handbook 3.3-widget-data-sources
  */
 
 import { readFile, mkdir, open, readdir, unlink, stat } from 'fs/promises';

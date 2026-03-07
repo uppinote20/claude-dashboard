@@ -3,6 +3,8 @@
  * @handbook 6.2-stale-while-error
  * Note: These widgets return null when using z.ai provider,
  * allowing zaiUsage widget to display instead.
+ * @handbook 3.3-widget-data-sources
+ * @handbook 7.2-provider-detection
  */
 
 import type { Widget } from './base.js';

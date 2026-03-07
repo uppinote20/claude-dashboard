@@ -1,5 +1,6 @@
 /**
  * Project info widget - displays directory name, git branch, and ahead/behind status
+ * @handbook 3.3-widget-data-sources
  */
 
 import { execFile } from 'child_process';
