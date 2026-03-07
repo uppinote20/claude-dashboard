@@ -1,33 +1,45 @@
 ---
-title: 테마
-description: 8가지 색상 테마 설정
+title: Themes
+description: 8 color themes and separator styles
 sidebar:
   order: 3
 ---
 
-claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getTheme()` 함수의 시맨틱 역할을 통해 위젯 색상을 결정합니다.
+claude-dashboard supports 8 color themes and 4 separator styles to customize the visual appearance of your status line.
 
-## 사용 가능한 테마
+## Color Themes
 
-| 테마 | 스타일 |
-|------|--------|
-| `default` | 파스텔 색상 (cyan, yellow, pink, green) |
-| `minimal` | 모노크롬 (white + gray) |
-| `catppuccin` | Catppuccin Mocha 팔레트 |
-| `dracula` | Dracula 팔레트 |
-| `gruvbox` | Gruvbox 팔레트 |
-| `nord` | Nord polar night/frost 팔레트 |
-| `tokyoNight` | Tokyo Night blue/purple 팔레트 |
-| `solarized` | Solarized dark 팔레트 |
+Set the theme in your configuration file (`~/.claude/claude-dashboard.local.json`):
 
-### 테마별 미리보기
+```json
+{
+  "theme": "catppuccin"
+}
+```
 
-각 테마의 실제 색상으로 렌더링한 compact 모드 예시입니다.
+### Available Themes
 
-**default** — 파스텔 색상
+| Theme | Style |
+|-------|-------|
+| `default` | Pastel colors (cyan, yellow, pink, green) |
+| `minimal` | Monochrome (white + gray) |
+| `catppuccin` | Catppuccin Mocha palette |
+| `dracula` | Dracula palette |
+| `gruvbox` | Gruvbox palette |
+| `nord` | Nord polar night/frost palette |
+| `tokyoNight` | Tokyo Night blue/purple palette |
+| `solarized` | Solarized dark palette |
+
+Each theme provides semantic color roles used across all widgets, ensuring a consistent look regardless of which widgets you have enabled.
+
+### Theme Previews
+
+Each preview below uses the actual hex colors from the theme definition.
+
+**default** — Pastel colors
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#87d7ff">🤖 Opus(H)</span> <span style="color:#808080">│</span> <span style="color:#afd7af">██░░ 45%</span> <span style="color:#808080">│</span> <span style="color:#ffd787">$1.25</span> <span style="color:#808080">│</span> <span style="color:#afd7af">5h: 42%</span> <span style="color:#808080">│</span> <span style="color:#ffd787">7d: 69%</span></div>
 
-**minimal** — 모노크롬
+**minimal** — Monochrome
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#ffffff">🤖 Opus(H)</span> <span style="color:#808080">│</span> <span style="color:#808080">██░░ 45%</span> <span style="color:#808080">│</span> <span style="color:#ffffff">$1.25</span> <span style="color:#808080">│</span> <span style="color:#808080">5h: 42%</span> <span style="color:#808080">│</span> <span style="color:#ffffff">7d: 69%</span></div>
 
 **catppuccin** — Catppuccin Mocha
@@ -48,36 +60,28 @@ claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getThem
 **solarized** — Solarized Dark
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#268bd2">🤖 Opus(H)</span> <span style="color:#586e75">│</span> <span style="color:#859900">██░░ 45%</span> <span style="color:#586e75">│</span> <span style="color:#b58900">$1.25</span> <span style="color:#586e75">│</span> <span style="color:#859900">5h: 42%</span> <span style="color:#586e75">│</span> <span style="color:#b58900">7d: 69%</span></div>
 
-## 테마 설정
+## Separator Styles
 
-설정 파일(`~/.claude/claude-dashboard.local.json`)에서 `"theme"` 값을 변경합니다:
+The separator controls the character used between widgets on the same line.
 
 ```json
 {
-  "theme": "catppuccin"
+  "separator": "dot"
 }
 ```
 
-또는 setup 커맨드의 대화형 모드에서 테마를 선택할 수 있습니다:
+### Available Separators
 
-```
-/claude-dashboard:setup
-```
-
-## 구분선 스타일
-
-위젯 사이의 구분선 스타일을 설정할 수 있습니다. `"separator"` 값을 변경하세요.
-
-| 스타일 | 문자 | 예시 |
-|--------|------|------|
-| `pipe` (기본값) | `│` | `Model │ Context │ Cost` |
+| Style | Character | Example |
+|-------|-----------|---------|
+| `pipe` (default) | `│` | `Model │ Context │ Cost` |
 | `space` | ` ` | `Model  Context  Cost` |
 | `dot` | `·` | `Model · Context · Cost` |
 | `arrow` | `›` | `Model › Context › Cost` |
 
-### 구분선 스타일 미리보기
+### Separator Previews
 
-<div style="background:#1a1b26; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#7aa2f7">🤖 Opus(H)</span> <span style="color:#565f89">│</span> <span style="color:#9ece6a">██░░ 45%</span> <span style="color:#565f89">│</span> <span style="color:#e0af68">$1.25</span> <span style="color:#565f89">│</span> <span style="color:#9ece6a">5h: 42%</span>  <span style="color:#565f89; font-size:12px">pipe (기본값)</span></div>
+<div style="background:#1a1b26; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#7aa2f7">🤖 Opus(H)</span> <span style="color:#565f89">│</span> <span style="color:#9ece6a">██░░ 45%</span> <span style="color:#565f89">│</span> <span style="color:#e0af68">$1.25</span> <span style="color:#565f89">│</span> <span style="color:#9ece6a">5h: 42%</span>  <span style="color:#565f89; font-size:12px">pipe (default)</span></div>
 
 <div style="background:#1a1b26; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#7aa2f7">🤖 Opus(H)</span>  <span style="color:#9ece6a">██░░ 45%</span>  <span style="color:#e0af68">$1.25</span>  <span style="color:#9ece6a">5h: 42%</span>  <span style="color:#565f89; font-size:12px">space</span></div>
 
@@ -85,24 +89,17 @@ claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getThem
 
 <div style="background:#1a1b26; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#7aa2f7">🤖 Opus(H)</span> <span style="color:#565f89">›</span> <span style="color:#9ece6a">██░░ 45%</span> <span style="color:#565f89">›</span> <span style="color:#e0af68">$1.25</span> <span style="color:#565f89">›</span> <span style="color:#9ece6a">5h: 42%</span>  <span style="color:#565f89; font-size:12px">arrow</span></div>
 
-### 구분선 설정 예시
+## Combined Example
+
+Here is a configuration using the Tokyo Night theme with dot separators:
 
 ```json
 {
-  "theme": "dracula",
-  "separator": "dot"
-}
-```
-
-## 테마 + 구분선 조합 예시
-
-```json
-{
-  "language": "auto",
+  "language": "en",
   "plan": "max",
   "displayMode": "normal",
   "theme": "tokyoNight",
-  "separator": "arrow",
+  "separator": "dot",
   "cache": {
     "ttlSeconds": 300
   }

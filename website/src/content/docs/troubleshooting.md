@@ -1,104 +1,63 @@
 ---
-title: 문제 해결
-description: 자주 묻는 문제와 해결 방법
+title: Troubleshooting
+description: Common issues and solutions
 sidebar:
-  label: 문제 해결
+  label: Troubleshooting
 ---
 
-claude-dashboard 사용 중 발생할 수 있는 문제와 해결 방법을 안내합니다.
+## Status line not showing
 
-## 상태줄이 표시되지 않는 경우
+1. Check if the plugin is installed by running `/plugin list` in Claude Code.
+2. Verify that `~/.claude/settings.json` contains a `statusLine` configuration entry.
+3. Restart Claude Code.
 
-상태줄이 나타나지 않을 때 다음을 확인하세요:
+If the status line still does not appear after restarting, try running `/claude-dashboard:setup` again to regenerate the configuration.
 
-1. **플러그인 설치 확인**: Claude Code에서 `/plugin list`를 실행하여 claude-dashboard가 설치되어 있는지 확인합니다.
+## Rate limits showing warning
 
-2. **settings.json 확인**: `~/.claude/settings.json` 파일에 `statusLine` 설정이 있는지 확인합니다. 없다면 setup 커맨드를 다시 실행하세요:
-   ```
-   /claude-dashboard:setup
-   ```
+If rate limit widgets display a warning icon instead of percentages:
 
-3. **Claude Code 재시작**: 설정 변경 후에는 Claude Code를 재시작해야 합니다.
+- **Expired token**: Your API token may have expired. Re-login to Claude Code to refresh it.
+- **Network issue**: Check your internet connection.
+- **API rate limited**: The dashboard caches API responses for 60 seconds. Wait for the cache to refresh and try again.
 
-4. **경로 업데이트**: 플러그인 업데이트 후 경로가 변경되었을 수 있습니다. 다음 커맨드를 실행하세요:
-   ```
-   /claude-dashboard:update
-   ```
+## Wrong language
 
-## 속도 제한에 경고 기호 표시
-
-속도 제한 위젯에 `⚠️`가 표시되는 경우:
-
-1. **API 토큰 만료**: Claude Code에 다시 로그인하세요. OAuth 토큰이 만료되었을 수 있습니다.
-
-2. **네트워크 문제**: 인터넷 연결을 확인하세요. API 서버에 접근할 수 없는 경우 경고가 표시됩니다.
-
-3. **API 속도 제한**: API 자체의 요청 제한에 걸린 경우입니다. 60초 후 캐시가 갱신되면 정상으로 돌아옵니다.
-
-## 언어가 잘못 설정된 경우
-
-시스템 언어 자동 감지가 원하는 대로 동작하지 않을 때, setup 커맨드에서 언어를 직접 지정하세요:
+If the status line is showing the wrong language, run the setup command with an explicit language argument:
 
 ```
-# 한국어로 설정
-/claude-dashboard:setup normal ko
-
-# 영어로 설정
-/claude-dashboard:setup normal en
+/claude-dashboard:setup normal en    # Set to English
+/claude-dashboard:setup normal ko    # Set to Korean
 ```
 
-또는 설정 파일(`~/.claude/claude-dashboard.local.json`)을 직접 수정할 수 있습니다:
+You can also edit the configuration file directly at `~/.claude/claude-dashboard.local.json` and change the `"language"` field to `"en"`, `"ko"`, or `"auto"`.
 
-```json
-{
-  "language": "ko"
-}
-```
+## Cache issues
 
-## 캐시 문제
-
-API 응답이 오래된 데이터를 표시하거나, 비정상적인 값이 보이는 경우 캐시를 삭제하세요.
-
-캐시 파일 위치: `~/.cache/claude-dashboard/`
+API response cache is stored in `~/.cache/claude-dashboard/`. If you are experiencing stale data or unexpected behavior, clear the cache:
 
 ```bash
 rm -rf ~/.cache/claude-dashboard/
 ```
 
-캐시 파일은 1시간 후 자동으로 정리됩니다. 수동 삭제 후 다음 상태줄 갱신 시 새로운 데이터를 가져옵니다.
+Cache files are automatically cleaned up after 1 hour, so this is typically only needed when debugging issues.
 
-## 멀티 CLI 위젯이 표시되지 않는 경우
+## Plugin not found after update
 
-Codex, Gemini, z.ai 위젯은 해당 CLI가 설치되어 있을 때만 표시됩니다:
+If the status line stops working after a plugin update, the path in settings.json may be pointing to an old version. Run:
 
-- **Codex**: `~/.codex/auth.json` 파일이 필요합니다. Codex CLI를 설치하고 인증을 완료하세요.
-- **Gemini**: `~/.gemini/oauth_creds.json` 파일이 필요합니다. Gemini CLI를 설치하고 인증을 완료하세요.
-- **z.ai**: `ANTHROPIC_BASE_URL` 환경 변수를 통해 z.ai가 감지되어야 합니다.
-
-해당 파일이나 설정이 없으면 관련 위젯은 자동으로 숨겨지며, 오류가 발생하지 않습니다.
-
-## 예산 위젯이 표시되지 않는 경우
-
-`budget` 위젯은 설정 파일에 `"dailyBudget"` 값이 지정된 경우에만 활성화됩니다:
-
-```json
-{
-  "dailyBudget": 15
-}
+```bash
+/claude-dashboard:update
 ```
 
-## 플러그인 업데이트 후 문제
+This updates the `statusLine` path to the latest cached version. Restart Claude Code afterward.
 
-플러그인을 업데이트한 후 상태줄이 동작하지 않으면:
+## Multi-CLI widgets not appearing
 
-1. statusLine 경로를 업데이트합니다:
-   ```
-   /claude-dashboard:update
-   ```
+The multi-CLI widgets (`codexUsage`, `geminiUsage`, `zaiUsage`) auto-hide when their respective CLIs are not detected:
 
-2. Claude Code를 재시작합니다.
+- **codexUsage**: Requires `~/.codex/auth.json` to exist
+- **geminiUsage / geminiUsageAll**: Requires `~/.gemini/oauth_creds.json` to exist
+- **zaiUsage**: Requires detection via `ANTHROPIC_BASE_URL` environment variable
 
-3. 여전히 문제가 있으면 setup을 다시 실행합니다:
-   ```
-   /claude-dashboard:setup
-   ```
+Make sure the corresponding CLI is installed and authenticated before expecting these widgets to appear.

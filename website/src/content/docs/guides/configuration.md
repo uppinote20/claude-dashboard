@@ -1,57 +1,43 @@
 ---
-title: 설정
-description: 상세 설정 방법
+title: Configuration
+description: Detailed configuration guide
 sidebar:
   order: 4
 ---
 
-## setup 커맨드
+claude-dashboard is configured through a JSON file and the `/claude-dashboard:setup` command.
 
-`/claude-dashboard:setup` 커맨드로 상태줄을 설정할 수 있습니다.
+## Setup Command
 
-### 프리셋 모드
-
-```bash
-# 1줄 (기본값)
-/claude-dashboard:setup compact
-
-# 2줄, 영어, Pro 플랜
-/claude-dashboard:setup normal en pro
-
-# 5줄, 한국어, Max 플랜
-/claude-dashboard:setup detailed ko max
-```
-
-### 커스텀 모드
-
-위젯의 순서와 줄 구성을 직접 지정합니다. `|`로 줄을 구분합니다.
+The fastest way to configure is via the setup command:
 
 ```bash
+# Preset modes
+/claude-dashboard:setup compact             # 1 line (default)
+/claude-dashboard:setup normal en pro       # 2 lines, English, Pro plan
+/claude-dashboard:setup detailed ko max     # 5 lines, Korean, Max plan
+
+# Custom mode: control widget order and line composition
+# Format: "widget1,widget2,...|widget3,widget4,..." (| separates lines)
 /claude-dashboard:setup custom auto max "model,context,cost|projectInfo,todoProgress"
 ```
 
-### 대화형 모드
+Running `/claude-dashboard:setup` without arguments launches interactive mode, which guides you through each option.
 
-인자 없이 실행하면 대화형으로 설정할 수 있습니다:
+## Plan Differences
 
-```
-/claude-dashboard:setup
-```
+| Feature | Max | Pro |
+|---------|-----|-----|
+| 5h rate limit + countdown | Yes | Yes |
+| 7d all models | Yes | No |
 
-디스플레이 모드, 언어, 플랜, 테마를 순서대로 선택합니다.
+Pro plan users will not see the 7-day rate limit widgets (`rateLimit7d`, `rateLimit7dSonnet`), as these limits only apply to the Max plan.
 
-## 플랜 차이
+## Configuration File
 
-| 기능 | Max | Pro |
-|------|-----|-----|
-| 5시간 속도 제한 + 카운트다운 | O | O |
-| 7일 전체 모델 제한 | O | X |
+The configuration is stored at `~/.claude/claude-dashboard.local.json`. You can edit this file directly or use the setup command.
 
-## 설정 파일
-
-설정 파일 위치: `~/.claude/claude-dashboard.local.json`
-
-### 전체 설정 예시
+### Full Example
 
 ```json
 {
@@ -72,9 +58,9 @@ sidebar:
 }
 ```
 
-### 프리셋 단축키 사용
+### Preset Shorthand
 
-프리셋 단축키를 사용하면 더 간결하게 설정할 수 있습니다:
+For quick configuration, you can use a preset string instead of specifying lines manually:
 
 ```json
 {
@@ -84,11 +70,11 @@ sidebar:
 }
 ```
 
-자세한 내용은 [프리셋 단축키](/guides/presets/) 페이지를 참고하세요.
+When `preset` is set, it overrides `displayMode` with `custom` and generates the line layout from the shorthand string. See [Preset Shortcuts](/guides/presets/) for the character mapping.
 
-## 예산 추적
+## Budget Tracking
 
-일일 예산 한도를 설정하면 `budget` 위젯이 활성화됩니다:
+Set a daily budget limit in USD to track your spending:
 
 ```json
 {
@@ -96,12 +82,11 @@ sidebar:
 }
 ```
 
-- 80% 소진 시 경고 표시
-- 95% 소진 시 위험 표시
+The `budget` widget shows daily spending versus your configured limit. Warning indicators appear at 80% usage and critical alerts at 95%.
 
-## 위젯 비활성화
+## Widget Toggle
 
-`disabledWidgets` 배열에 위젯 ID를 추가하면 모든 디스플레이 모드에서 해당 위젯이 숨겨집니다. 필터링 후 빈 줄은 자동으로 제거됩니다.
+Add widget IDs to `disabledWidgets` to hide specific widgets from any display mode (including presets and custom layouts):
 
 ```json
 {
@@ -109,10 +94,14 @@ sidebar:
 }
 ```
 
-## 색상 범례
+Empty lines that result from disabling widgets are automatically removed.
 
-컨텍스트 사용량과 속도 제한 위젯에는 다음 색상이 적용됩니다:
+## Color Legend
 
-- 🟢 **0-50%**: 안전 (Safe)
-- 🟡 **51-80%**: 주의 (Warning)
-- 🔴 **81-100%**: 위험 (Critical)
+Widgets that show utilization percentages use a consistent color scheme:
+
+- **Green (0-50%):** Safe range
+- **Yellow (51-80%):** Warning range
+- **Red (81-100%):** Critical range
+
+This applies to context usage, rate limits, cache hit rate, budget utilization, and similar percentage-based widgets.

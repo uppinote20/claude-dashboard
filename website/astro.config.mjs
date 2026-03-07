@@ -10,7 +10,7 @@ export default defineConfig({
         en: 'claude-dashboard',
       },
       description:
-        'Claude Code 상태줄 플러그인 — 컨텍스트, 비용, 속도제한, 28개 위젯',
+        'Comprehensive status line plugin for Claude Code — context, cost, rate limits, 25+ widgets',
       social: [
         {
           icon: 'github',
@@ -21,26 +21,26 @@ export default defineConfig({
       defaultLocale: 'root',
       locales: {
         root: {
-          label: '한국어',
-          lang: 'ko',
-        },
-        en: {
           label: 'English',
           lang: 'en',
+        },
+        ko: {
+          label: '한국어',
+          lang: 'ko',
         },
       },
       sidebar: [
         {
-          label: '시작하기',
-          translations: { en: 'Getting Started' },
+          label: 'Getting Started',
+          translations: { ko: '시작하기' },
           items: [
             'getting-started/installation',
             'getting-started/quick-start',
           ],
         },
         {
-          label: '가이드',
-          translations: { en: 'Guides' },
+          label: 'Guides',
+          translations: { ko: '가이드' },
           items: [
             'guides/display-modes',
             'guides/widgets',
@@ -50,8 +50,8 @@ export default defineConfig({
           ],
         },
         {
-          label: '레퍼런스',
-          translations: { en: 'Reference' },
+          label: 'Reference',
+          translations: { ko: '레퍼런스' },
           items: [
             'reference/commands',
             'reference/widget-reference',
@@ -60,24 +60,24 @@ export default defineConfig({
         },
         'troubleshooting',
         {
-          label: '관련 글',
-          translations: { en: 'Blog Posts' },
+          label: 'Blog Posts',
+          translations: { ko: '관련 글' },
           items: [
             {
-              label: 'claude-dashboard 플러그인 가이드',
-              translations: { en: 'claude-dashboard Plugin Guide' },
+              label: 'claude-dashboard Plugin Guide',
+              translations: { ko: 'claude-dashboard 플러그인 가이드' },
               link: 'https://blog.uppinote.dev/claude-dashboard-plugin-guide/',
               attrs: { target: '_blank' },
             },
             {
-              label: 'v1.10~v1.13 테마·성능·별칭',
-              translations: { en: 'v1.10–v1.13: Themes, Performance, Alias' },
+              label: 'v1.10–v1.13: Themes, Performance, Alias',
+              translations: { ko: 'v1.10~v1.13 테마·성능·별칭' },
               link: 'https://blog.uppinote.dev/claude-dashboard-v1-10-to-v1-13-theme-performance-alias/',
               attrs: { target: '_blank' },
             },
             {
-              label: 'Claude Code 공식 문서: Status Line',
-              translations: { en: 'Claude Code Docs: Status Line' },
+              label: 'Claude Code Docs: Status Line',
+              translations: { ko: 'Claude Code 공식 문서: Status Line' },
               link: 'https://code.claude.com/docs/en/statusline#display-multiple-lines',
               attrs: { target: '_blank' },
             },

@@ -1,125 +1,123 @@
 ---
-title: 커맨드
-description: 사용 가능한 모든 커맨드 레퍼런스
+title: Commands
+description: All available command reference
 sidebar:
   order: 1
 ---
 
-claude-dashboard는 4개의 커맨드를 제공합니다.
+claude-dashboard provides four commands for setup, usage checking, shell integration, and updating.
 
 ## /claude-dashboard:setup
 
-상태줄 디스플레이 모드, 언어, 플랜, 테마를 설정합니다.
+Configure the status line display mode, language, plan, and theme.
 
-### 인자
-
-- **인자 없음**: 대화형 모드 (질문을 통해 설정)
-- **인자 있음**: 직접 설정 모드
-
-| 인자 | 설명 | 기본값 |
-|------|------|--------|
-| `$1` | 디스플레이 모드 (`compact`, `normal`, `detailed`, `custom`) | `compact` |
-| `$2` | 언어 (`auto`, `en`, `ko`) | `auto` |
-| `$3` | 플랜 (`max`, `pro`) | `max` |
-| `$4` | 커스텀 위젯 (custom 모드 전용, `"widget1,widget2\|widget3"`) | - |
-
-### 사용 예시
+### Usage
 
 ```bash
-# 대화형 모드
+# Interactive mode (asks questions)
 /claude-dashboard:setup
 
-# 프리셋 모드
-/claude-dashboard:setup normal
-/claude-dashboard:setup compact en pro
-/claude-dashboard:setup detailed ko max
+# Direct mode with arguments
+/claude-dashboard:setup [displayMode] [language] [plan] ["customWidgets"]
+```
 
-# 커스텀 모드
+### Arguments
+
+| Argument | Options | Default | Description |
+|----------|---------|---------|-------------|
+| displayMode | `compact`, `normal`, `detailed`, `custom` | `compact` | Number of lines and widget selection |
+| language | `auto`, `en`, `ko` | `auto` | UI language |
+| plan | `max`, `pro` | `max` | Subscription plan (affects available rate limit widgets) |
+| customWidgets | `"widget1,widget2\|widget3"` | -- | Custom layout (only for `custom` mode) |
+
+### Examples
+
+```bash
+/claude-dashboard:setup                          # Interactive
+/claude-dashboard:setup compact                  # 1 line, defaults
+/claude-dashboard:setup normal en pro            # 2 lines, English, Pro
+/claude-dashboard:setup detailed ko max          # 5 lines, Korean, Max
 /claude-dashboard:setup custom auto max "model,context,cost|projectInfo,todoProgress"
 ```
 
+### Notes
+
+- The status line updates on the next message after setup
+- Run this command again at any time to change settings
+- Interactive mode is best for preset selection; for full widget control, use direct mode or edit the JSON file directly
+
 ## /claude-dashboard:check-usage
 
-모든 AI CLI(Claude, Codex, Gemini, z.ai)의 사용량 제한을 확인하고, 가장 여유 있는 CLI를 추천합니다.
+Check usage limits for all installed AI CLIs and get a recommendation for which one has the most available capacity.
 
-### 인자
-
-| 인자 | 설명 |
-|------|------|
-| (없음) | 컬러 인터랙티브 출력 |
-| `--json` | 스크립팅용 JSON 출력 |
-| `--lang ko` | 한국어로 출력 |
-| `--lang en` | 영어로 출력 |
-
-### 사용 예시
+### Usage
 
 ```bash
-# 인터랙티브 출력
-/claude-dashboard:check-usage
-
-# JSON 출력
-/claude-dashboard:check-usage --json
-
-# 한국어 출력
-/claude-dashboard:check-usage --lang ko
+/claude-dashboard:check-usage              # Interactive output with colors
+/claude-dashboard:check-usage --json       # JSON output for scripting
+/claude-dashboard:check-usage --lang ko    # Specify language
+/claude-dashboard:check-usage --lang en    # Specify language
 ```
 
-### 출력 내용
+### Output
 
-각 설치된 CLI의 사용량을 표시합니다:
+Shows usage for each installed CLI:
 
-- **Claude**: 5시간 및 7일 속도 제한, 리셋 시간
-- **Codex**: 5시간 및 7일 제한, 플랜 정보 (설치된 경우)
-- **Gemini**: 모델별 사용량 백분율 (설치된 경우)
-- **z.ai**: 토큰 및 MCP 사용량 (설정된 경우)
+- **Claude**: 5h and 7d rate limits with reset times
+- **Codex**: 5h and 7d limits with plan info (if installed)
+- **Gemini**: Usage percentage with model info (if installed)
+- **z.ai**: Token and MCP usage with model info (if configured)
 
-하단에 현재 사용량이 가장 낮은 CLI를 추천합니다.
+At the bottom, recommends the CLI with the lowest current usage.
 
 ## /claude-dashboard:setup-alias
 
-터미널에서 `check-ai` 쉘 별칭을 설정합니다. macOS/Linux (zsh/bash) 및 Windows (PowerShell)를 지원합니다.
+Add a `check-ai` shell alias to quickly check all AI CLI usage from your terminal. Supports macOS/Linux (zsh/bash) and Windows (PowerShell).
 
-### 사용 예시
+### Usage
 
 ```bash
 /claude-dashboard:setup-alias
 ```
 
-설정 완료 후 터미널에서 직접 사용할 수 있습니다:
+### After Setup
+
+Once the alias is installed, you can run it directly from your terminal (outside of Claude Code):
 
 ```bash
-check-ai          # 컬러 출력
-check-ai --json   # 스크립팅용 JSON 출력
+check-ai          # Pretty output
+check-ai --json   # JSON output for scripting
 ```
 
-### 지원 환경
+### Platform Support
 
-- **macOS/Linux**: `~/.zshrc` 또는 `~/.bashrc`에 함수를 추가합니다.
-- **Windows**: PowerShell 프로파일에 함수를 추가합니다.
+- **macOS / Linux**: Adds a shell function to `~/.zshrc` or `~/.bashrc`
+- **Windows**: Adds a PowerShell function to your PowerShell profile
 
-별칭은 플러그인의 최신 버전을 자동으로 찾으므로, 플러그인 업데이트 후에도 별도 재설정 없이 동작합니다.
+### Notes
+
+- The function dynamically finds the latest plugin version, so it continues to work after updates
+- Run this command again if you need to reinstall the alias
+- The alias works independently of Claude Code
 
 ## /claude-dashboard:update
 
-플러그인 업데이트 후 `settings.json`의 `statusLine` 경로를 최신 버전으로 갱신합니다.
+Update the statusLine path in settings.json to point to the latest cached plugin version.
 
-### 사용 예시
+### Usage
 
 ```bash
 /claude-dashboard:update
 ```
 
-### 사용 시점
+### When to Use
 
-플러그인을 업데이트한 후 실행합니다:
+Run this command after updating the plugin via `/plugin update claude-dashboard`. It ensures that the `statusLine` path in your settings points to the latest installed version.
 
-```bash
-# 마켓플레이스를 통해 업데이트 후
-/plugin update claude-dashboard
-/claude-dashboard:update
+### What It Does
 
-# git pull로 수동 업데이트 후
-/claude-dashboard:update
-```
+1. Finds the latest version in the plugin cache directory
+2. Updates the `statusLine.command` path in `~/.claude/settings.json`
+3. Shows the previous and new version paths
 
-업데이트 후 변경 사항을 적용하려면 Claude Code를 재시작해야 합니다.
+After running this command, restart Claude Code for the changes to take effect.

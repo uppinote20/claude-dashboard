@@ -1,18 +1,18 @@
 ---
-title: 설치
-description: claude-dashboard 설치 방법
+title: Installation
+description: How to install claude-dashboard
 sidebar:
   order: 1
 ---
 
-## 요구 사항
+## Requirements
 
-- **Claude Code** v1.0.80 이상
-- **Node.js** 18 이상
+- **Claude Code** v1.0.80 or later
+- **Node.js** 18 or later
 
-## 플러그인 마켓플레이스에서 설치 (권장)
+## Install from Plugin Marketplace (Recommended)
 
-Claude Code 내에서 다음 커맨드를 순서대로 실행하세요:
+Run the following commands inside Claude Code, in order:
 
 ```
 /plugin marketplace add uppinote20/claude-dashboard
@@ -20,15 +20,15 @@ Claude Code 내에서 다음 커맨드를 순서대로 실행하세요:
 /claude-dashboard:setup
 ```
 
-## 수동 설치
+## Manual Installation
 
-Git을 사용하여 직접 설치할 수도 있습니다:
+You can also install directly using Git:
 
 ```bash
 git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/claude-dashboard
 /claude-dashboard:setup
 ```
 
-## 다음 단계
+## Next Steps
 
-설치가 완료되면 [빠른 시작](/getting-started/quick-start/) 가이드를 참고하여 첫 설정을 진행하세요.
+Once installation is complete, follow the [Quick Start](/getting-started/quick-start/) guide to set up your first configuration.

@@ -1,0 +1,35 @@
+---
+title: claude-dashboard
+description: Claude Code를 위한 종합 상태줄 플러그인
+template: splash
+hero:
+  tagline: 컨텍스트 사용량, API 속도 제한, 비용 추적, 그리고 25개 이상의 모듈형 위젯을 갖춘 Claude Code 종합 상태줄 플러그인
+  actions:
+    - text: 시작하기
+      link: /ko/getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: GitHub
+      link: https://github.com/uppinote20/claude-dashboard
+      icon: external
+      variant: minimal
+      attrs:
+        target: _blank
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid stagger>
+  <Card title="25개 이상의 위젯" icon="puzzle">
+    모델 정보, 컨텍스트 사용량, 비용 추적, 속도 제한, 번 레이트, 캐시 히트율, 예산 관리 등 25개 이상의 위젯으로 세션을 완벽하게 모니터링하세요.
+  </Card>
+  <Card title="멀티 CLI 지원" icon="laptop">
+    Claude Code뿐만 아니라 OpenAI Codex CLI, Google Gemini CLI, z.ai/ZHIPU까지 한눈에 사용량을 확인할 수 있습니다.
+  </Card>
+  <Card title="8가지 테마" icon="seti:color">
+    default, minimal, catppuccin, dracula, gruvbox, nord, tokyoNight, solarized 등 8가지 색상 테마를 지원합니다.
+  </Card>
+  <Card title="다국어 지원" icon="translate">
+    영어와 한국어를 지원하며, 시스템 언어를 자동 감지하거나 직접 설정할 수 있습니다.
+  </Card>
+</CardGrid>
