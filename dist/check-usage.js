@@ -66,7 +66,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.16.1";
+var VERSION = "1.16.2";
 
 // scripts/utils/debug.ts
 var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
@@ -85,9 +85,9 @@ function debugLog(context, message, error) {
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
 var MAX_RETRY_AFTER_MS = 3e3;
-var STALE_CACHE_TTL_MULTIPLIER = 10;
+var STALE_FALLBACK_SECONDS = 3600;
 var CACHE_DIR = path.join(os.homedir(), ".cache", "claude-dashboard");
-var CACHE_MAX_AGE_SECONDS = 3600;
+var CACHE_CLEANUP_AGE_SECONDS = 3600;
 var CLEANUP_INTERVAL_MS = 36e5;
 var usageCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests = /* @__PURE__ */ new Map();
@@ -116,7 +116,7 @@ async function fetchUsageLimits(ttlSeconds = 300) {
       const cached = usageCacheMap.get(lastTokenHash);
       if (cached)
         return cached.data;
-      const fileCache2 = await loadFileCache(lastTokenHash, ttlSeconds * STALE_CACHE_TTL_MULTIPLIER);
+      const fileCache2 = await loadFileCache(lastTokenHash, STALE_FALLBACK_SECONDS);
       if (fileCache2)
         return fileCache2;
     }
@@ -147,7 +147,7 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     const staleMemory = usageCacheMap.get(tokenHash);
     if (staleMemory)
       return staleMemory.data;
-    const staleFile = await loadFileCache(tokenHash, ttlSeconds * STALE_CACHE_TTL_MULTIPLIER);
+    const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
     if (staleFile)
       return staleFile;
     return null;
@@ -256,7 +256,7 @@ async function cleanupExpiredCache() {
       try {
         const fileStat = await stat2(filePath);
         const ageSeconds = (now - fileStat.mtimeMs) / 1e3;
-        if (ageSeconds > CACHE_MAX_AGE_SECONDS) {
+        if (ageSeconds > CACHE_CLEANUP_AGE_SECONDS) {
           await unlink(filePath);
         }
       } catch {

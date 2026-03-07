@@ -26,26 +26,34 @@ interface ModelSettings {
   fastMode: boolean;
 }
 
-const DEFAULT_SETTINGS: ModelSettings = { effortLevel: 'high', fastMode: false };
+function getDefaultEffort(modelId: string): EffortLevel {
+  if (modelId.includes('opus-4-6') || modelId.includes('sonnet-4-6')) return 'medium';
+  return 'high';
+}
 
-let settingsCache: (ModelSettings & { mtime: number }) | null = null;
+let settingsCache: { rawEffort: unknown; fastMode: boolean; mtime: number } | null = null;
 
-async function getModelSettings(): Promise<ModelSettings> {
+async function getModelSettings(modelId: string): Promise<ModelSettings> {
+  const defaultEffort = getDefaultEffort(modelId);
   const settingsPath = join(homedir(), '.claude', 'settings.json');
 
   try {
     const fileStat = await stat(settingsPath);
     if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
-      return { effortLevel: settingsCache.effortLevel, fastMode: settingsCache.fastMode };
+      return {
+        effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
+        fastMode: settingsCache.fastMode,
+      };
     }
     const content = await readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(content);
-    const effortLevel: EffortLevel = isEffortLevel(settings.effortLevel)
-      ? settings.effortLevel
-      : 'high';
+    const rawEffort = settings.effortLevel;
     const fastMode = settings.fastMode === true;
-    settingsCache = { mtime: fileStat.mtimeMs, effortLevel, fastMode };
-    return { effortLevel, fastMode };
+    settingsCache = { mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    return {
+      effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
+      fastMode,
+    };
   } catch {
     settingsCache = null;
   }
@@ -55,7 +63,7 @@ async function getModelSettings(): Promise<ModelSettings> {
     return { effortLevel: envEffort, fastMode: false };
   }
 
-  return DEFAULT_SETTINGS;
+  return { effortLevel: defaultEffort, fastMode: false };
 }
 
 export const modelWidget: Widget<ModelData> = {
@@ -64,7 +72,8 @@ export const modelWidget: Widget<ModelData> = {
 
   async getData(ctx: WidgetContext): Promise<ModelData | null> {
     const { model } = ctx.stdin;
-    const { effortLevel, fastMode } = await getModelSettings();
+    const modelId = model?.id || '';
+    const { effortLevel, fastMode } = await getModelSettings(modelId);
 
     return {
       id: model?.id || '',

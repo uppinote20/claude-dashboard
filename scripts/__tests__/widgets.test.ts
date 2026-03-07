@@ -92,6 +92,28 @@ describe('widgets', () => {
       expect(result).toContain('(H)');
     });
 
+    it('should show medium effort for Opus 4.6 by default', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-opus-4-6', displayName: 'Claude Opus 4.6', effortLevel: 'medium' }),
+        ctx,
+      );
+
+      expect(result).toContain('Opus');
+      expect(result).toContain('(M)');
+    });
+
+    it('should show medium effort for Sonnet 4.6 by default', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', effortLevel: 'medium' }),
+        ctx,
+      );
+
+      expect(result).toContain('Sonnet');
+      expect(result).toContain('(M)');
+    });
+
     it('should show effort level for Sonnet', () => {
       const ctx = createContext();
       const result = modelWidget.render(

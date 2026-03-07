@@ -462,7 +462,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.16.1";
+var VERSION = "1.16.2";
 
 // scripts/utils/debug.ts
 var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
@@ -481,9 +481,9 @@ function debugLog(context, message, error) {
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
 var MAX_RETRY_AFTER_MS = 3e3;
-var STALE_CACHE_TTL_MULTIPLIER = 10;
+var STALE_FALLBACK_SECONDS = 3600;
 var CACHE_DIR = path.join(os.homedir(), ".cache", "claude-dashboard");
-var CACHE_MAX_AGE_SECONDS = 3600;
+var CACHE_CLEANUP_AGE_SECONDS = 3600;
 var CLEANUP_INTERVAL_MS = 36e5;
 var usageCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests = /* @__PURE__ */ new Map();
@@ -512,7 +512,7 @@ async function fetchUsageLimits(ttlSeconds = 300) {
       const cached = usageCacheMap.get(lastTokenHash);
       if (cached)
         return cached.data;
-      const fileCache2 = await loadFileCache(lastTokenHash, ttlSeconds * STALE_CACHE_TTL_MULTIPLIER);
+      const fileCache2 = await loadFileCache(lastTokenHash, STALE_FALLBACK_SECONDS);
       if (fileCache2)
         return fileCache2;
     }
@@ -543,7 +543,7 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     const staleMemory = usageCacheMap.get(tokenHash);
     if (staleMemory)
       return staleMemory.data;
-    const staleFile = await loadFileCache(tokenHash, ttlSeconds * STALE_CACHE_TTL_MULTIPLIER);
+    const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
     if (staleFile)
       return staleFile;
     return null;
@@ -652,7 +652,7 @@ async function cleanupExpiredCache() {
       try {
         const fileStat = await stat2(filePath);
         const ageSeconds = (now - fileStat.mtimeMs) / 1e3;
-        if (ageSeconds > CACHE_MAX_AGE_SECONDS) {
+        if (ageSeconds > CACHE_CLEANUP_AGE_SECONDS) {
           await unlink(filePath);
         }
       } catch {
@@ -896,21 +896,32 @@ var EFFORT_LEVELS = /* @__PURE__ */ new Set(["high", "medium", "low"]);
 function isEffortLevel(value) {
   return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
-var DEFAULT_SETTINGS = { effortLevel: "high", fastMode: false };
+function getDefaultEffort(modelId) {
+  if (modelId.includes("opus-4-6") || modelId.includes("sonnet-4-6"))
+    return "medium";
+  return "high";
+}
 var settingsCache = null;
-async function getModelSettings() {
+async function getModelSettings(modelId) {
+  const defaultEffort = getDefaultEffort(modelId);
   const settingsPath = join2(homedir2(), ".claude", "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
     if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
-      return { effortLevel: settingsCache.effortLevel, fastMode: settingsCache.fastMode };
+      return {
+        effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
+        fastMode: settingsCache.fastMode
+      };
     }
     const content = await readFile3(settingsPath, "utf-8");
     const settings = JSON.parse(content);
-    const effortLevel = isEffortLevel(settings.effortLevel) ? settings.effortLevel : "high";
+    const rawEffort = settings.effortLevel;
     const fastMode = settings.fastMode === true;
-    settingsCache = { mtime: fileStat.mtimeMs, effortLevel, fastMode };
-    return { effortLevel, fastMode };
+    settingsCache = { mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    return {
+      effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
+      fastMode
+    };
   } catch {
     settingsCache = null;
   }
@@ -918,14 +929,15 @@ async function getModelSettings() {
   if (isEffortLevel(envEffort)) {
     return { effortLevel: envEffort, fastMode: false };
   }
-  return DEFAULT_SETTINGS;
+  return { effortLevel: defaultEffort, fastMode: false };
 }
 var modelWidget = {
   id: "model",
   name: "Model",
   async getData(ctx) {
     const { model } = ctx.stdin;
-    const { effortLevel, fastMode } = await getModelSettings();
+    const modelId = model?.id || "";
+    const { effortLevel, fastMode } = await getModelSettings(modelId);
     return {
       id: model?.id || "",
       displayName: model?.display_name || "-",
@@ -1282,7 +1294,7 @@ import { readFile as readFile4, mkdir as mkdir2, open, readdir as readdir3, unli
 import { join as join4 } from "path";
 import { homedir as homedir3 } from "os";
 var SESSION_DIR = join4(homedir3(), ".cache", "claude-dashboard", "sessions");
-var SESSION_MAX_AGE_SECONDS = 86400;
+var SESSION_MAX_AGE_SECONDS = 604800;
 var CLEANUP_INTERVAL_MS2 = 36e5;
 function isErrnoException(error, code) {
   return error instanceof Error && "code" in error && error.code === code;
