@@ -15,6 +15,7 @@ import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
+const NEGATIVE_CACHE_SECONDS = 30;
 const CODEX_AUTH_PATH = path.join(os.homedir(), '.codex', 'auth.json');
 const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml');
 const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
@@ -252,11 +253,16 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
 
   const tokenHash = hashToken(auth.accessToken);
 
-  // Check memory cache
+  // Check memory cache (includes negative cache entries)
   const cached = codexCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1000;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog('codex', 'Negative cache hit, skipping API call');
+        return null;
+      }
       return cached.data;
     }
   }
@@ -272,7 +278,24 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
   pendingRequests.set(tokenHash, requestPromise);
 
   try {
-    return await requestPromise;
+    const result = await requestPromise;
+    if (result) return result;
+
+    // API failed - set negative cache to prevent rapid retries
+    debugLog('codex', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+    codexCacheMap.set(tokenHash, {
+      data: null as unknown as CodexUsageLimits,
+      timestamp: Date.now(),
+      isError: true,
+    });
+
+    // Fall back to stale cache (any previous successful data)
+    if (cached && !cached.isError) {
+      debugLog('codex', 'Returning stale cache data');
+      return cached.data;
+    }
+
+    return null;
   } finally {
     pendingRequests.delete(tokenHash);
   }

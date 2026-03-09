@@ -84,8 +84,9 @@ function debugLog(context, message, error) {
 
 // scripts/utils/api-client.ts
 var API_TIMEOUT_MS = 5e3;
-var MAX_RETRY_AFTER_MS = 3e3;
+var MAX_RETRY_AFTER_MS = 1e4;
 var STALE_FALLBACK_SECONDS = 3600;
+var NEGATIVE_CACHE_SECONDS = 30;
 var CACHE_DIR = path.join(os.homedir(), ".cache", "claude-dashboard");
 var CACHE_CLEANUP_AGE_SECONDS = 3600;
 var CLEANUP_INTERVAL_MS = 36e5;
@@ -107,7 +108,8 @@ function isCacheValid(tokenHash, ttlSeconds) {
   if (!cache)
     return false;
   const ageSeconds = (Date.now() - cache.timestamp) / 1e3;
-  return ageSeconds < ttlSeconds;
+  const effectiveTtl = cache.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+  return ageSeconds < effectiveTtl;
 }
 async function fetchUsageLimits(ttlSeconds = 300) {
   const token = await getCredentials();
@@ -126,12 +128,20 @@ async function fetchUsageLimits(ttlSeconds = 300) {
   lastTokenHash = tokenHash;
   if (isCacheValid(tokenHash, ttlSeconds)) {
     const cached = usageCacheMap.get(tokenHash);
-    if (cached)
+    if (cached) {
+      if (cached.isError) {
+        debugLog("api", "Negative cache hit, returning stale or null");
+        const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
+        return staleFile;
+      }
       return cached.data;
+    }
   }
   const fileCache = await loadFileCache(tokenHash, ttlSeconds);
   if (fileCache) {
-    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: Date.now() });
+    const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+    const ts = raw?.timestamp ?? Date.now();
+    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: ts });
     return fileCache;
   }
   const pending = pendingRequests.get(tokenHash);
@@ -145,7 +155,13 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     if (result)
       return result;
     const staleMemory = usageCacheMap.get(tokenHash);
-    if (staleMemory)
+    debugLog("api", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+    usageCacheMap.set(tokenHash, {
+      data: null,
+      timestamp: Date.now(),
+      isError: true
+    });
+    if (staleMemory && !staleMemory.isError)
       return staleMemory.data;
     const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
     if (staleFile)
@@ -209,19 +225,23 @@ async function fetchFromApi(token, tokenHash) {
     return null;
   }
 }
-async function loadFileCache(tokenHash, ttlSeconds) {
+async function loadFileCacheRaw(tokenHash, ttlSeconds) {
   try {
     const cacheFile = getCacheFilePath(tokenHash);
     const raw = await readFile2(cacheFile, "utf-8");
     const content = JSON.parse(raw);
     const ageSeconds = (Date.now() - content.timestamp) / 1e3;
     if (ageSeconds < ttlSeconds) {
-      return content.data;
+      return { data: content.data, timestamp: content.timestamp };
     }
     return null;
   } catch {
     return null;
   }
+}
+async function loadFileCache(tokenHash, ttlSeconds) {
+  const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+  return raw?.data ?? null;
 }
 async function saveFileCache(tokenHash, data) {
   try {
@@ -272,6 +292,7 @@ import { execFileSync as execFileSync2 } from "child_process";
 import os2 from "os";
 import path2 from "path";
 var API_TIMEOUT_MS2 = 5e3;
+var NEGATIVE_CACHE_SECONDS2 = 30;
 var CODEX_AUTH_PATH = path2.join(os2.homedir(), ".codex", "auth.json");
 var CODEX_CONFIG_PATH = path2.join(os2.homedir(), ".codex", "config.toml");
 var CACHE_DIR2 = path2.join(os2.homedir(), ".cache", "claude-dashboard");
@@ -399,7 +420,12 @@ async function fetchCodexUsage(ttlSeconds = 60) {
   const cached = codexCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS2 : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog("codex", "Negative cache hit, skipping API call");
+        return null;
+      }
       return cached.data;
     }
   }
@@ -410,7 +436,20 @@ async function fetchCodexUsage(ttlSeconds = 60) {
   const requestPromise = fetchFromCodexApi(auth);
   pendingRequests2.set(tokenHash, requestPromise);
   try {
-    return await requestPromise;
+    const result = await requestPromise;
+    if (result)
+      return result;
+    debugLog("codex", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS2}s`);
+    codexCacheMap.set(tokenHash, {
+      data: null,
+      timestamp: Date.now(),
+      isError: true
+    });
+    if (cached && !cached.isError) {
+      debugLog("codex", "Returning stale cache data");
+      return cached.data;
+    }
+    return null;
   } finally {
     pendingRequests2.delete(tokenHash);
   }
@@ -474,6 +513,7 @@ import { execFileSync as execFileSync3 } from "child_process";
 import os3 from "os";
 import path3 from "path";
 var API_TIMEOUT_MS3 = 5e3;
+var NEGATIVE_CACHE_SECONDS3 = 30;
 var GEMINI_DIR = ".gemini";
 var OAUTH_CREDS_FILE = "oauth_creds.json";
 var SETTINGS_FILE = "settings.json";
@@ -753,7 +793,12 @@ async function fetchGeminiUsage(ttlSeconds = 60) {
   const cached = geminiCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS3 : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog("gemini", "Negative cache hit, skipping API call");
+        return null;
+      }
       debugLog("gemini", "fetchGeminiUsage: returning cached data");
       return cached.data;
     }
@@ -765,7 +810,20 @@ async function fetchGeminiUsage(ttlSeconds = 60) {
   const requestPromise = fetchFromGeminiApi(credentials, projectId);
   pendingRequests3.set(tokenHash, requestPromise);
   try {
-    return await requestPromise;
+    const result = await requestPromise;
+    if (result)
+      return result;
+    debugLog("gemini", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS3}s`);
+    geminiCacheMap.set(tokenHash, {
+      data: null,
+      timestamp: Date.now(),
+      isError: true
+    });
+    if (cached && !cached.isError) {
+      debugLog("gemini", "Returning stale cache data");
+      return cached.data;
+    }
+    return null;
   } finally {
     pendingRequests3.delete(tokenHash);
   }
@@ -871,6 +929,7 @@ function getZaiApiBaseUrl() {
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
+var NEGATIVE_CACHE_SECONDS4 = 30;
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
@@ -917,7 +976,12 @@ async function fetchZaiUsage(ttlSeconds = 60) {
   const cached = zaiCacheMap.get(cacheKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS4 : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog("zai", "Negative cache hit, skipping API call");
+        return null;
+      }
       debugLog("zai", "fetchZaiUsage: returning cached data");
       return cached.data;
     }
@@ -932,8 +996,19 @@ async function fetchZaiUsage(ttlSeconds = 60) {
     const result = await requestPromise;
     if (result) {
       zaiCacheMap.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
     }
-    return result;
+    debugLog("zai", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS4}s`);
+    zaiCacheMap.set(cacheKey, {
+      data: null,
+      timestamp: Date.now(),
+      isError: true
+    });
+    if (cached && !cached.isError) {
+      debugLog("zai", "Returning stale cache data");
+      return cached.data;
+    }
+    return null;
   } finally {
     pendingRequests4.delete(cacheKey);
   }

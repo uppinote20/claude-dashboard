@@ -270,10 +270,13 @@ export interface UsageLimits {
 
 /**
  * Cache entry for API responses
+ * @handbook 4.1-three-tier-cache
  */
 export interface CacheEntry<T> {
   data: T;
   timestamp: number;
+  /** When true, this entry represents a cached API failure (negative cache) */
+  isError?: boolean;
 }
 
 /**

@@ -11,6 +11,7 @@ import { debugLog } from './debug.js';
 import { hashToken } from './hash.js';
 
 const API_TIMEOUT_MS = 5000;
+const NEGATIVE_CACHE_SECONDS = 30;
 
 /**
  * Clamp percentage to safe 0-100 range
@@ -142,11 +143,16 @@ export async function fetchZaiUsage(ttlSeconds: number = 60): Promise<ZaiUsageLi
   const tokenHash = hashToken(authToken);
   const cacheKey = `${baseUrl}:${tokenHash}`;
 
-  // Check memory cache
+  // Check memory cache (includes negative cache entries)
   const cached = zaiCacheMap.get(cacheKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1000;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog('zai', 'Negative cache hit, skipping API call');
+        return null;
+      }
       debugLog('zai', 'fetchZaiUsage: returning cached data');
       return cached.data;
     }
@@ -166,8 +172,24 @@ export async function fetchZaiUsage(ttlSeconds: number = 60): Promise<ZaiUsageLi
     const result = await requestPromise;
     if (result) {
       zaiCacheMap.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
     }
-    return result;
+
+    // API failed - set negative cache to prevent rapid retries
+    debugLog('zai', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+    zaiCacheMap.set(cacheKey, {
+      data: null as unknown as ZaiUsageLimits,
+      timestamp: Date.now(),
+      isError: true,
+    });
+
+    // Fall back to stale cache
+    if (cached && !cached.isError) {
+      debugLog('zai', 'Returning stale cache data');
+      return cached.data;
+    }
+
+    return null;
   } finally {
     pendingRequests.delete(cacheKey);
   }

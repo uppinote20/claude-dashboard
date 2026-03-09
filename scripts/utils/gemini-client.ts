@@ -16,6 +16,7 @@ import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
+const NEGATIVE_CACHE_SECONDS = 30;
 const GEMINI_DIR = '.gemini';
 const OAUTH_CREDS_FILE = 'oauth_creds.json';
 const SETTINGS_FILE = 'settings.json';
@@ -483,11 +484,16 @@ export async function fetchGeminiUsage(ttlSeconds: number = 60): Promise<GeminiU
 
   const tokenHash = hashToken(credentials.accessToken);
 
-  // Check memory cache
+  // Check memory cache (includes negative cache entries)
   const cached = geminiCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1000;
-    if (ageSeconds < ttlSeconds) {
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog('gemini', 'Negative cache hit, skipping API call');
+        return null;
+      }
       debugLog('gemini', 'fetchGeminiUsage: returning cached data');
       return cached.data;
     }
@@ -504,7 +510,24 @@ export async function fetchGeminiUsage(ttlSeconds: number = 60): Promise<GeminiU
   pendingRequests.set(tokenHash, requestPromise);
 
   try {
-    return await requestPromise;
+    const result = await requestPromise;
+    if (result) return result;
+
+    // API failed - set negative cache to prevent rapid retries
+    debugLog('gemini', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+    geminiCacheMap.set(tokenHash, {
+      data: null as unknown as GeminiUsageLimits,
+      timestamp: Date.now(),
+      isError: true,
+    });
+
+    // Fall back to stale cache
+    if (cached && !cached.isError) {
+      debugLog('gemini', 'Returning stale cache data');
+      return cached.data;
+    }
+
+    return null;
   } finally {
     pendingRequests.delete(tokenHash);
   }

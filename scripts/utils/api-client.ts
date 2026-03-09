@@ -15,8 +15,9 @@ import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
-const MAX_RETRY_AFTER_MS = 3000;
+const MAX_RETRY_AFTER_MS = 10000;
 const STALE_FALLBACK_SECONDS = 3600;
+const NEGATIVE_CACHE_SECONDS = 30;
 const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
 const CACHE_CLEANUP_AGE_SECONDS = 3600;
 const CLEANUP_INTERVAL_MS = 3600000;
@@ -61,13 +62,16 @@ function getCacheFilePath(tokenHash: string): string {
 }
 
 /**
- * Check if cache is still valid for given token
+ * Check if cache is still valid for given token.
+ * Error entries use a shorter TTL (NEGATIVE_CACHE_SECONDS) to allow
+ * retries after a brief cooldown, while preventing rapid-fire API calls.
  */
 function isCacheValid(tokenHash: string, ttlSeconds: number): boolean {
   const cache = usageCacheMap.get(tokenHash);
   if (!cache) return false;
   const ageSeconds = (Date.now() - cache.timestamp) / 1000;
-  return ageSeconds < ttlSeconds;
+  const effectiveTtl = cache.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+  return ageSeconds < effectiveTtl;
 }
 
 /**
@@ -95,16 +99,27 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
   const tokenHash = hashToken(token);
   lastTokenHash = tokenHash;
 
-  // Check memory cache first
+  // Check memory cache first (includes negative cache entries)
   if (isCacheValid(tokenHash, ttlSeconds)) {
     const cached = usageCacheMap.get(tokenHash);
-    if (cached) return cached.data;
+    if (cached) {
+      if (cached.isError) {
+        debugLog('api', 'Negative cache hit, returning stale or null');
+        // Return stale data if available, otherwise null
+        const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
+        return staleFile;
+      }
+      return cached.data;
+    }
   }
 
   // Try to load from file cache (for persistence across calls)
   const fileCache = await loadFileCache(tokenHash, ttlSeconds);
   if (fileCache) {
-    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: Date.now() });
+    // Preserve original file cache timestamp for accurate TTL tracking
+    const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+    const ts = raw?.timestamp ?? Date.now();
+    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: ts });
     return fileCache;
   }
 
@@ -122,9 +137,19 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     const result = await requestPromise;
     if (result) return result;
 
-    // API failed - fall back to stale cache
+    // Save stale reference before overwriting with negative cache
     const staleMemory = usageCacheMap.get(tokenHash);
-    if (staleMemory) return staleMemory.data;
+
+    // API failed - set negative cache to prevent rapid retries
+    debugLog('api', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+    usageCacheMap.set(tokenHash, {
+      data: null as unknown as UsageLimits,
+      timestamp: Date.now(),
+      isError: true,
+    });
+
+    // Fall back to stale cache
+    if (staleMemory && !staleMemory.isError) return staleMemory.data;
 
     const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
     if (staleFile) return staleFile;
@@ -207,9 +232,12 @@ async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimi
 }
 
 /**
- * Load cache from file for specific token
+ * Load raw cache content from file (includes timestamp)
  */
-async function loadFileCache(tokenHash: string, ttlSeconds: number): Promise<UsageLimits | null> {
+async function loadFileCacheRaw(
+  tokenHash: string,
+  ttlSeconds: number
+): Promise<{ data: UsageLimits; timestamp: number } | null> {
   try {
     const cacheFile = getCacheFilePath(tokenHash);
     const raw = await readFile(cacheFile, 'utf-8');
@@ -217,13 +245,20 @@ async function loadFileCache(tokenHash: string, ttlSeconds: number): Promise<Usa
     const ageSeconds = (Date.now() - content.timestamp) / 1000;
 
     if (ageSeconds < ttlSeconds) {
-      return content.data as UsageLimits;
+      return { data: content.data as UsageLimits, timestamp: content.timestamp };
     }
     return null;
   } catch {
-    // File doesn't exist or parse failed
     return null;
   }
+}
+
+/**
+ * Load cache from file for specific token
+ */
+async function loadFileCache(tokenHash: string, ttlSeconds: number): Promise<UsageLimits | null> {
+  const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+  return raw?.data ?? null;
 }
 
 /**
