@@ -10,13 +10,12 @@ import { readFile, writeFile, stat } from 'fs/promises';
 import { execFileSync } from 'child_process';
 import os from 'os';
 import path from 'path';
-import type { GeminiUsageLimits, CacheEntry } from '../types.js';
+import { NEGATIVE_CACHE_SECONDS, type GeminiUsageLimits, type CacheEntry } from '../types.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
-const NEGATIVE_CACHE_SECONDS = 30;
 const GEMINI_DIR = '.gemini';
 const OAUTH_CREDS_FILE = 'oauth_creds.json';
 const SETTINGS_FILE = 'settings.json';
@@ -516,7 +515,7 @@ export async function fetchGeminiUsage(ttlSeconds: number = 60): Promise<GeminiU
     // API failed - set negative cache to prevent rapid retries
     debugLog('gemini', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     geminiCacheMap.set(tokenHash, {
-      data: null as unknown as GeminiUsageLimits,
+      data: null,
       timestamp: Date.now(),
       isError: true,
     });
@@ -527,6 +526,7 @@ export async function fetchGeminiUsage(ttlSeconds: number = 60): Promise<GeminiU
       return cached.data;
     }
 
+    // No file cache available for Gemini — return null
     return null;
   } finally {
     pendingRequests.delete(tokenHash);

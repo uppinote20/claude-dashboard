@@ -269,15 +269,20 @@ export interface UsageLimits {
 }
 
 /**
- * Cache entry for API responses
+ * Negative cache TTL in seconds.
+ * After an API failure, suppress retries for this duration.
+ * Shared across all API clients (Anthropic, Codex, Gemini, z.ai).
+ */
+export const NEGATIVE_CACHE_SECONDS = 30;
+
+/**
+ * Cache entry for API responses (discriminated union).
+ * Success entries hold data of type T; error entries hold null.
  * @handbook 4.1-three-tier-cache
  */
-export interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  /** When true, this entry represents a cached API failure (negative cache) */
-  isError?: boolean;
-}
+export type CacheEntry<T> =
+  | { data: T; timestamp: number; isError?: false }
+  | { data: null; timestamp: number; isError: true };
 
 /**
  * Widget context passed to all widgets

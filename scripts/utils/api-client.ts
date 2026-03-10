@@ -8,7 +8,7 @@
 import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
 import os from 'os';
 import path from 'path';
-import type { UsageLimits, CacheEntry } from '../types.js';
+import { NEGATIVE_CACHE_SECONDS, type UsageLimits, type CacheEntry } from '../types.js';
 import { getCredentials } from './credentials.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
@@ -17,7 +17,6 @@ import { debugLog } from './debug.js';
 const API_TIMEOUT_MS = 5000;
 const MAX_RETRY_AFTER_MS = 10000;
 const STALE_FALLBACK_SECONDS = 3600;
-const NEGATIVE_CACHE_SECONDS = 30;
 const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
 const CACHE_CLEANUP_AGE_SECONDS = 3600;
 const CLEANUP_INTERVAL_MS = 3600000;
@@ -105,22 +104,17 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     if (cached) {
       if (cached.isError) {
         debugLog('api', 'Negative cache hit, returning stale or null');
-        // Return stale data if available, otherwise null
-        const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
-        return staleFile;
+        return loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
       }
       return cached.data;
     }
   }
 
   // Try to load from file cache (for persistence across calls)
-  const fileCache = await loadFileCache(tokenHash, ttlSeconds);
-  if (fileCache) {
-    // Preserve original file cache timestamp for accurate TTL tracking
-    const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
-    const ts = raw?.timestamp ?? Date.now();
-    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: ts });
-    return fileCache;
+  const fileCacheRaw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+  if (fileCacheRaw) {
+    usageCacheMap.set(tokenHash, { data: fileCacheRaw.data, timestamp: fileCacheRaw.timestamp });
+    return fileCacheRaw.data;
   }
 
   // Check if there's already a pending request for this token
@@ -143,7 +137,7 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     // API failed - set negative cache to prevent rapid retries
     debugLog('api', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     usageCacheMap.set(tokenHash, {
-      data: null as unknown as UsageLimits,
+      data: null,
       timestamp: Date.now(),
       isError: true,
     });

@@ -5,6 +5,9 @@ import { readFile as readFile2, writeFile, mkdir, readdir, stat as stat2, unlink
 import os from "os";
 import path from "path";
 
+// scripts/types.ts
+var NEGATIVE_CACHE_SECONDS = 30;
+
 // scripts/utils/credentials.ts
 import { execFileSync } from "child_process";
 import { readFile, stat } from "fs/promises";
@@ -86,7 +89,6 @@ function debugLog(context, message, error) {
 var API_TIMEOUT_MS = 5e3;
 var MAX_RETRY_AFTER_MS = 1e4;
 var STALE_FALLBACK_SECONDS = 3600;
-var NEGATIVE_CACHE_SECONDS = 30;
 var CACHE_DIR = path.join(os.homedir(), ".cache", "claude-dashboard");
 var CACHE_CLEANUP_AGE_SECONDS = 3600;
 var CLEANUP_INTERVAL_MS = 36e5;
@@ -118,9 +120,9 @@ async function fetchUsageLimits(ttlSeconds = 300) {
       const cached = usageCacheMap.get(lastTokenHash);
       if (cached)
         return cached.data;
-      const fileCache2 = await loadFileCache(lastTokenHash, STALE_FALLBACK_SECONDS);
-      if (fileCache2)
-        return fileCache2;
+      const fileCache = await loadFileCache(lastTokenHash, STALE_FALLBACK_SECONDS);
+      if (fileCache)
+        return fileCache;
     }
     return null;
   }
@@ -131,18 +133,15 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     if (cached) {
       if (cached.isError) {
         debugLog("api", "Negative cache hit, returning stale or null");
-        const staleFile = await loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
-        return staleFile;
+        return loadFileCache(tokenHash, STALE_FALLBACK_SECONDS);
       }
       return cached.data;
     }
   }
-  const fileCache = await loadFileCache(tokenHash, ttlSeconds);
-  if (fileCache) {
-    const raw = await loadFileCacheRaw(tokenHash, ttlSeconds);
-    const ts = raw?.timestamp ?? Date.now();
-    usageCacheMap.set(tokenHash, { data: fileCache, timestamp: ts });
-    return fileCache;
+  const fileCacheRaw = await loadFileCacheRaw(tokenHash, ttlSeconds);
+  if (fileCacheRaw) {
+    usageCacheMap.set(tokenHash, { data: fileCacheRaw.data, timestamp: fileCacheRaw.timestamp });
+    return fileCacheRaw.data;
   }
   const pending = pendingRequests.get(tokenHash);
   if (pending) {
@@ -292,7 +291,6 @@ import { execFileSync as execFileSync2 } from "child_process";
 import os2 from "os";
 import path2 from "path";
 var API_TIMEOUT_MS2 = 5e3;
-var NEGATIVE_CACHE_SECONDS2 = 30;
 var CODEX_AUTH_PATH = path2.join(os2.homedir(), ".codex", "auth.json");
 var CODEX_CONFIG_PATH = path2.join(os2.homedir(), ".codex", "config.toml");
 var CACHE_DIR2 = path2.join(os2.homedir(), ".cache", "claude-dashboard");
@@ -420,7 +418,7 @@ async function fetchCodexUsage(ttlSeconds = 60) {
   const cached = codexCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS2 : ttlSeconds;
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
     if (ageSeconds < effectiveTtl) {
       if (cached.isError) {
         debugLog("codex", "Negative cache hit, skipping API call");
@@ -439,7 +437,7 @@ async function fetchCodexUsage(ttlSeconds = 60) {
     const result = await requestPromise;
     if (result)
       return result;
-    debugLog("codex", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS2}s`);
+    debugLog("codex", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     codexCacheMap.set(tokenHash, {
       data: null,
       timestamp: Date.now(),
@@ -513,7 +511,6 @@ import { execFileSync as execFileSync3 } from "child_process";
 import os3 from "os";
 import path3 from "path";
 var API_TIMEOUT_MS3 = 5e3;
-var NEGATIVE_CACHE_SECONDS3 = 30;
 var GEMINI_DIR = ".gemini";
 var OAUTH_CREDS_FILE = "oauth_creds.json";
 var SETTINGS_FILE = "settings.json";
@@ -793,7 +790,7 @@ async function fetchGeminiUsage(ttlSeconds = 60) {
   const cached = geminiCacheMap.get(tokenHash);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS3 : ttlSeconds;
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
     if (ageSeconds < effectiveTtl) {
       if (cached.isError) {
         debugLog("gemini", "Negative cache hit, skipping API call");
@@ -813,7 +810,7 @@ async function fetchGeminiUsage(ttlSeconds = 60) {
     const result = await requestPromise;
     if (result)
       return result;
-    debugLog("gemini", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS3}s`);
+    debugLog("gemini", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     geminiCacheMap.set(tokenHash, {
       data: null,
       timestamp: Date.now(),
@@ -929,7 +926,6 @@ function getZaiApiBaseUrl() {
 
 // scripts/utils/zai-api-client.ts
 var API_TIMEOUT_MS4 = 5e3;
-var NEGATIVE_CACHE_SECONDS4 = 30;
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
@@ -976,7 +972,7 @@ async function fetchZaiUsage(ttlSeconds = 60) {
   const cached = zaiCacheMap.get(cacheKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
-    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS4 : ttlSeconds;
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
     if (ageSeconds < effectiveTtl) {
       if (cached.isError) {
         debugLog("zai", "Negative cache hit, skipping API call");
@@ -998,7 +994,7 @@ async function fetchZaiUsage(ttlSeconds = 60) {
       zaiCacheMap.set(cacheKey, { data: result, timestamp: Date.now() });
       return result;
     }
-    debugLog("zai", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS4}s`);
+    debugLog("zai", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     zaiCacheMap.set(cacheKey, {
       data: null,
       timestamp: Date.now(),

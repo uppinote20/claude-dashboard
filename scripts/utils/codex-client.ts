@@ -9,13 +9,12 @@ import { readFile, stat, writeFile, mkdir } from 'fs/promises';
 import { execFileSync } from 'child_process';
 import os from 'os';
 import path from 'path';
-import type { CodexUsageLimits, CacheEntry } from '../types.js';
+import { NEGATIVE_CACHE_SECONDS, type CodexUsageLimits, type CacheEntry } from '../types.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
 
 const API_TIMEOUT_MS = 5000;
-const NEGATIVE_CACHE_SECONDS = 30;
 const CODEX_AUTH_PATH = path.join(os.homedir(), '.codex', 'auth.json');
 const CODEX_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml');
 const CACHE_DIR = path.join(os.homedir(), '.cache', 'claude-dashboard');
@@ -284,7 +283,7 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
     // API failed - set negative cache to prevent rapid retries
     debugLog('codex', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     codexCacheMap.set(tokenHash, {
-      data: null as unknown as CodexUsageLimits,
+      data: null,
       timestamp: Date.now(),
       isError: true,
     });
@@ -295,6 +294,7 @@ export async function fetchCodexUsage(ttlSeconds: number = 60): Promise<CodexUsa
       return cached.data;
     }
 
+    // No file cache available for Codex — return null
     return null;
   } finally {
     pendingRequests.delete(tokenHash);

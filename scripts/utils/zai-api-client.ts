@@ -5,13 +5,12 @@
  * @handbook 4.2-request-deduplication
  */
 
-import type { CacheEntry } from '../types.js';
+import { NEGATIVE_CACHE_SECONDS, type CacheEntry } from '../types.js';
 import { isZaiProvider, getZaiApiBaseUrl } from './provider.js';
 import { debugLog } from './debug.js';
 import { hashToken } from './hash.js';
 
 const API_TIMEOUT_MS = 5000;
-const NEGATIVE_CACHE_SECONDS = 30;
 
 /**
  * Clamp percentage to safe 0-100 range
@@ -178,7 +177,7 @@ export async function fetchZaiUsage(ttlSeconds: number = 60): Promise<ZaiUsageLi
     // API failed - set negative cache to prevent rapid retries
     debugLog('zai', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
     zaiCacheMap.set(cacheKey, {
-      data: null as unknown as ZaiUsageLimits,
+      data: null,
       timestamp: Date.now(),
       isError: true,
     });
@@ -189,6 +188,7 @@ export async function fetchZaiUsage(ttlSeconds: number = 60): Promise<ZaiUsageLi
       return cached.data;
     }
 
+    // No file cache available for z.ai — return null
     return null;
   } finally {
     pendingRequests.delete(cacheKey);
