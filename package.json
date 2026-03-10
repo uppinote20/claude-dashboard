@@ -1,6 +1,6 @@
 {
   "name": "claude-dashboard",
-  "version": "1.16.2",
+  "version": "1.16.3",
   "type": "module",
   "description": "Comprehensive status line with context usage, API rate limits, and cost tracking",
   "main": "dist/index.js",
