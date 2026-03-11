@@ -14,7 +14,13 @@ export const sessionDurationWidget: Widget<SessionDurationData> = {
   name: 'Session Duration',
 
   async getData(ctx: WidgetContext): Promise<SessionDurationData | null> {
-    // Use session_id if available, otherwise use a default
+    // Prefer stdin total_duration_ms when available (direct from Claude Code)
+    const stdinDuration = ctx.stdin.cost?.total_duration_ms;
+    if (typeof stdinDuration === 'number' && stdinDuration > 0) {
+      return { elapsedMs: stdinDuration };
+    }
+
+    // Fallback to file-based session tracking
     const sessionId = ctx.stdin.session_id || 'default';
     const elapsedMs = await getSessionElapsedMs(sessionId);
 

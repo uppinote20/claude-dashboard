@@ -77,7 +77,8 @@ type WidgetId =
   | 'toolActivity' | 'agentStatus' | 'todoProgress'
   | 'burnRate' | 'depletionTime' | 'cacheHit'
   | 'codexUsage' | 'geminiUsage' | 'geminiUsageAll' | 'zaiUsage'
-  | 'tokenBreakdown' | 'performance' | 'forecast' | 'budget';
+  | 'tokenBreakdown' | 'performance' | 'forecast' | 'budget'
+  | 'version';
 ```
 
 See the [Widget Reference](/reference/widget-reference/) for detailed information about each widget.

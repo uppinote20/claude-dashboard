@@ -363,3 +363,18 @@ In 30K · Out 8K · CW 5K · CR 20K
 $5/$15
 $14/$15 !!
 ```
+
+## Info Widgets
+
+### version
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `version` |
+| **Data Source** | stdin (version) |
+| **Description** | Displays the Claude Code version. Hidden when stdin does not provide version info. |
+
+**Example output:**
+```
+v1.0.80
+```

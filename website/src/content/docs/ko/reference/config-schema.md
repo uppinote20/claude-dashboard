@@ -101,7 +101,8 @@ type WidgetId =
   | 'tokenBreakdown'
   | 'performance'
   | 'forecast'
-  | 'budget';
+  | 'budget'
+  | 'version';
 ```
 
 ## 전체 설정 예시

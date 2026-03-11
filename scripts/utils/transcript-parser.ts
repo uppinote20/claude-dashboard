@@ -164,6 +164,25 @@ export function getCompletedToolCount(transcript: ParsedTranscript): number {
 }
 
 /**
+ * Normalize task/todo status variants to canonical values.
+ * Maps upstream API variants (not_started, running, done, complete)
+ * to the canonical set used in TodoProgressData.
+ */
+export function normalizeTaskStatus(status: string): string {
+  switch (status) {
+    case 'not_started':
+      return 'pending';
+    case 'running':
+      return 'in_progress';
+    case 'complete':
+    case 'done':
+      return 'completed';
+    default:
+      return status;
+  }
+}
+
+/**
  * Extract TodoWrite calls to get todo progress
  */
 export function extractTodoProgress(
@@ -201,17 +220,18 @@ export function extractTodoProgress(
   }
 
   const todos = input.todos;
-  const completed = todos.filter((t) => t.status === 'completed').length;
+  const completed = todos.filter((t) => normalizeTaskStatus(t.status) === 'completed').length;
   const total = todos.length;
-  const current = todos.find(
-    (t) => t.status === 'in_progress' || t.status === 'pending'
-  );
+  const current = todos.find((t) => {
+    const s = normalizeTaskStatus(t.status);
+    return s === 'in_progress' || s === 'pending';
+  });
 
   return {
     current: current
       ? {
           content: current.content,
-          status: current.status as 'in_progress' | 'pending',
+          status: normalizeTaskStatus(current.status) as 'in_progress' | 'pending',
         }
       : undefined,
     completed,
@@ -243,7 +263,7 @@ export function extractTaskProgress(
         if (input.subject) {
           tasks.set(String(nextId), {
             subject: input.subject,
-            status: input.status || 'pending',
+            status: normalizeTaskStatus(input.status || 'pending'),
           });
           nextId++;
         }
@@ -251,7 +271,7 @@ export function extractTaskProgress(
         const input = block.input as { taskId?: string; status?: string; subject?: string };
         if (input.taskId && tasks.has(input.taskId)) {
           const task = tasks.get(input.taskId)!;
-          if (input.status) task.status = input.status;
+          if (input.status) task.status = normalizeTaskStatus(input.status);
           if (input.subject) task.subject = input.subject;
         }
       }

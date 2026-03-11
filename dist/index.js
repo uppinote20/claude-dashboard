@@ -45,7 +45,8 @@ var PRESET_CHAR_MAP = {
   N: "tokenBreakdown",
   F: "performance",
   W: "forecast",
-  U: "budget"
+  U: "budget",
+  V: "version"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -1002,19 +1003,20 @@ var contextWidget = {
     const { context_window } = ctx.stdin;
     const usage = context_window?.current_usage;
     const contextSize = context_window?.context_window_size || 2e5;
+    const officialPercent = context_window?.used_percentage;
     if (!usage) {
       return {
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
         contextSize,
-        percentage: 0
+        percentage: typeof officialPercent === "number" ? Math.round(officialPercent) : 0
       };
     }
     const inputTokens = usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens;
     const outputTokens = usage.output_tokens;
     const totalTokens = inputTokens + outputTokens;
-    const percentage = calculatePercent(inputTokens, contextSize);
+    const percentage = typeof officialPercent === "number" ? Math.round(officialPercent) : calculatePercent(inputTokens, contextSize);
     return {
       inputTokens,
       outputTokens,
@@ -1435,6 +1437,10 @@ var sessionDurationWidget = {
   id: "sessionDuration",
   name: "Session Duration",
   async getData(ctx) {
+    const stdinDuration = ctx.stdin.cost?.total_duration_ms;
+    if (typeof stdinDuration === "number" && stdinDuration > 0) {
+      return { elapsedMs: stdinDuration };
+    }
     const sessionId = ctx.stdin.session_id || "default";
     const elapsedMs = await getSessionElapsedMs(sessionId);
     return { elapsedMs };
@@ -1540,6 +1546,19 @@ function getRunningTools(transcript) {
 function getCompletedToolCount(transcript) {
   return transcript.toolResults.size;
 }
+function normalizeTaskStatus(status) {
+  switch (status) {
+    case "not_started":
+      return "pending";
+    case "running":
+      return "in_progress";
+    case "complete":
+    case "done":
+      return "completed";
+    default:
+      return status;
+  }
+}
 function extractTodoProgress(transcript) {
   let lastTodoWrite = null;
   for (const [id, tool] of transcript.toolUses) {
@@ -1563,15 +1582,16 @@ function extractTodoProgress(transcript) {
     return null;
   }
   const todos = input.todos;
-  const completed = todos.filter((t) => t.status === "completed").length;
+  const completed = todos.filter((t) => normalizeTaskStatus(t.status) === "completed").length;
   const total = todos.length;
-  const current = todos.find(
-    (t) => t.status === "in_progress" || t.status === "pending"
-  );
+  const current = todos.find((t) => {
+    const s = normalizeTaskStatus(t.status);
+    return s === "in_progress" || s === "pending";
+  });
   return {
     current: current ? {
       content: current.content,
-      status: current.status
+      status: normalizeTaskStatus(current.status)
     } : void 0,
     completed,
     total
@@ -1593,7 +1613,7 @@ function extractTaskProgress(transcript) {
         if (input.subject) {
           tasks.set(String(nextId), {
             subject: input.subject,
-            status: input.status || "pending"
+            status: normalizeTaskStatus(input.status || "pending")
           });
           nextId++;
         }
@@ -1602,7 +1622,7 @@ function extractTaskProgress(transcript) {
         if (input.taskId && tasks.has(input.taskId)) {
           const task = tasks.get(input.taskId);
           if (input.status)
-            task.status = input.status;
+            task.status = normalizeTaskStatus(input.status);
           if (input.subject)
             task.subject = input.subject;
         }
@@ -3059,6 +3079,21 @@ var budgetWidget = {
   }
 };
 
+// scripts/widgets/version.ts
+var versionWidget = {
+  id: "version",
+  name: "Version",
+  async getData(ctx) {
+    const version = ctx.stdin.version;
+    if (!version)
+      return null;
+    return { version };
+  },
+  render(data, _ctx) {
+    return colorize(`v${data.version}`, getTheme().dim);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3085,7 +3120,8 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["tokenBreakdown", tokenBreakdownWidget],
   ["performance", performanceWidget],
   ["forecast", forecastWidget],
-  ["budget", budgetWidget]
+  ["budget", budgetWidget],
+  ["version", versionWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

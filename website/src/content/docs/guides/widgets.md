@@ -67,6 +67,12 @@ claude-dashboard provides 25+ widgets organized by category. Each widget can be 
 | `forecast` | Estimated hourly cost based on session rate |
 | `budget` | Daily spending vs configured budget limit [5] |
 
+## Info
+
+| Widget | Description |
+|--------|-------------|
+| `version` | Claude Code version display |
+
 ## Notes
 
 1. **depletionTime** assumes all utilization came from the current session; accuracy improves as the session runs longer.

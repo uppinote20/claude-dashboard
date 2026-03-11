@@ -21,6 +21,10 @@ export interface StdinInput {
     total_input_tokens: number;
     total_output_tokens: number;
     context_window_size: number;
+    /** Official usage percentage from Claude Code stdin (0-100) */
+    used_percentage?: number | null;
+    /** Official remaining percentage from Claude Code stdin (0-100) */
+    remaining_percentage?: number | null;
     current_usage: {
       input_tokens: number;
       output_tokens: number;
@@ -30,9 +34,13 @@ export interface StdinInput {
   };
   cost: {
     total_cost_usd: number;
+    /** Total session duration in milliseconds from Claude Code stdin */
+    total_duration_ms?: number;
   };
   /** Path to transcript.jsonl file (if available) */
   transcript_path?: string;
+  /** Claude Code version string */
+  version?: string;
   /** Session ID for duration tracking */
   session_id?: string;
 }
@@ -65,7 +73,8 @@ export type WidgetId =
   | 'tokenBreakdown'
   | 'performance'
   | 'forecast'
-  | 'budget';
+  | 'budget'
+  | 'version';
 
 /**
  * Display mode for status line output
@@ -164,6 +173,7 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   F: 'performance',
   W: 'forecast',
   U: 'budget',
+  V: 'version',
 };
 
 /**
@@ -540,6 +550,13 @@ export interface BudgetData {
 }
 
 /**
+ * Version widget data
+ */
+export interface VersionData {
+  version: string;
+}
+
+/**
  * Union type of all widget data
  */
 export type WidgetData =
@@ -564,7 +581,8 @@ export type WidgetData =
   | TokenBreakdownData
   | PerformanceData
   | ForecastData
-  | BudgetData;
+  | BudgetData
+  | VersionData;
 
 /**
  * Transcript entry from JSONL file

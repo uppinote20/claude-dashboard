@@ -36,7 +36,7 @@ sidebar:
 | `D` | sessionDuration | `Z` | zaiUsage |
 | `K` | configCounts | `N` | tokenBreakdown |
 | `F` | performance | `W` | forecast |
-| `U` | budget | | |
+| `U` | budget | `V` | version |
 
 ## 줄 구분
 

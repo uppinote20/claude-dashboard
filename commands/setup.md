@@ -64,6 +64,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `performance` | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | Estimated hourly cost based on session rate |
 | `budget` | Daily spending vs configured budget limit (requires `dailyBudget` in config) |
+| `version` | Claude Code version display |
 
 ## Tasks
 
@@ -130,7 +131,7 @@ Create `~/.claude/claude-dashboard.local.json`:
   "separator": "pipe (default) | space | dot | arrow",
   "disabledWidgets": ["selected widgets to hide, omit if empty"],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
@@ -143,12 +144,12 @@ Create `~/.claude/claude-dashboard.local.json`:
   "preset": "MC$R|BDO",
   "theme": "default",
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```
 
-Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget. Use `|` to separate lines.
+Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `V`=version. Use `|` to separate lines.
 
 **For custom mode:**
 ```json
@@ -164,7 +165,7 @@ Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLi
   "separator": "pipe",
   "disabledWidgets": ["selected widgets to hide, omit if empty"],
   "cache": {
-    "ttlSeconds": 60
+    "ttlSeconds": 300
   }
 }
 ```

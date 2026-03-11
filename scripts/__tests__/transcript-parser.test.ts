@@ -184,6 +184,27 @@ describe('transcript-parser', () => {
     });
   });
 
+  describe('normalizeTaskStatus', () => {
+    it('should normalize status variants', async () => {
+      const { normalizeTaskStatus } = await import('../utils/transcript-parser.js');
+
+      expect(normalizeTaskStatus('not_started')).toBe('pending');
+      expect(normalizeTaskStatus('running')).toBe('in_progress');
+      expect(normalizeTaskStatus('complete')).toBe('completed');
+      expect(normalizeTaskStatus('done')).toBe('completed');
+      expect(normalizeTaskStatus('pending')).toBe('pending');
+      expect(normalizeTaskStatus('in_progress')).toBe('in_progress');
+      expect(normalizeTaskStatus('completed')).toBe('completed');
+    });
+
+    it('should pass through unknown statuses', async () => {
+      const { normalizeTaskStatus } = await import('../utils/transcript-parser.js');
+
+      expect(normalizeTaskStatus('cancelled')).toBe('cancelled');
+      expect(normalizeTaskStatus('unknown')).toBe('unknown');
+    });
+  });
+
   describe('extractTodoProgress', () => {
     it('should return null when no TodoWrite calls', async () => {
       await writeTranscript([
@@ -232,6 +253,45 @@ describe('transcript-parser', () => {
       expect(progress?.total).toBe(3);
       expect(progress?.current?.content).toBe('Task 2');
       expect(progress?.current?.status).toBe('in_progress');
+    });
+
+    it('should normalize variant statuses in TodoWrite', async () => {
+      await writeTranscript([
+        {
+          type: 'assistant',
+          message: {
+            content: [
+              {
+                type: 'tool_use',
+                id: 'todo-2',
+                name: 'TodoWrite',
+                input: {
+                  todos: [
+                    { content: 'Task A', status: 'done' },
+                    { content: 'Task B', status: 'complete' },
+                    { content: 'Task C', status: 'running' },
+                    { content: 'Task D', status: 'not_started' },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+        {
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'todo-2' }] },
+        },
+      ]);
+
+      const { parseTranscript, extractTodoProgress } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const progress = extractTodoProgress(transcript!);
+
+      expect(progress).not.toBeNull();
+      expect(progress?.completed).toBe(2); // done + complete → completed
+      expect(progress?.total).toBe(4);
+      expect(progress?.current?.content).toBe('Task C');
+      expect(progress?.current?.status).toBe('in_progress'); // running → in_progress
     });
   });
 
@@ -365,6 +425,76 @@ describe('transcript-parser', () => {
       expect(progress).not.toBeNull();
       expect(progress?.completed).toBe(1);
       expect(progress?.total).toBe(2);
+      expect(progress?.current?.content).toBe('Task B');
+      expect(progress?.current?.status).toBe('in_progress');
+    });
+
+    it('should normalize variant statuses in TaskCreate/TaskUpdate', async () => {
+      await writeTranscript([
+        {
+          type: 'assistant',
+          message: {
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tc-1',
+                name: 'TaskCreate',
+                input: { subject: 'Task A', status: 'not_started' },
+              },
+              {
+                type: 'tool_use',
+                id: 'tc-2',
+                name: 'TaskCreate',
+                input: { subject: 'Task B', status: 'running' },
+              },
+              {
+                type: 'tool_use',
+                id: 'tc-3',
+                name: 'TaskCreate',
+                input: { subject: 'Task C', status: 'done' },
+              },
+            ],
+          },
+        },
+        {
+          type: 'user',
+          message: {
+            content: [
+              { type: 'tool_result', tool_use_id: 'tc-1' },
+              { type: 'tool_result', tool_use_id: 'tc-2' },
+              { type: 'tool_result', tool_use_id: 'tc-3' },
+            ],
+          },
+        },
+        {
+          type: 'assistant',
+          message: {
+            content: [
+              {
+                type: 'tool_use',
+                id: 'tu-1',
+                name: 'TaskUpdate',
+                input: { taskId: '1', status: 'complete' },
+              },
+            ],
+          },
+        },
+        {
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tu-1' }] },
+        },
+      ]);
+
+      const { parseTranscript, extractTaskProgress } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const progress = extractTaskProgress(transcript!);
+
+      expect(progress).not.toBeNull();
+      // Task A: not_started→pending, then updated to complete→completed
+      // Task B: running→in_progress
+      // Task C: done→completed
+      expect(progress?.completed).toBe(2); // Task A (updated) + Task C
+      expect(progress?.total).toBe(3);
       expect(progress?.current?.content).toBe('Task B');
       expect(progress?.current?.status).toBe('in_progress');
     });
