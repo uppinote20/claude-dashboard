@@ -1,5 +1,5 @@
 /**
- * @handbook 2.1-naming-rules
+ * @handbook 2.1-naming-conventions
  */
 import type { Translations } from '../types.js';
 

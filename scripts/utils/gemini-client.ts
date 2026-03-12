@@ -3,7 +3,7 @@
  * Fetches usage limits from Google Code Assist API
  * @handbook 7.1-common-api-pattern
  * @handbook 4.2-request-deduplication
- * @handbook 4.4-credentials-caching
+ * @handbook 4.4-credential-caching
  */
 
 import { readFile, writeFile, stat } from 'fs/promises';
