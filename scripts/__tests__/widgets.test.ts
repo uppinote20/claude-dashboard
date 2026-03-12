@@ -405,6 +405,16 @@ describe('widgets', () => {
       expect(data?.subPath).toBeUndefined();
     });
 
+    it('should not set subPath when current_dir is a sibling with same prefix', async () => {
+      const ctx = createContext({
+        workspace: { current_dir: '/home/user/proj-backup/src', project_dir: '/home/user/proj' },
+      });
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.subPath).toBeUndefined();
+    });
+
     it('should render subPath in parentheses', () => {
       const ctx = createContext();
       const data = { dirName: 'my-project', gitBranch: 'main', subPath: 'src/components' };

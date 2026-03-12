@@ -1188,7 +1188,7 @@ var projectInfoWidget = {
     }
     const projectDir = ctx.stdin.workspace?.project_dir;
     const dirName = basename(projectDir || currentDir);
-    const subPath = projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir) ? relative(projectDir, currentDir) : void 0;
+    const subPath = projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir + "/") ? relative(projectDir, currentDir) : void 0;
     const worktreeName = ctx.stdin.worktree?.name || void 0;
     const [branch, dirty, ab] = await Promise.all([
       getGitBranch(currentDir),

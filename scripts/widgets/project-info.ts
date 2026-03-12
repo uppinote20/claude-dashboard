@@ -85,7 +85,7 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
     const dirName = basename(projectDir || currentDir);
 
     // Compute relative subpath when CWD differs from project root
-    const subPath = (projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir))
+    const subPath = (projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir + '/'))
       ? relative(projectDir, currentDir)
       : undefined;
 
