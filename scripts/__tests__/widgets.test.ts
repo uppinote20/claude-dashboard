@@ -16,6 +16,7 @@ import { codexUsageWidget } from '../widgets/codex-usage.js';
 import { geminiUsageWidget } from '../widgets/gemini-usage.js';
 import { configCountsWidget } from '../widgets/config-counts.js';
 import { sessionDurationWidget } from '../widgets/session-duration.js';
+import { versionWidget } from '../widgets/version.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
@@ -223,6 +224,70 @@ describe('widgets', () => {
       expect(data?.contextSize).toBe(200000);
       // 6500 / 200000 * 100 = 3.25% -> 3%
       expect(data?.percentage).toBe(3);
+    });
+
+    it('should use official used_percentage when available', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 5000,
+          total_output_tokens: 2000,
+          context_window_size: 200000,
+          used_percentage: 42,
+          current_usage: {
+            input_tokens: 5000,
+            output_tokens: 2000,
+            cache_creation_input_tokens: 1000,
+            cache_read_input_tokens: 500,
+          },
+        },
+      });
+      const data = await contextWidget.getData(ctx);
+
+      expect(data?.percentage).toBe(42);
+    });
+
+    it('should fall back to calculated percentage when used_percentage is null', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 5000,
+          total_output_tokens: 2000,
+          context_window_size: 200000,
+          used_percentage: null,
+          current_usage: {
+            input_tokens: 5000,
+            output_tokens: 2000,
+            cache_creation_input_tokens: 1000,
+            cache_read_input_tokens: 500,
+          },
+        },
+      });
+      const data = await contextWidget.getData(ctx);
+
+      // Fallback: calculatePercent(6500, 200000) = 3%
+      expect(data?.percentage).toBe(3);
+    });
+
+    it('should fall back to calculated percentage when used_percentage is undefined', async () => {
+      const ctx = createContext();
+      const data = await contextWidget.getData(ctx);
+
+      // No used_percentage in MOCK_STDIN, so fallback
+      expect(data?.percentage).toBe(3);
+    });
+
+    it('should use used_percentage even when current_usage is null', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 0,
+          total_output_tokens: 0,
+          context_window_size: 200000,
+          used_percentage: 15,
+          current_usage: null,
+        },
+      });
+      const data = await contextWidget.getData(ctx);
+
+      expect(data?.percentage).toBe(15);
     });
 
     it('should render progress bar and percentage', () => {
@@ -990,6 +1055,38 @@ describe('widgets', () => {
       expect(sessionDurationWidget.name).toBe('Session Duration');
     });
 
+    it('should use total_duration_ms from stdin when available', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_duration_ms: 600000 },
+      });
+      const data = await sessionDurationWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.elapsedMs).toBe(600000); // 10 minutes from stdin
+    });
+
+    it('should fall back to file-based duration when total_duration_ms is missing', async () => {
+      vi.spyOn(sessionUtils, 'getSessionElapsedMs').mockResolvedValue(120000);
+
+      const ctx = createContext(); // MOCK_STDIN has no total_duration_ms
+      const data = await sessionDurationWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.elapsedMs).toBe(120000);
+    });
+
+    it('should fall back to file-based duration when total_duration_ms is 0', async () => {
+      vi.spyOn(sessionUtils, 'getSessionElapsedMs').mockResolvedValue(60000);
+
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_duration_ms: 0 },
+      });
+      const data = await sessionDurationWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.elapsedMs).toBe(60000);
+    });
+
     it('should return elapsed time data', async () => {
       vi.spyOn(sessionUtils, 'getSessionElapsedMs').mockResolvedValue(3600000); // 1 hour
 
@@ -1043,6 +1140,36 @@ describe('widgets', () => {
       const result = sessionDurationWidget.render(data, ctx);
 
       expect(result).toContain('25h');
+    });
+  });
+
+  describe('versionWidget', () => {
+    it('should have correct id and name', () => {
+      expect(versionWidget.id).toBe('version');
+      expect(versionWidget.name).toBe('Version');
+    });
+
+    it('should use stdin version when available', async () => {
+      const ctx = createContext({ version: '1.0.80' });
+      const data = await versionWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.version).toBe('1.0.80');
+    });
+
+    it('should return null when stdin version is missing', async () => {
+      const ctx = createContext(); // No version in MOCK_STDIN
+      const data = await versionWidget.getData(ctx);
+
+      expect(data).toBeNull();
+    });
+
+    it('should render version with v prefix', () => {
+      const ctx = createContext();
+      const data = { version: '1.0.80' };
+      const result = versionWidget.render(data, ctx);
+
+      expect(result).toContain('v1.0.80');
     });
   });
 });

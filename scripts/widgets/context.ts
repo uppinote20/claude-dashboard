@@ -17,15 +17,15 @@ export const contextWidget: Widget<ContextData> = {
     const { context_window } = ctx.stdin;
     const usage = context_window?.current_usage;
     const contextSize = context_window?.context_window_size || 200000;
+    const officialPercent = context_window?.used_percentage;
 
     if (!usage) {
-      // Return default values when no usage data
       return {
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
         contextSize,
-        percentage: 0,
+        percentage: typeof officialPercent === 'number' ? Math.round(officialPercent) : 0,
       };
     }
 
@@ -35,7 +35,9 @@ export const contextWidget: Widget<ContextData> = {
       usage.cache_read_input_tokens;
     const outputTokens = usage.output_tokens;
     const totalTokens = inputTokens + outputTokens;
-    const percentage = calculatePercent(inputTokens, contextSize);
+    const percentage = typeof officialPercent === 'number'
+      ? Math.round(officialPercent)
+      : calculatePercent(inputTokens, contextSize);
 
     return {
       inputTokens,

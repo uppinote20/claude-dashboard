@@ -36,7 +36,7 @@ This creates a 2-line layout:
 | `D` | sessionDuration | `Z` | zaiUsage |
 | `K` | configCounts | `N` | tokenBreakdown |
 | `F` | performance | `W` | forecast |
-| `U` | budget | | |
+| `U` | budget | `V` | version |
 
 ## Examples
 

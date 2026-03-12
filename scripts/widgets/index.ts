@@ -37,6 +37,7 @@ import { tokenBreakdownWidget } from './token-breakdown.js';
 import { performanceWidget } from './performance.js';
 import { forecastWidget } from './forecast.js';
 import { budgetWidget } from './budget.js';
+import { versionWidget } from './version.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -67,6 +68,7 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['performance', performanceWidget],
   ['forecast', forecastWidget],
   ['budget', budgetWidget],
+  ['version', versionWidget],
 ] as [WidgetId, Widget][]);
 
 /**

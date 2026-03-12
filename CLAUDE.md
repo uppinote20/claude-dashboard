@@ -143,6 +143,7 @@ interface Widget<T extends WidgetData> {
 | `performance` | stdin + session | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | stdin + session | Estimated hourly cost based on session rate |
 | `budget` | stdin + file | Daily spending vs configured budget limit |
+| `version` | stdin | Claude Code version display |
 
 ### Display Modes
 
@@ -188,7 +189,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `D` | sessionDuration | `Z` | zaiUsage |
 | `K` | configCounts | `N` | tokenBreakdown |
 | `F` | performance | `W` | forecast |
-| `U` | budget | | |
+| `U` | budget | `V` | version |
 
 ### Theme System
 
