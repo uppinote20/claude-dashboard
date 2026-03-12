@@ -80,7 +80,9 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `performance` | Composite efficiency badge (cache hit + output ratio) |
 | | `forecast` | Estimated hourly cost based on session rate |
 | | `budget` | Daily spending vs configured budget limit⁵ |
-| **Info** | `version` | Claude Code version display |
+| **Info** | `linesChanged` | Lines added/removed count (+N -N) |
+| | `outputStyle` | Current output style (hidden when "default") |
+| | `version` | Claude Code version display |
 
 > ¹ Assumes all utilization came from this session; improves as session runs longer.
 > ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config.
@@ -118,7 +120,7 @@ i18n: English and Korean supported (auto-detect or set via setup).
 |------|-------|---------|
 | `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage |
 | `normal` | 2 | + projectInfo, sessionId, sessionDuration, burnRate, todoProgress |
-| `detailed` | 5 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage |
+| `detailed` | 5 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version |
 
 **Configuration file** (`~/.claude/claude-dashboard.local.json`):
 

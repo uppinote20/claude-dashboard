@@ -38,6 +38,8 @@ import { performanceWidget } from './performance.js';
 import { forecastWidget } from './forecast.js';
 import { budgetWidget } from './budget.js';
 import { versionWidget } from './version.js';
+import { linesChangedWidget } from './lines-changed.js';
+import { outputStyleWidget } from './output-style.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -69,6 +71,8 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['forecast', forecastWidget],
   ['budget', budgetWidget],
   ['version', versionWidget],
+  ['linesChanged', linesChangedWidget],
+  ['outputStyle', outputStyleWidget],
 ] as [WidgetId, Widget][]);
 
 /**

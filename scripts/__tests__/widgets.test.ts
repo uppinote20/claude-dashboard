@@ -17,6 +17,8 @@ import { geminiUsageWidget } from '../widgets/gemini-usage.js';
 import { configCountsWidget } from '../widgets/config-counts.js';
 import { sessionDurationWidget } from '../widgets/session-duration.js';
 import { versionWidget } from '../widgets/version.js';
+import { linesChangedWidget } from '../widgets/lines-changed.js';
+import { outputStyleWidget } from '../widgets/output-style.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
@@ -1170,6 +1172,124 @@ describe('widgets', () => {
       const result = versionWidget.render(data, ctx);
 
       expect(result).toContain('v1.0.80');
+    });
+  });
+
+  describe('linesChangedWidget', () => {
+    it('should have correct id and name', () => {
+      expect(linesChangedWidget.id).toBe('linesChanged');
+      expect(linesChangedWidget.name).toBe('Lines Changed');
+    });
+
+    it('should return data when added and removed are present', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_lines_added: 156, total_lines_removed: 23 },
+      });
+      const data = await linesChangedWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.added).toBe(156);
+      expect(data?.removed).toBe(23);
+    });
+
+    it('should return null when both are 0', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_lines_added: 0, total_lines_removed: 0 },
+      });
+      const data = await linesChangedWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when both are missing', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5 },
+      });
+      const data = await linesChangedWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return data when only added is present', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_lines_added: 42 },
+      });
+      const data = await linesChangedWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.added).toBe(42);
+      expect(data?.removed).toBe(0);
+    });
+
+    it('should return data when only removed is present', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_lines_removed: 15 },
+      });
+      const data = await linesChangedWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.added).toBe(0);
+      expect(data?.removed).toBe(15);
+    });
+
+    it('should render only removed part when added is 0', () => {
+      const ctx = createContext();
+      const data = { added: 0, removed: 15 };
+      const result = linesChangedWidget.render(data, ctx);
+
+      expect(result).toContain('-15');
+      expect(result).not.toContain('+');
+    });
+
+    it('should render only added part when removed is 0', () => {
+      const ctx = createContext();
+      const data = { added: 100, removed: 0 };
+      const result = linesChangedWidget.render(data, ctx);
+
+      expect(result).toContain('+100');
+      expect(result).not.toContain('-');
+    });
+
+    it('should render both added and removed', () => {
+      const ctx = createContext();
+      const data = { added: 156, removed: 23 };
+      const result = linesChangedWidget.render(data, ctx);
+
+      expect(result).toContain('+156');
+      expect(result).toContain('-23');
+    });
+  });
+
+  describe('outputStyleWidget', () => {
+    it('should have correct id and name', () => {
+      expect(outputStyleWidget.id).toBe('outputStyle');
+      expect(outputStyleWidget.name).toBe('Output Style');
+    });
+
+    it('should return data when style is non-default', async () => {
+      const ctx = createContext({ output_style: { name: 'concise' } });
+      const data = await outputStyleWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.styleName).toBe('concise');
+    });
+
+    it('should return null when style is default', async () => {
+      const ctx = createContext({ output_style: { name: 'default' } });
+      const data = await outputStyleWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when output_style is missing', async () => {
+      const ctx = createContext();
+      const data = await outputStyleWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should render style name', () => {
+      const ctx = createContext();
+      const data = { styleName: 'explanatory' };
+      const result = outputStyleWidget.render(data, ctx);
+
+      expect(result).toContain('explanatory');
     });
   });
 });

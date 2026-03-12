@@ -36,7 +36,13 @@ export interface StdinInput {
     total_cost_usd: number;
     /** Total session duration in milliseconds from Claude Code stdin */
     total_duration_ms?: number;
+    /** Total lines added in the session */
+    total_lines_added?: number;
+    /** Total lines removed in the session */
+    total_lines_removed?: number;
   };
+  /** Output style configuration */
+  output_style?: { name: string };
   /** Path to transcript.jsonl file (if available) */
   transcript_path?: string;
   /** Claude Code version string */
@@ -74,7 +80,9 @@ export type WidgetId =
   | 'performance'
   | 'forecast'
   | 'budget'
-  | 'version';
+  | 'version'
+  | 'linesChanged'
+  | 'outputStyle';
 
 /**
  * Display mode for status line output
@@ -101,7 +109,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget'],
-    ['codexUsage', 'geminiUsage'],
+    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version'],
   ],
 };
 
@@ -174,6 +182,8 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   W: 'forecast',
   U: 'budget',
   V: 'version',
+  L: 'linesChanged',
+  Y: 'outputStyle',
 };
 
 /**
@@ -557,6 +567,21 @@ export interface VersionData {
 }
 
 /**
+ * Lines changed widget data - coding productivity metric
+ */
+export interface LinesChangedData {
+  added: number;
+  removed: number;
+}
+
+/**
+ * Output style widget data - current output style display
+ */
+export interface OutputStyleData {
+  styleName: string;
+}
+
+/**
  * Union type of all widget data
  */
 export type WidgetData =
@@ -582,7 +607,9 @@ export type WidgetData =
   | PerformanceData
   | ForecastData
   | BudgetData
-  | VersionData;
+  | VersionData
+  | LinesChangedData
+  | OutputStyleData;
 
 /**
  * Transcript entry from JSONL file

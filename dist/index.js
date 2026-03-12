@@ -19,7 +19,7 @@ var DISPLAY_PRESETS = {
     ["projectInfo", "sessionId", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
     ["tokenBreakdown", "forecast", "budget"],
-    ["codexUsage", "geminiUsage"]
+    ["codexUsage", "geminiUsage", "linesChanged", "outputStyle", "version"]
   ]
 };
 var PRESET_CHAR_MAP = {
@@ -46,7 +46,9 @@ var PRESET_CHAR_MAP = {
   F: "performance",
   W: "forecast",
   U: "budget",
-  V: "version"
+  V: "version",
+  L: "linesChanged",
+  Y: "outputStyle"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -3094,6 +3096,43 @@ var versionWidget = {
   }
 };
 
+// scripts/widgets/lines-changed.ts
+var linesChangedWidget = {
+  id: "linesChanged",
+  name: "Lines Changed",
+  async getData(ctx) {
+    const added = ctx.stdin.cost?.total_lines_added;
+    const removed = ctx.stdin.cost?.total_lines_removed;
+    if (added == null && removed == null || added === 0 && removed === 0)
+      return null;
+    return { added: added ?? 0, removed: removed ?? 0 };
+  },
+  render(data, _ctx) {
+    const theme = getTheme();
+    const parts = [];
+    if (data.added > 0)
+      parts.push(colorize(`+${data.added}`, theme.safe));
+    if (data.removed > 0)
+      parts.push(colorize(`-${data.removed}`, theme.danger));
+    return parts.join(" ");
+  }
+};
+
+// scripts/widgets/output-style.ts
+var outputStyleWidget = {
+  id: "outputStyle",
+  name: "Output Style",
+  async getData(ctx) {
+    const name = ctx.stdin.output_style?.name;
+    if (!name || name === "default")
+      return null;
+    return { styleName: name };
+  },
+  render(data, _ctx) {
+    return colorize(data.styleName, getTheme().dim);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3121,7 +3160,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["performance", performanceWidget],
   ["forecast", forecastWidget],
   ["budget", budgetWidget],
-  ["version", versionWidget]
+  ["version", versionWidget],
+  ["linesChanged", linesChangedWidget],
+  ["outputStyle", outputStyleWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

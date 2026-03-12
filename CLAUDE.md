@@ -143,6 +143,8 @@ interface Widget<T extends WidgetData> {
 | `performance` | stdin + session | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | stdin + session | Estimated hourly cost based on session rate |
 | `budget` | stdin + file | Daily spending vs configured budget limit |
+| `linesChanged` | stdin | Lines added/removed count |
+| `outputStyle` | stdin | Current output style |
 | `version` | stdin | Claude Code version display |
 
 ### Display Modes
@@ -163,7 +165,8 @@ const DISPLAY_PRESETS = {
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
-    ['tokenBreakdown', 'forecast', 'budget', 'codexUsage', 'geminiUsage'],
+    ['tokenBreakdown', 'forecast', 'budget'],
+    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version'],
   ],
 };
 ```
@@ -189,7 +192,8 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `D` | sessionDuration | `Z` | zaiUsage |
 | `K` | configCounts | `N` | tokenBreakdown |
 | `F` | performance | `W` | forecast |
-| `U` | budget | `V` | version |
+| `U` | budget | `L` | linesChanged |
+| `V` | version | `Y` | outputStyle |
 
 ### Theme System
 
