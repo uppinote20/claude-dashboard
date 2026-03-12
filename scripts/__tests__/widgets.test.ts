@@ -375,6 +375,79 @@ describe('widgets', () => {
       expect(result).toContain('my-project');
       expect(result).not.toContain('(');
     });
+
+    it('should use project_dir for dirName when available', async () => {
+      const ctx = createContext({
+        workspace: { current_dir: '/project/src/components', project_dir: '/project' },
+      });
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.dirName).toBe('project');
+      expect(data?.subPath).toBe('src/components');
+    });
+
+    it('should not set subPath when current_dir equals project_dir', async () => {
+      const ctx = createContext({
+        workspace: { current_dir: '/project', project_dir: '/project' },
+      });
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.subPath).toBeUndefined();
+    });
+
+    it('should not set subPath when project_dir is missing', async () => {
+      const ctx = createContext();
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.subPath).toBeUndefined();
+    });
+
+    it('should not set subPath when current_dir is a sibling with same prefix', async () => {
+      const ctx = createContext({
+        workspace: { current_dir: '/home/user/proj-backup/src', project_dir: '/home/user/proj' },
+      });
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.subPath).toBeUndefined();
+    });
+
+    it('should render subPath in parentheses', () => {
+      const ctx = createContext();
+      const data = { dirName: 'my-project', gitBranch: 'main', subPath: 'src/components' };
+      const result = projectInfoWidget.render(data, ctx);
+
+      expect(result).toContain('my-project (src/components)');
+    });
+
+    it('should extract worktree name from stdin', async () => {
+      const ctx = createContext({
+        worktree: { name: 'my-feature', path: '/tmp/wt', original_cwd: '/project' },
+      } as any);
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.worktreeName).toBe('my-feature');
+    });
+
+    it('should not set worktreeName when worktree is missing', async () => {
+      const ctx = createContext();
+      const data = await projectInfoWidget.getData(ctx);
+
+      expect(data?.worktreeName).toBeUndefined();
+    });
+
+    it('should render worktree indicator', () => {
+      const ctx = createContext();
+      const data = { dirName: 'my-project', gitBranch: 'main', worktreeName: 'my-feature' };
+      const result = projectInfoWidget.render(data, ctx);
+
+      expect(result).toContain('🌳');
+      expect(result).toContain('wt:my-feature');
+    });
   });
 
   describe('todoProgressWidget', () => {
@@ -419,7 +492,7 @@ describe('widgets', () => {
       };
       const result = todoProgressWidget.render(data, ctx);
 
-      expect(result).toContain('...');
+      expect(result).toContain('…');
     });
 
     it('should render completed state', () => {
@@ -465,7 +538,7 @@ describe('widgets', () => {
       };
       const result = agentStatusWidget.render(data, ctx);
 
-      expect(result).toContain('...');
+      expect(result).toContain('…');
     });
 
     it('should show completed count when no active agents', () => {
@@ -533,6 +606,35 @@ describe('widgets', () => {
       expect(result).toContain('Tools');
       expect(result).toContain('15');
       expect(result).toContain('done');
+    });
+
+    it('should render tool targets when present', () => {
+      const ctx = createContext();
+      const data = {
+        running: [
+          { name: 'Read', startTime: Date.now(), target: 'app.ts' },
+          { name: 'Bash', startTime: Date.now(), target: 'npm test' },
+        ],
+        completed: 3,
+      };
+      const result = toolActivityWidget.render(data, ctx);
+
+      expect(result).toContain('Read(app.ts)');
+      expect(result).toContain('Bash(npm test)');
+    });
+
+    it('should render tool name only when target is absent', () => {
+      const ctx = createContext();
+      const data = {
+        running: [
+          { name: 'Agent', startTime: Date.now() },
+        ],
+        completed: 2,
+      };
+      const result = toolActivityWidget.render(data, ctx);
+
+      expect(result).toContain('Agent');
+      expect(result).not.toContain('Agent(');
     });
   });
 

@@ -16,6 +16,16 @@ export interface StdinInput {
   };
   workspace: {
     current_dir: string;
+    /** Directory where Claude Code was launched (may differ from current_dir) */
+    project_dir?: string;
+  };
+  /** Worktree info (present only during --worktree sessions) */
+  worktree?: {
+    name: string;
+    path: string;
+    branch?: string;
+    original_cwd: string;
+    original_branch?: string;
   };
   context_window: {
     total_input_tokens: number;
@@ -352,6 +362,10 @@ export interface ProjectInfoData {
   ahead?: number;
   /** Commits behind upstream */
   behind?: number;
+  /** Relative path from project_dir when CWD differs */
+  subPath?: string;
+  /** Worktree name when in --worktree session */
+  worktreeName?: string;
 }
 
 export interface ConfigCountsData {
@@ -366,7 +380,7 @@ export interface SessionDurationData {
 }
 
 export interface ToolActivityData {
-  running: Array<{ name: string; startTime: number }>;
+  running: Array<{ name: string; startTime: number; target?: string }>;
   completed: number;
 }
 
@@ -633,7 +647,7 @@ export interface TranscriptEntry {
  */
 export interface ParsedTranscript {
   entries: TranscriptEntry[];
-  toolUses: Map<string, { name: string; timestamp?: string }>;
+  toolUses: Map<string, { name: string; timestamp?: string; input?: unknown }>;
   toolResults: Set<string>;
   sessionStartTime?: number;
 }

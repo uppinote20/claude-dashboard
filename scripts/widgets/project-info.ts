@@ -4,7 +4,7 @@
  */
 
 import { execFile } from 'child_process';
-import { basename } from 'path';
+import { basename, relative } from 'path';
 import type { Widget } from './base.js';
 import type { WidgetContext, ProjectInfoData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
@@ -79,7 +79,18 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
       return null;
     }
 
-    const dirName = basename(currentDir);
+    const projectDir = ctx.stdin.workspace?.project_dir;
+
+    // Use project_dir for display name when available
+    const dirName = basename(projectDir || currentDir);
+
+    // Compute relative subpath when CWD differs from project root
+    const subPath = (projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir + '/'))
+      ? relative(projectDir, currentDir)
+      : undefined;
+
+    // Worktree name (only present in --worktree sessions)
+    const worktreeName = ctx.stdin.worktree?.name || undefined;
 
     // Run all git calls in parallel to reduce latency (~2s → ~1s)
     const [branch, dirty, ab] = await Promise.all([
@@ -106,6 +117,8 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
       gitBranch,
       ahead,
       behind,
+      subPath,
+      worktreeName,
     };
   },
 
@@ -113,8 +126,11 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
     const theme = getTheme();
     const parts: string[] = [];
 
-    // Directory name with folder icon
-    parts.push(colorize(`📁 ${data.dirName}`, theme.folder));
+    // Directory name with folder icon, and subpath when CWD differs from project root
+    const dirDisplay = data.subPath
+      ? `📁 ${data.dirName} (${data.subPath})`
+      : `📁 ${data.dirName}`;
+    parts.push(colorize(dirDisplay, theme.folder));
 
     // Git branch in parentheses with ahead/behind indicators
     if (data.gitBranch) {
@@ -129,6 +145,11 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
       }
 
       parts.push(colorize(`(${branchStr})`, theme.branch));
+    }
+
+    // Worktree indicator (only in --worktree sessions)
+    if (data.worktreeName) {
+      parts.push(colorize(`🌳 wt:${data.worktreeName}`, theme.info));
     }
 
     return parts.join(' ');

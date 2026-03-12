@@ -58,7 +58,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `cost` | Session cost in USD |
-| | `projectInfo` | Directory + git branch + ahead/behind (↑↓) |
+| | `projectInfo` | Directory + git branch + ahead/behind (↑↓), subpath from project_dir, worktree indicator (🌳) |
 | **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
 | | `rateLimit7d` | 7-day rate limit (Max only) |
 | | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
@@ -66,7 +66,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `sessionIdFull` | Session ID (full UUID) |
 | | `sessionDuration` | Session duration |
 | | `configCounts` | CLAUDE.md, rules, MCPs, hooks |
-| **Activity** | `toolActivity` | Running/completed tools |
+| **Activity** | `toolActivity` | Running/completed tools with targets (e.g., `Read(app.ts)`) |
 | | `agentStatus` | Subagent progress |
 | | `todoProgress` | Todo completion rate |
 | **Analytics** | `burnRate` | Token consumption per minute |

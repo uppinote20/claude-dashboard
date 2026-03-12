@@ -100,3 +100,10 @@ export function formatDuration(ms: number, t: { hours: string; minutes: string }
   }
   return `${minutes}${t.minutes}`;
 }
+
+/**
+ * Truncate string to maxLen characters, appending '…' if truncated.
+ */
+export function truncate(str: string, maxLen: number): string {
+  return str.length <= maxLen ? str : str.slice(0, maxLen) + '…';
+}

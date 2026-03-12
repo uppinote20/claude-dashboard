@@ -683,4 +683,103 @@ describe('transcript-parser', () => {
       expect(status.active).toHaveLength(0);
     });
   });
+
+  describe('extractToolTarget', () => {
+    it('should extract file basename for Read', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Read', { file_path: '/project/src/app.ts' })).toBe('app.ts');
+    });
+
+    it('should extract file basename for Write', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Write', { file_path: '/project/index.html' })).toBe('index.html');
+    });
+
+    it('should extract file basename for Edit', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Edit', { file_path: '/a/b/c.ts' })).toBe('c.ts');
+    });
+
+    it('should extract pattern for Grep', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Grep', { pattern: 'TODO' })).toBe('TODO');
+    });
+
+    it('should truncate long pattern for Glob', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      const result = extractToolTarget('Glob', { pattern: 'this-is-a-very-long-pattern-string' });
+      expect(result).toHaveLength(21); // 20 chars + '…'
+      expect(result).toContain('…');
+    });
+
+    it('should extract and truncate Bash command', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Bash', { command: 'npm test' })).toBe('npm test');
+      const long = extractToolTarget('Bash', { command: 'this is a very long bash command that exceeds limit' });
+      expect(long).toHaveLength(26); // 25 chars + '…'
+    });
+
+    it('should return undefined for unknown tools', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Agent', { description: 'do stuff' })).toBeUndefined();
+    });
+
+    it('should return undefined for null/undefined input', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Read', null)).toBeUndefined();
+      expect(extractToolTarget('Read', undefined)).toBeUndefined();
+    });
+
+    it('should return undefined when expected field is missing', async () => {
+      const { extractToolTarget } = await import('../utils/transcript-parser.js');
+      expect(extractToolTarget('Read', { pattern: 'foo' })).toBeUndefined();
+      expect(extractToolTarget('Bash', { file_path: '/x' })).toBeUndefined();
+    });
+  });
+
+  describe('getRunningTools with targets', () => {
+    it('should include targets in running tools', async () => {
+      await writeTranscript([
+        {
+          type: 'assistant',
+          timestamp: '2026-01-01T00:00:00Z',
+          message: {
+            content: [
+              { type: 'tool_use', id: 'r1', name: 'Read', input: { file_path: '/project/src/app.ts' } },
+              { type: 'tool_use', id: 'b1', name: 'Bash', input: { command: 'npm test' } },
+            ],
+          },
+        },
+      ]);
+
+      const { parseTranscript, getRunningTools } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const running = getRunningTools(transcript!);
+
+      expect(running).toHaveLength(2);
+      expect(running[0].target).toBe('app.ts');
+      expect(running[1].target).toBe('npm test');
+    });
+
+    it('should have undefined target for tools without extractable input', async () => {
+      await writeTranscript([
+        {
+          type: 'assistant',
+          timestamp: '2026-01-01T00:00:00Z',
+          message: {
+            content: [
+              { type: 'tool_use', id: 'a1', name: 'Agent', input: { description: 'do stuff' } },
+            ],
+          },
+        },
+      ]);
+
+      const { parseTranscript, getRunningTools } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const running = getRunningTools(transcript!);
+
+      expect(running).toHaveLength(1);
+      expect(running[0].target).toBeUndefined();
+    });
+  });
 });

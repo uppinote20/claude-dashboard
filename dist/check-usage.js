@@ -14,7 +14,9 @@ import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 var KEYCHAIN_CACHE_TTL_MS = 1e4;
+var KEYCHAIN_BACKOFF_MS = 6e4;
 var credentialsCache = null;
+var keychainBackoffAt = null;
 async function getCredentials() {
   try {
     if (process.platform === "darwin") {
@@ -26,6 +28,9 @@ async function getCredentials() {
   }
 }
 async function getCredentialsFromKeychain() {
+  if (keychainBackoffAt !== null && Date.now() - keychainBackoffAt < KEYCHAIN_BACKOFF_MS) {
+    return await getCredentialsFromFile();
+  }
   if (credentialsCache?.timestamp && Date.now() - credentialsCache.timestamp < KEYCHAIN_CACHE_TTL_MS) {
     return credentialsCache.token;
   }
@@ -38,8 +43,10 @@ async function getCredentialsFromKeychain() {
     const creds = JSON.parse(result);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
     credentialsCache = { token, timestamp: Date.now() };
+    keychainBackoffAt = null;
     return token;
   } catch {
+    keychainBackoffAt = Date.now();
     return await getCredentialsFromFile();
   }
 }

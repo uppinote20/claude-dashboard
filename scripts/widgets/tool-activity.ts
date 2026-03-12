@@ -46,7 +46,7 @@ export const toolActivityWidget: Widget<ToolActivityData> = {
 
     const runningNames = data.running
       .slice(0, 2)
-      .map((r) => r.name)
+      .map((r) => r.target ? `${r.name}(${r.target})` : r.name)
       .join(', ');
     const more = data.running.length > 2 ? ` +${data.running.length - 2}` : '';
 

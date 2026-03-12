@@ -14,6 +14,12 @@ import { homedir } from 'os';
 const KEYCHAIN_CACHE_TTL_MS = 10_000;
 
 /**
+ * Backoff duration after keychain failure (60 seconds).
+ * Prevents repeated macOS permission dialogs on keychain errors.
+ */
+const KEYCHAIN_BACKOFF_MS = 60_000;
+
+/**
  * Cached credentials with mtime-based invalidation for file
  * or TTL-based invalidation for keychain
  */
@@ -22,6 +28,14 @@ let credentialsCache: {
   mtime?: number; // For file-based cache
   timestamp?: number; // For keychain-based cache
 } | null = null;
+
+/**
+ * Separate keychain backoff state.
+ * When keychain fails, we skip retries for KEYCHAIN_BACKOFF_MS
+ * and fall back to file-based credentials directly.
+ * Stores the epoch-ms timestamp of last failure, or null if not in backoff.
+ */
+let keychainBackoffAt: number | null = null;
 
 /**
  * Get OAuth access token from Claude Code credentials
@@ -43,9 +57,14 @@ export async function getCredentials(): Promise<string | null> {
 }
 
 /**
- * Get credentials from macOS Keychain (with TTL-based cache)
+ * Get credentials from macOS Keychain (with TTL-based cache + backoff on failure)
  */
 async function getCredentialsFromKeychain(): Promise<string | null> {
+  // Check backoff: skip keychain entirely during cooldown
+  if (keychainBackoffAt !== null && Date.now() - keychainBackoffAt < KEYCHAIN_BACKOFF_MS) {
+    return await getCredentialsFromFile();
+  }
+
   // Check TTL-based cache
   if (
     credentialsCache?.timestamp &&
@@ -64,10 +83,13 @@ async function getCredentialsFromKeychain(): Promise<string | null> {
     const creds = JSON.parse(result);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
 
-    // Cache result
+    // Cache result and clear any backoff
     credentialsCache = { token, timestamp: Date.now() };
+    keychainBackoffAt = null;
     return token;
   } catch {
+    // Set backoff to suppress retries for 60 seconds
+    keychainBackoffAt = Date.now();
     // Fallback to file if Keychain fails
     return await getCredentialsFromFile();
   }

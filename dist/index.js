@@ -415,7 +415,9 @@ import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 var KEYCHAIN_CACHE_TTL_MS = 1e4;
+var KEYCHAIN_BACKOFF_MS = 6e4;
 var credentialsCache = null;
+var keychainBackoffAt = null;
 async function getCredentials() {
   try {
     if (process.platform === "darwin") {
@@ -427,6 +429,9 @@ async function getCredentials() {
   }
 }
 async function getCredentialsFromKeychain() {
+  if (keychainBackoffAt !== null && Date.now() - keychainBackoffAt < KEYCHAIN_BACKOFF_MS) {
+    return await getCredentialsFromFile();
+  }
   if (credentialsCache?.timestamp && Date.now() - credentialsCache.timestamp < KEYCHAIN_CACHE_TTL_MS) {
     return credentialsCache.token;
   }
@@ -439,8 +444,10 @@ async function getCredentialsFromKeychain() {
     const creds = JSON.parse(result);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
     credentialsCache = { token, timestamp: Date.now() };
+    keychainBackoffAt = null;
     return token;
   } catch {
+    keychainBackoffAt = Date.now();
     return await getCredentialsFromFile();
   }
 }
@@ -886,6 +893,9 @@ function formatDuration(ms, t) {
   }
   return `${minutes}${t.minutes}`;
 }
+function truncate(str, maxLen) {
+  return str.length <= maxLen ? str : str.slice(0, maxLen) + "\u2026";
+}
 
 // scripts/utils/provider.ts
 function detectProvider() {
@@ -1122,7 +1132,7 @@ var rateLimit7dSonnetWidget = {
 
 // scripts/widgets/project-info.ts
 import { execFile } from "child_process";
-import { basename } from "path";
+import { basename, relative } from "path";
 function execGit(args, cwd, timeout) {
   return new Promise((resolve, reject) => {
     execFile("git", ["--no-optional-locks", ...args], {
@@ -1176,7 +1186,10 @@ var projectInfoWidget = {
     if (!currentDir) {
       return null;
     }
-    const dirName = basename(currentDir);
+    const projectDir = ctx.stdin.workspace?.project_dir;
+    const dirName = basename(projectDir || currentDir);
+    const subPath = projectDir && currentDir !== projectDir && currentDir.startsWith(projectDir + "/") ? relative(projectDir, currentDir) : void 0;
+    const worktreeName = ctx.stdin.worktree?.name || void 0;
     const [branch, dirty, ab] = await Promise.all([
       getGitBranch(currentDir),
       isGitDirty(currentDir),
@@ -1196,13 +1209,16 @@ var projectInfoWidget = {
       dirName,
       gitBranch,
       ahead,
-      behind
+      behind,
+      subPath,
+      worktreeName
     };
   },
   render(data, _ctx) {
     const theme = getTheme();
     const parts = [];
-    parts.push(colorize(`\u{1F4C1} ${data.dirName}`, theme.folder));
+    const dirDisplay = data.subPath ? `\u{1F4C1} ${data.dirName} (${data.subPath})` : `\u{1F4C1} ${data.dirName}`;
+    parts.push(colorize(dirDisplay, theme.folder));
     if (data.gitBranch) {
       let branchStr = data.gitBranch;
       const aheadStr = (data.ahead ?? 0) > 0 ? `\u2191${data.ahead}` : "";
@@ -1212,6 +1228,9 @@ var projectInfoWidget = {
         branchStr += ` ${indicators}`;
       }
       parts.push(colorize(`(${branchStr})`, theme.branch));
+    }
+    if (data.worktreeName) {
+      parts.push(colorize(`\u{1F333} wt:${data.worktreeName}`, theme.info));
     }
     return parts.join(" ");
   }
@@ -1456,6 +1475,7 @@ var sessionDurationWidget = {
 
 // scripts/utils/transcript-parser.ts
 import { open as open2, stat as stat5 } from "fs/promises";
+import { basename as basename2 } from "path";
 var cachedTranscript = null;
 function parseJsonlContent(content) {
   const entries = [];
@@ -1480,7 +1500,8 @@ function processEntries(entries, existing) {
         if (block.type === "tool_use" && block.id && block.name) {
           existing.toolUses.set(block.id, {
             name: block.name,
-            timestamp: entry.timestamp
+            timestamp: entry.timestamp,
+            input: block.input
           });
         }
       }
@@ -1533,13 +1554,32 @@ async function parseTranscript(transcriptPath) {
     return null;
   }
 }
+function extractToolTarget(name, input) {
+  if (!input || typeof input !== "object")
+    return void 0;
+  const inp = input;
+  switch (name) {
+    case "Read":
+    case "Write":
+    case "Edit":
+      return typeof inp.file_path === "string" ? basename2(inp.file_path) : void 0;
+    case "Glob":
+    case "Grep":
+      return typeof inp.pattern === "string" ? truncate(inp.pattern, 20) : void 0;
+    case "Bash":
+      return typeof inp.command === "string" ? truncate(inp.command, 25) : void 0;
+    default:
+      return void 0;
+  }
+}
 function getRunningTools(transcript) {
   const running = [];
   for (const [id, tool] of transcript.toolUses) {
     if (!transcript.toolResults.has(id)) {
       running.push({
         name: tool.name,
-        startTime: tool.timestamp ? new Date(tool.timestamp).getTime() : Date.now()
+        startTime: tool.timestamp ? new Date(tool.timestamp).getTime() : Date.now(),
+        target: extractToolTarget(tool.name, tool.input)
       });
     }
   }
@@ -1565,15 +1605,7 @@ function extractTodoProgress(transcript) {
   let lastTodoWrite = null;
   for (const [id, tool] of transcript.toolUses) {
     if (tool.name === "TodoWrite" && transcript.toolResults.has(id)) {
-      for (const entry of transcript.entries) {
-        if (entry.type === "assistant" && entry.message?.content) {
-          for (const block of entry.message.content) {
-            if (block.type === "tool_use" && block.id === id && block.input) {
-              lastTodoWrite = block.input;
-            }
-          }
-        }
-      }
+      lastTodoWrite = tool.input;
     }
   }
   if (!lastTodoWrite || typeof lastTodoWrite !== "object") {
@@ -1655,19 +1687,11 @@ function extractAgentStatus(transcript) {
       if (transcript.toolResults.has(id)) {
         completed++;
       } else {
-        for (const entry of transcript.entries) {
-          if (entry.type === "assistant" && entry.message?.content) {
-            for (const block of entry.message.content) {
-              if (block.type === "tool_use" && block.id === id && block.input) {
-                const input = block.input;
-                active.push({
-                  name: input.subagent_type || "Agent",
-                  description: input.description
-                });
-              }
-            }
-          }
-        }
+        const input = tool.input;
+        active.push({
+          name: input?.subagent_type || "Agent",
+          description: input?.description
+        });
       }
     }
   }
@@ -1700,7 +1724,7 @@ var toolActivityWidget = {
         theme.secondary
       );
     }
-    const runningNames = data.running.slice(0, 2).map((r) => r.name).join(", ");
+    const runningNames = data.running.slice(0, 2).map((r) => r.target ? `${r.name}(${r.target})` : r.name).join(", ");
     const more = data.running.length > 2 ? ` +${data.running.length - 2}` : "";
     return `${colorize("\u2699\uFE0F", theme.warning)} ${runningNames}${more} (${data.completed} ${t.widgets.done})`;
   }
@@ -1735,7 +1759,7 @@ var agentStatusWidget = {
       );
     }
     const activeAgent = data.active[0];
-    const agentText = activeAgent.description ? `${activeAgent.name}: ${activeAgent.description.slice(0, 20)}${activeAgent.description.length > 20 ? "..." : ""}` : activeAgent.name;
+    const agentText = activeAgent.description ? `${activeAgent.name}: ${truncate(activeAgent.description, 20)}` : activeAgent.name;
     const more = data.active.length > 1 ? ` +${data.active.length - 1}` : "";
     return `${colorize("\u{1F916}", theme.info)} ${t.widgets.agent}: ${agentText}${more}`;
   }
@@ -1766,7 +1790,7 @@ var todoProgressWidget = {
     const percent = calculatePercent(data.completed, data.total);
     const color = getColorForPercent(100 - percent);
     if (data.current) {
-      const taskName = data.current.content.length > 15 ? data.current.content.slice(0, 15) + "..." : data.current.content;
+      const taskName = truncate(data.current.content, 15);
       return `${colorize("\u2713", theme.safe)} ${taskName} [${data.completed}/${data.total}]`;
     }
     return colorize(

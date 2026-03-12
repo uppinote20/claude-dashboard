@@ -7,6 +7,7 @@ import type { Widget } from './base.js';
 import type { WidgetContext, AgentStatusData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import { parseTranscript, extractAgentStatus } from '../utils/transcript-parser.js';
+import { truncate } from '../utils/formatters.js';
 
 export const agentStatusWidget: Widget<AgentStatusData> = {
   id: 'agentStatus',
@@ -46,7 +47,7 @@ export const agentStatusWidget: Widget<AgentStatusData> = {
 
     const activeAgent = data.active[0];
     const agentText = activeAgent.description
-      ? `${activeAgent.name}: ${activeAgent.description.slice(0, 20)}${activeAgent.description.length > 20 ? '...' : ''}`
+      ? `${activeAgent.name}: ${truncate(activeAgent.description, 20)}`
       : activeAgent.name;
     const more = data.active.length > 1 ? ` +${data.active.length - 1}` : '';
 

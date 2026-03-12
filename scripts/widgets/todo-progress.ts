@@ -7,7 +7,7 @@ import type { Widget } from './base.js';
 import type { WidgetContext, TodoProgressData } from '../types.js';
 import { colorize, getColorForPercent, getTheme } from '../utils/colors.js';
 import { parseTranscript, extractTodoOrTaskProgress } from '../utils/transcript-parser.js';
-import { calculatePercent } from '../utils/formatters.js';
+import { calculatePercent, truncate } from '../utils/formatters.js';
 
 export const todoProgressWidget: Widget<TodoProgressData> = {
   id: 'todoProgress',
@@ -45,10 +45,7 @@ export const todoProgressWidget: Widget<TodoProgressData> = {
 
     // Format: ✓ Task name [3/5] when current task exists, otherwise ✓ 3/5
     if (data.current) {
-      const taskName =
-        data.current.content.length > 15
-          ? data.current.content.slice(0, 15) + '...'
-          : data.current.content;
+      const taskName = truncate(data.current.content, 15);
       return `${colorize('✓', theme.safe)} ${taskName} [${data.completed}/${data.total}]`;
     }
 

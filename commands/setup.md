@@ -45,12 +45,12 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `rateLimit5h` | 5-hour rate limit |
 | `rateLimit7d` | 7-day rate limit (Max only) |
 | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
-| `projectInfo` | Directory name + git branch + ahead/behind (↑↓) |
+| `projectInfo` | Directory name + git branch + ahead/behind (↑↓), subpath from project_dir, worktree indicator |
 | `configCounts` | CLAUDE.md, rules, MCPs, hooks counts |
 | `sessionId` | Session ID (short 8 chars) |
 | `sessionIdFull` | Session ID (full UUID) |
 | `sessionDuration` | Session duration |
-| `toolActivity` | Running/completed tools |
+| `toolActivity` | Running/completed tools with targets (e.g., `Read(app.ts)`) |
 | `agentStatus` | Subagent progress |
 | `todoProgress` | Todo completion rate |
 | `burnRate` | Token consumption per minute |

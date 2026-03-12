@@ -5,7 +5,9 @@
  */
 
 import { open, stat } from 'fs/promises';
+import { basename } from 'path';
 import type { TranscriptEntry, ParsedTranscript, TodoProgressData } from '../types.js';
+import { truncate } from './formatters.js';
 
 /**
  * Cached transcript data with incremental parsing state
@@ -55,6 +57,7 @@ function processEntries(
           existing.toolUses.set(block.id, {
             name: block.name,
             timestamp: entry.timestamp,
+            input: block.input,
           });
         }
       }
@@ -135,12 +138,35 @@ export async function parseTranscript(
 }
 
 /**
+ * Extract a human-readable target from a tool's input.
+ * Returns the file basename for file tools, pattern for search tools,
+ * or truncated command for Bash.
+ */
+export function extractToolTarget(name: string, input: unknown): string | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const inp = input as Record<string, unknown>;
+  switch (name) {
+    case 'Read':
+    case 'Write':
+    case 'Edit':
+      return typeof inp.file_path === 'string' ? basename(inp.file_path) : undefined;
+    case 'Glob':
+    case 'Grep':
+      return typeof inp.pattern === 'string' ? truncate(inp.pattern, 20) : undefined;
+    case 'Bash':
+      return typeof inp.command === 'string' ? truncate(inp.command, 25) : undefined;
+    default:
+      return undefined;
+  }
+}
+
+/**
  * Get running tools (tools that have been called but not yet returned)
  */
 export function getRunningTools(
   transcript: ParsedTranscript
-): Array<{ name: string; startTime: number }> {
-  const running: Array<{ name: string; startTime: number }> = [];
+): Array<{ name: string; startTime: number; target?: string }> {
+  const running: Array<{ name: string; startTime: number; target?: string }> = [];
 
   for (const [id, tool] of transcript.toolUses) {
     if (!transcript.toolResults.has(id)) {
@@ -149,6 +175,7 @@ export function getRunningTools(
         startTime: tool.timestamp
           ? new Date(tool.timestamp).getTime()
           : Date.now(),
+        target: extractToolTarget(tool.name, tool.input),
       });
     }
   }
@@ -192,21 +219,12 @@ export function extractTodoProgress(
   completed: number;
   total: number;
 } | null {
-  // Find the most recent TodoWrite call
+  // Find the most recent TodoWrite call (input stored in toolUses Map)
   let lastTodoWrite: unknown = null;
 
   for (const [id, tool] of transcript.toolUses) {
     if (tool.name === 'TodoWrite' && transcript.toolResults.has(id)) {
-      // Find the entry with this tool use to get the input
-      for (const entry of transcript.entries) {
-        if (entry.type === 'assistant' && entry.message?.content) {
-          for (const block of entry.message.content) {
-            if (block.type === 'tool_use' && block.id === id && block.input) {
-              lastTodoWrite = block.input;
-            }
-          }
-        }
-      }
+      lastTodoWrite = tool.input;
     }
   }
 
@@ -322,23 +340,15 @@ export function extractAgentStatus(
       if (transcript.toolResults.has(id)) {
         completed++;
       } else {
-        // Find the description from input
-        for (const entry of transcript.entries) {
-          if (entry.type === 'assistant' && entry.message?.content) {
-            for (const block of entry.message.content) {
-              if (block.type === 'tool_use' && block.id === id && block.input) {
-                const input = block.input as {
-                  description?: string;
-                  subagent_type?: string;
-                };
-                active.push({
-                  name: input.subagent_type || 'Agent',
-                  description: input.description,
-                });
-              }
-            }
-          }
-        }
+        // Read input directly from toolUses Map
+        const input = tool.input as {
+          description?: string;
+          subagent_type?: string;
+        } | undefined;
+        active.push({
+          name: input?.subagent_type || 'Agent',
+          description: input?.description,
+        });
       }
     }
   }

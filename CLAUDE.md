@@ -55,7 +55,7 @@ claude-dashboard/
 │       ├── zai-api-client.ts # z.ai/ZHIPU API client
 │       ├── provider.ts      # Provider detection (anthropic/zai/zhipu)
 │       ├── colors.ts        # ANSI color codes + theme system
-│       ├── credentials.ts   # Keychain/credentials extraction
+│       ├── credentials.ts   # Keychain/credentials extraction (60s backoff on failure)
 │       ├── debug.ts         # Debug utilities
 │       ├── formatters.ts    # Token/cost/time/duration formatting
 │       ├── hash.ts          # Token hashing for cache keys
@@ -126,10 +126,10 @@ interface Widget<T extends WidgetData> {
 | `rateLimit5h` | API | 5-hour rate limit |
 | `rateLimit7d` | API | 7-day rate limit (Max) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max) |
-| `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓) |
+| `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
 | `configCounts` | filesystem | CLAUDE.md, rules, MCPs, hooks |
 | `sessionDuration` | file | Session duration |
-| `toolActivity` | transcript | Tool tracking |
+| `toolActivity` | transcript | Tool tracking with target display (e.g., `Read(app.ts)`, `Bash(npm test)`) |
 | `agentStatus` | transcript | Agent tracking |
 | `todoProgress` | transcript | Todo completion |
 | `burnRate` | stdin + session | Token consumption per minute |
