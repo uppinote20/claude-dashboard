@@ -670,6 +670,8 @@ export type WidgetData =
 export interface TranscriptEntry {
   type: 'assistant' | 'user' | 'tool_result' | 'system';
   timestamp?: string;
+  /** Session name set by /rename command */
+  customTitle?: string;
   message?: {
     content?: Array<{
       type: 'tool_use' | 'tool_result' | 'text';

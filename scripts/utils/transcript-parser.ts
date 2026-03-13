@@ -51,9 +51,8 @@ function processEntries(
     }
 
     // Extract session name from /rename command
-    const raw = entry as unknown as Record<string, unknown>;
-    if (typeof raw.customTitle === 'string' && raw.customTitle) {
-      existing.sessionName = raw.customTitle;
+    if (entry.customTitle) {
+      existing.sessionName = entry.customTitle;
     }
 
     // Extract tool_use blocks

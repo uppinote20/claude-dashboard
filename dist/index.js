@@ -1504,9 +1504,8 @@ function processEntries(entries, existing) {
     if (!existing.sessionStartTime && entry.timestamp) {
       existing.sessionStartTime = new Date(entry.timestamp).getTime();
     }
-    const raw = entry;
-    if (typeof raw.customTitle === "string" && raw.customTitle) {
-      existing.sessionName = raw.customTitle;
+    if (entry.customTitle) {
+      existing.sessionName = entry.customTitle;
     }
     if (entry.type === "assistant" && entry.message?.content) {
       for (const block of entry.message.content) {
@@ -3033,6 +3032,7 @@ var BUDGET_DIR = join5(homedir4(), ".cache", "claude-dashboard");
 var BUDGET_FILE = join5(BUDGET_DIR, "budget.json");
 var budgetCache = null;
 var dirEnsured = false;
+var pendingRecordDaily = null;
 function getToday() {
   return (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
 }
@@ -3067,6 +3067,16 @@ async function saveBudgetState(state) {
   }
 }
 async function recordCostAndGetDaily(sessionId, sessionCost) {
+  if (pendingRecordDaily)
+    return pendingRecordDaily;
+  pendingRecordDaily = recordCostAndGetDailyImpl(sessionId, sessionCost);
+  try {
+    return await pendingRecordDaily;
+  } finally {
+    pendingRecordDaily = null;
+  }
+}
+async function recordCostAndGetDailyImpl(sessionId, sessionCost) {
   const state = await loadBudgetState();
   if (sessionCost <= 0 && !(sessionId in state.sessions)) {
     return state.dailyTotal;

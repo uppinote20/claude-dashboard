@@ -34,6 +34,9 @@ let budgetCache: BudgetState | null = null;
 /** Track whether BUDGET_DIR has been created */
 let dirEnsured = false;
 
+/** Deduplicate concurrent calls within the same render cycle */
+let pendingRecordDaily: Promise<number> | null = null;
+
 /**
  * Get today's date as YYYY-MM-DD
  */
@@ -97,6 +100,20 @@ async function saveBudgetState(state: BudgetState): Promise<void> {
  * @returns Current daily total cost
  */
 export async function recordCostAndGetDaily(
+  sessionId: string,
+  sessionCost: number,
+): Promise<number> {
+  // Deduplicate concurrent calls (budget + todayCost widgets render in same Promise.all)
+  if (pendingRecordDaily) return pendingRecordDaily;
+  pendingRecordDaily = recordCostAndGetDailyImpl(sessionId, sessionCost);
+  try {
+    return await pendingRecordDaily;
+  } finally {
+    pendingRecordDaily = null;
+  }
+}
+
+async function recordCostAndGetDailyImpl(
   sessionId: string,
   sessionCost: number,
 ): Promise<number> {
