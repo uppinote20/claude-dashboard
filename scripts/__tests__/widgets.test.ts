@@ -19,9 +19,14 @@ import { sessionDurationWidget } from '../widgets/session-duration.js';
 import { versionWidget } from '../widgets/version.js';
 import { linesChangedWidget } from '../widgets/lines-changed.js';
 import { outputStyleWidget } from '../widgets/output-style.js';
+import { tokenSpeedWidget } from '../widgets/token-speed.js';
+import { sessionNameWidget } from '../widgets/session-name.js';
+import { todayCostWidget } from '../widgets/today-cost.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
+import * as budgetUtils from '../utils/budget.js';
+import * as transcriptParser from '../utils/transcript-parser.js';
 import type { WidgetContext, StdinInput, ModelData } from '../types.js';
 import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
@@ -83,7 +88,7 @@ describe('widgets', () => {
       );
 
       expect(result).toContain('Sonnet');
-      expect(result).toContain('🤖');
+      expect(result).toContain('◆');
       expect(result).toContain('(H)');
     });
 
@@ -1392,6 +1397,216 @@ describe('widgets', () => {
       const result = outputStyleWidget.render(data, ctx);
 
       expect(result).toContain('explanatory');
+    });
+  });
+
+  describe('tokenSpeedWidget', () => {
+    it('should have correct id and name', () => {
+      expect(tokenSpeedWidget.id).toBe('tokenSpeed');
+      expect(tokenSpeedWidget.name).toBe('Token Speed');
+    });
+
+    it('should return data when output tokens and api duration are present', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 5000,
+          total_output_tokens: 3000,
+          context_window_size: 200000,
+          current_usage: null,
+        },
+        cost: { total_cost_usd: 0.5, total_api_duration_ms: 10000 },
+      });
+      const data = await tokenSpeedWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      // 3000 / (10000 / 1000) = 300
+      expect(data?.tokensPerSecond).toBe(300);
+    });
+
+    it('should return null when total_api_duration_ms is missing', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5 },
+      });
+      const data = await tokenSpeedWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when total_api_duration_ms is 0', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_api_duration_ms: 0 },
+      });
+      const data = await tokenSpeedWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when total_output_tokens is missing or 0', async () => {
+      const ctx = createContext({
+        context_window: {
+          total_input_tokens: 5000,
+          total_output_tokens: 0,
+          context_window_size: 200000,
+          current_usage: null,
+        },
+        cost: { total_cost_usd: 0.5, total_api_duration_ms: 5000 },
+      });
+      const data = await tokenSpeedWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should render token speed with lightning icon', () => {
+      const ctx = createContext();
+      const data = { tokensPerSecond: 150 };
+      const result = tokenSpeedWidget.render(data, ctx);
+
+      expect(result).toContain('⚡');
+      expect(result).toContain('150 tok/s');
+    });
+
+    it('should round tokensPerSecond in render', () => {
+      const ctx = createContext();
+      const data = { tokensPerSecond: 123.7 };
+      const result = tokenSpeedWidget.render(data, ctx);
+
+      expect(result).toContain('124 tok/s');
+    });
+  });
+
+  describe('sessionNameWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(sessionNameWidget.id).toBe('sessionName');
+      expect(sessionNameWidget.name).toBe('Session Name');
+    });
+
+    it('should return null when transcript_path is missing', async () => {
+      const ctx = createContext();
+      const data = await sessionNameWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when transcript has no sessionName', async () => {
+      vi.spyOn(transcriptParser, 'parseTranscript').mockResolvedValue({
+        entries: [],
+        toolUses: new Map(),
+        toolResults: new Set(),
+      });
+
+      const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
+      const data = await sessionNameWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return session name from transcript', async () => {
+      vi.spyOn(transcriptParser, 'parseTranscript').mockResolvedValue({
+        entries: [],
+        toolUses: new Map(),
+        toolResults: new Set(),
+        sessionName: 'my-feature-work',
+      });
+
+      const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
+      const data = await sessionNameWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.name).toBe('my-feature-work');
+    });
+
+    it('should render session name with arrow prefix', () => {
+      const ctx = createContext();
+      const data = { name: 'bug-fix-session' };
+      const result = sessionNameWidget.render(data, ctx);
+
+      expect(result).toContain('»');
+      expect(result).toContain('bug-fix-session');
+    });
+
+    it('should truncate long session names to 20 chars', () => {
+      const ctx = createContext();
+      const data = { name: 'this-is-a-very-long-session-name-that-exceeds-limit' };
+      const result = sessionNameWidget.render(data, ctx);
+
+      expect(result).toContain('»');
+      expect(result).toContain('…');
+    });
+  });
+
+  describe('todayCostWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(todayCostWidget.id).toBe('todayCost');
+      expect(todayCostWidget.name).toBe('Today Cost');
+    });
+
+    it('should return data when dailyTotal is positive', async () => {
+      vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(2.5);
+
+      const ctx = createContext();
+      const data = await todayCostWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.dailyTotal).toBe(2.5);
+    });
+
+    it('should return null when dailyTotal is 0', async () => {
+      vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(0);
+
+      const ctx = createContext();
+      const data = await todayCostWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when dailyTotal is negative', async () => {
+      vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(-1);
+
+      const ctx = createContext();
+      const data = await todayCostWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should pass session_id and cost to recordCostAndGetDaily', async () => {
+      const mockRecord = vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(1.0);
+
+      const ctx = createContext({
+        session_id: 'test-session-456',
+        cost: { total_cost_usd: 0.75 },
+      });
+      await todayCostWidget.getData(ctx);
+
+      expect(mockRecord).toHaveBeenCalledWith('test-session-456', 0.75);
+    });
+
+    it('should use default session_id when not provided', async () => {
+      const mockRecord = vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(1.0);
+
+      const ctx = createContext();
+      ctx.stdin.session_id = undefined;
+      await todayCostWidget.getData(ctx);
+
+      expect(mockRecord).toHaveBeenCalledWith('default', 0.75);
+    });
+
+    it('should render daily total with Today label', () => {
+      const ctx = createContext();
+      const data = { dailyTotal: 3.5 };
+      const result = todayCostWidget.render(data, ctx);
+
+      expect(result).toContain('💰');
+      expect(result).toContain('Today');
+      expect(result).toContain('$3.50');
+    });
+
+    it('should format small daily totals correctly', () => {
+      const ctx = createContext();
+      const data = { dailyTotal: 0.05 };
+      const result = todayCostWidget.render(data, ctx);
+
+      expect(result).toContain('$0.05');
     });
   });
 });

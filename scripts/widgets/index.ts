@@ -40,6 +40,9 @@ import { budgetWidget } from './budget.js';
 import { versionWidget } from './version.js';
 import { linesChangedWidget } from './lines-changed.js';
 import { outputStyleWidget } from './output-style.js';
+import { tokenSpeedWidget } from './token-speed.js';
+import { sessionNameWidget } from './session-name.js';
+import { todayCostWidget } from './today-cost.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -73,6 +76,9 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['version', versionWidget],
   ['linesChanged', linesChangedWidget],
   ['outputStyle', outputStyleWidget],
+  ['tokenSpeed', tokenSpeedWidget],
+  ['sessionName', sessionNameWidget],
+  ['todayCost', todayCostWidget],
 ] as [WidgetId, Widget][]);
 
 /**

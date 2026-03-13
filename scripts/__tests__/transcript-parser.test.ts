@@ -106,6 +106,43 @@ describe('transcript-parser', () => {
       // Should parse 2 valid entries, skip 1 invalid
       expect(result?.entries).toHaveLength(2);
     });
+
+    it('should extract sessionName from customTitle field', async () => {
+      await writeTranscript([
+        { type: 'user', timestamp: '2024-01-01T00:00:00Z', message: { content: 'hello' }, customTitle: 'my-session' },
+      ]);
+
+      const { parseTranscript } = await import('../utils/transcript-parser.js');
+      const result = await parseTranscript(TEST_FILE);
+
+      expect(result).not.toBeNull();
+      expect(result?.sessionName).toBe('my-session');
+    });
+
+    it('should overwrite sessionName with later customTitle', async () => {
+      await writeTranscript([
+        { type: 'user', timestamp: '2024-01-01T00:00:00Z', message: { content: 'hello' }, customTitle: 'first-name' },
+        { type: 'user', timestamp: '2024-01-01T00:01:00Z', message: { content: 'world' }, customTitle: 'second-name' },
+      ]);
+
+      const { parseTranscript } = await import('../utils/transcript-parser.js');
+      const result = await parseTranscript(TEST_FILE);
+
+      expect(result).not.toBeNull();
+      expect(result?.sessionName).toBe('second-name');
+    });
+
+    it('should not set sessionName when no customTitle present', async () => {
+      await writeTranscript([
+        { type: 'user', timestamp: '2024-01-01T00:00:00Z', message: { content: 'hello' } },
+      ]);
+
+      const { parseTranscript } = await import('../utils/transcript-parser.js');
+      const result = await parseTranscript(TEST_FILE);
+
+      expect(result).not.toBeNull();
+      expect(result?.sessionName).toBeUndefined();
+    });
   });
 
   describe('getRunningTools', () => {

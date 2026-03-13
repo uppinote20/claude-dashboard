@@ -37,7 +37,10 @@
     "forecast": "예측",
     "budget": "예산",
     "performance": "성능",
-    "tokenBreakdown": "토큰"
+    "tokenBreakdown": "토큰",
+    "tokenSpeed": "속도",
+    "sessionName": "세션명",
+    "todayCost": "오늘"
   },
   "checkUsage": {
     "title": "CLI 사용량 대시보드",

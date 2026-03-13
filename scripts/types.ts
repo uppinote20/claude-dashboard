@@ -46,6 +46,8 @@ export interface StdinInput {
     total_cost_usd: number;
     /** Total session duration in milliseconds from Claude Code stdin */
     total_duration_ms?: number;
+    /** Total time spent in API calls in ms (excludes user/tool time) */
+    total_api_duration_ms?: number;
     /** Total lines added in the session */
     total_lines_added?: number;
     /** Total lines removed in the session */
@@ -92,7 +94,10 @@ export type WidgetId =
   | 'budget'
   | 'version'
   | 'linesChanged'
-  | 'outputStyle';
+  | 'outputStyle'
+  | 'tokenSpeed'
+  | 'sessionName'
+  | 'todayCost';
 
 /**
  * Display mode for status line output
@@ -116,9 +121,9 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
-    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
+    ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
-    ['tokenBreakdown', 'forecast', 'budget'],
+    ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
     ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version'],
   ],
 };
@@ -194,6 +199,9 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   V: 'version',
   L: 'linesChanged',
   Y: 'outputStyle',
+  Q: 'tokenSpeed',
+  J: 'sessionName',
+  '@': 'todayCost',
 };
 
 /**
@@ -267,6 +275,9 @@ export interface Translations {
     budget: string;
     performance: string;
     tokenBreakdown: string;
+    tokenSpeed: string;
+    sessionName: string;
+    todayCost: string;
   };
   /** Check-usage command labels */
   checkUsage: {
@@ -596,6 +607,31 @@ export interface OutputStyleData {
 }
 
 /**
+ * Token speed data - output generation speed during API calls
+ * @invariant tokensPerSecond >= 0 (enforced in widget)
+ */
+export interface TokenSpeedData {
+  /** Output tokens per second of API time. Always >= 0. */
+  tokensPerSecond: number;
+}
+
+/**
+ * Session name data - custom session label from /rename command
+ */
+export interface SessionNameData {
+  /** Session name set by user via /rename */
+  name: string;
+}
+
+/**
+ * Today cost data - total spending across all sessions today
+ */
+export interface TodayCostData {
+  /** Total cost accumulated today across all sessions */
+  dailyTotal: number;
+}
+
+/**
  * Union type of all widget data
  */
 export type WidgetData =
@@ -623,7 +659,10 @@ export type WidgetData =
   | BudgetData
   | VersionData
   | LinesChangedData
-  | OutputStyleData;
+  | OutputStyleData
+  | TokenSpeedData
+  | SessionNameData
+  | TodayCostData;
 
 /**
  * Transcript entry from JSONL file
@@ -650,6 +689,8 @@ export interface ParsedTranscript {
   toolUses: Map<string, { name: string; timestamp?: string; input?: unknown }>;
   toolResults: Set<string>;
   sessionStartTime?: number;
+  /** Session name set by /rename command */
+  sessionName?: string;
 }
 
 /**
