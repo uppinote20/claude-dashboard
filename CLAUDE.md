@@ -47,7 +47,10 @@ claude-dashboard/
 │   │   ├── token-breakdown.ts # Token breakdown widget
 │   │   ├── performance.ts   # Performance badge widget
 │   │   ├── forecast.ts      # Cost forecast widget
-│   │   └── budget.ts        # Budget tracking widget
+│   │   ├── budget.ts        # Budget tracking widget
+│   │   ├── token-speed.ts   # Token speed widget
+│   │   ├── session-name.ts  # Session name widget
+│   │   └── today-cost.ts    # Today cost widget
 │   └── utils/
 │       ├── api-client.ts    # OAuth API client with caching
 │       ├── codex-client.ts  # Codex CLI API client
@@ -146,6 +149,9 @@ interface Widget<T extends WidgetData> {
 | `linesChanged` | stdin | Lines added/removed count |
 | `outputStyle` | stdin | Current output style |
 | `version` | stdin | Claude Code version display |
+| `tokenSpeed` | stdin | Output token generation speed (tok/s) |
+| `sessionName` | transcript | Session name from /rename command |
+| `todayCost` | stdin + file | Total spending across all sessions today |
 
 ### Display Modes
 
@@ -163,9 +169,9 @@ const DISPLAY_PRESETS = {
   ],
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
-    ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'depletionTime', 'todoProgress'],
+    ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
-    ['tokenBreakdown', 'forecast', 'budget'],
+    ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
     ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version'],
   ],
 };
@@ -194,6 +200,8 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `F` | performance | `W` | forecast |
 | `U` | budget | `L` | linesChanged |
 | `V` | version | `Y` | outputStyle |
+| `Q` | tokenSpeed | `J` | sessionName |
+| `@` | todayCost | | |
 
 ### Theme System
 

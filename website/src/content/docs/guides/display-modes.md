@@ -14,7 +14,7 @@ The compact mode displays essential metrics on a single line. This is the defaul
 **Widgets:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
 
 ```
-🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
 ```
 
 ```
@@ -29,7 +29,7 @@ Adds project context, session tracking, and progress information on a second lin
 **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 
 ```
-🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
 📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
 ```
 
@@ -42,16 +42,16 @@ Adds project context, session tracking, and progress information on a second lin
 Shows all available widgets across five lines, including analytics, tool activity, multi-CLI usage, and insights.
 
 **Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
-**Line 2:** projectInfo, sessionId, sessionDuration, burnRate, depletionTime, todoProgress<br/>
+**Line 2:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
 **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
-**Line 4:** tokenBreakdown, forecast, budget<br/>
+**Line 4:** tokenBreakdown, forecast, budget, todayCost<br/>
 **Line 5:** codexUsage, geminiUsage, linesChanged, outputStyle, version
 
 ```
-🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
-📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h │ ✓ 3/5
+◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+📁 project (main ↑3) │ » feature-auth │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⚡ 67 tok/s │ ⏳ 2h │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
-📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15
+📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 Today: $4.83
 🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80
 ```
 

@@ -154,6 +154,20 @@ abc12345-6789-0def-ghij-klmnopqrstuv
 2h05m
 ```
 
+### sessionName
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `sessionName` |
+| **Data Source** | transcript (JSONL) |
+| **Description** | Shows the session name set via the /rename command. Hidden when no name has been set. |
+
+**Example output:**
+```
+» feature-auth
+» bug-fix-123
+```
+
 ### configCounts
 
 | Property | Value |
@@ -226,6 +240,20 @@ Agent: 3 done
 ```
 5K/m
 12K/m
+```
+
+### tokenSpeed
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `tokenSpeed` |
+| **Data Source** | stdin (output tokens + timing) |
+| **Description** | Shows the output token generation speed in tokens per second. |
+
+**Example output:**
+```
+⚡ 67 tok/s
+⚡ 120 tok/s
 ```
 
 ### cacheHit
@@ -365,6 +393,20 @@ In 30K · Out 8K · CW 5K · CR 20K
 ```
 $5/$15
 $14/$15 !!
+```
+
+### todayCost
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `todayCost` |
+| **Data Source** | stdin (cost) + file (daily cost tracking) |
+| **Description** | Shows the total spending across all sessions today. Aggregates costs from the current session and any previous sessions on the same calendar day. |
+
+**Example output:**
+```
+💰 Today: $4.83
+💰 Today: $12.50
 ```
 
 ## Info Widgets

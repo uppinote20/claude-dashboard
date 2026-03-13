@@ -1462,7 +1462,10 @@ var en_default = {
     forecast: "Forecast",
     budget: "Budget",
     performance: "Perf",
-    tokenBreakdown: "Tokens"
+    tokenBreakdown: "Tokens",
+    tokenSpeed: "Speed",
+    sessionName: "Session",
+    todayCost: "Today"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -1515,7 +1518,10 @@ var ko_default = {
     forecast: "\uC608\uCE21",
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
-    tokenBreakdown: "\uD1A0\uD070"
+    tokenBreakdown: "\uD1A0\uD070",
+    tokenSpeed: "\uC18D\uB3C4",
+    sessionName: "\uC138\uC158\uBA85",
+    todayCost: "\uC624\uB298"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",

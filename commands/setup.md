@@ -18,7 +18,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 - `$1`: Display mode
   - `compact` (default): 1 line (model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage)
   - `normal`: 2 lines (+ projectInfo, sessionId, sessionDuration, burnRate, todoProgress)
-  - `detailed`: 5 lines (+ depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version)
+  - `detailed`: 5 lines (+ sessionName, tokenSpeed, depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, todayCost, codexUsage, geminiUsage, linesChanged, outputStyle, version)
   - `custom`: Custom widget configuration (requires `$4`)
 
 - `$2`: Language preference
@@ -64,6 +64,9 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `performance` | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | Estimated hourly cost based on session rate |
 | `budget` | Daily spending vs configured budget limit (requires `dailyBudget` in config) |
+| `tokenSpeed` | Output token generation speed (e.g., `67 tok/s`) |
+| `sessionName` | Session name from /rename command |
+| `todayCost` | Total spending across all sessions today |
 | `linesChanged` | Lines added/removed count (+N -N) |
 | `outputStyle` | Current output style (hidden when "default") |
 | `version` | Claude Code version display |
@@ -80,16 +83,16 @@ Use AskUserQuestion to ask the user. Batch independent questions into a single A
 1. Display mode — MUST include `markdown` field on each option for visual preview:
    - compact (recommended), markdown:
      ```
-     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      ```
    - normal, markdown:
      ```
-     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
      ```
    - detailed, markdown:
      ```
-     🤖 Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h │ ✓ 3/5
      CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
      📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 🔷 codex │ 💎 gemini
@@ -151,7 +154,7 @@ Create `~/.claude/claude-dashboard.local.json`:
 }
 ```
 
-Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version. Use `|` to separate lines.
+Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version, `Q`=tokenSpeed, `J`=sessionName, `@`=todayCost. Use `|` to separate lines.
 
 **For custom mode:**
 ```json

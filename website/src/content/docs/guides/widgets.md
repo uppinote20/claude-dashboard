@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-claude-dashboard provides 27 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
+claude-dashboard provides 30 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
 
 ## Core
 
@@ -30,6 +30,7 @@ claude-dashboard provides 27 widgets organized by category. Each widget can be i
 |--------|-------------|
 | `sessionId` | Session ID (short 8-char) |
 | `sessionIdFull` | Session ID (full UUID) |
+| `sessionName` | Session name from /rename command |
 | `sessionDuration` | Session duration |
 | `configCounts` | CLAUDE.md, rules, MCPs, hooks |
 
@@ -46,6 +47,7 @@ claude-dashboard provides 27 widgets organized by category. Each widget can be i
 | Widget | Description |
 |--------|-------------|
 | `burnRate` | Token consumption per minute |
+| `tokenSpeed` | Output token generation speed (e.g., `67 tok/s`) |
 | `cacheHit` | Cache hit rate percentage |
 | `depletionTime` | Estimated time to rate limit (approx) [1] |
 
@@ -66,6 +68,7 @@ claude-dashboard provides 27 widgets organized by category. Each widget can be i
 | `performance` | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | Estimated hourly cost based on session rate |
 | `budget` | Daily spending vs configured budget limit [5] |
+| `todayCost` | Total spending across all sessions today |
 
 ## Info
 

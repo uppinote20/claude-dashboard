@@ -16,9 +16,9 @@ var DISPLAY_PRESETS = {
   ],
   detailed: [
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
-    ["projectInfo", "sessionId", "sessionDuration", "burnRate", "depletionTime", "todoProgress"],
+    ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
-    ["tokenBreakdown", "forecast", "budget"],
+    ["tokenBreakdown", "forecast", "budget", "todayCost"],
     ["codexUsage", "geminiUsage", "linesChanged", "outputStyle", "version"]
   ]
 };
@@ -48,7 +48,10 @@ var PRESET_CHAR_MAP = {
   U: "budget",
   V: "version",
   L: "linesChanged",
-  Y: "outputStyle"
+  Y: "outputStyle",
+  Q: "tokenSpeed",
+  J: "sessionName",
+  "@": "todayCost"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -733,7 +736,10 @@ var en_default = {
     forecast: "Forecast",
     budget: "Budget",
     performance: "Perf",
-    tokenBreakdown: "Tokens"
+    tokenBreakdown: "Tokens",
+    tokenSpeed: "Speed",
+    sessionName: "Session",
+    todayCost: "Today"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -786,7 +792,10 @@ var ko_default = {
     forecast: "\uC608\uCE21",
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
-    tokenBreakdown: "\uD1A0\uD070"
+    tokenBreakdown: "\uD1A0\uD070",
+    tokenSpeed: "\uC18D\uB3C4",
+    sessionName: "\uC138\uC158\uBA85",
+    todayCost: "\uC624\uB298"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",
@@ -981,7 +990,7 @@ var modelWidget = {
   },
   render(data) {
     const shortName = shortenModelName(data.displayName);
-    const icon = isZaiProvider() ? "\u{1F7E0}" : "\u{1F916}";
+    const icon = isZaiProvider() ? "\u{1F7E0}" : "\u25C6";
     const supportsEffort = shortName === "Opus" || shortName === "Sonnet";
     const effortSuffix = supportsEffort ? `(${data.effortLevel[0].toUpperCase()})` : "";
     const fastIndicator = shortName === "Opus" && data.fastMode ? " \u21AF" : "";
@@ -1494,6 +1503,10 @@ function processEntries(entries, existing) {
     existing.entries.push(entry);
     if (!existing.sessionStartTime && entry.timestamp) {
       existing.sessionStartTime = new Date(entry.timestamp).getTime();
+    }
+    const raw = entry;
+    if (typeof raw.customTitle === "string" && raw.customTitle) {
+      existing.sessionName = raw.customTitle;
     }
     if (entry.type === "assistant" && entry.message?.content) {
       for (const block of entry.message.content) {
@@ -3157,6 +3170,61 @@ var outputStyleWidget = {
   }
 };
 
+// scripts/widgets/token-speed.ts
+var tokenSpeedWidget = {
+  id: "tokenSpeed",
+  name: "Token Speed",
+  async getData(ctx) {
+    const outputTokens = ctx.stdin.context_window?.total_output_tokens;
+    const apiDurationMs = ctx.stdin.cost?.total_api_duration_ms;
+    if (!outputTokens || !apiDurationMs || apiDurationMs <= 0)
+      return null;
+    const tokensPerSecond = outputTokens / (apiDurationMs / 1e3);
+    if (!Number.isFinite(tokensPerSecond) || tokensPerSecond <= 0)
+      return null;
+    return { tokensPerSecond };
+  },
+  render(data, _ctx) {
+    return colorize(`\u26A1 ${Math.round(data.tokensPerSecond)} tok/s`, getTheme().accent);
+  }
+};
+
+// scripts/widgets/session-name.ts
+var sessionNameWidget = {
+  id: "sessionName",
+  name: "Session Name",
+  async getData(ctx) {
+    const transcriptPath = ctx.stdin.transcript_path;
+    if (!transcriptPath)
+      return null;
+    const transcript = await parseTranscript(transcriptPath);
+    if (!transcript?.sessionName)
+      return null;
+    return { name: transcript.sessionName };
+  },
+  render(data, _ctx) {
+    return colorize(`\xBB ${truncate(data.name, 20)}`, getTheme().secondary);
+  }
+};
+
+// scripts/widgets/today-cost.ts
+var todayCostWidget = {
+  id: "todayCost",
+  name: "Today Cost",
+  async getData(ctx) {
+    const sessionCost = ctx.stdin.cost?.total_cost_usd ?? 0;
+    const sessionId = ctx.stdin.session_id || "default";
+    const dailyTotal = await recordCostAndGetDaily(sessionId, sessionCost);
+    if (dailyTotal <= 0)
+      return null;
+    return { dailyTotal };
+  },
+  render(data, ctx) {
+    const { translations: t } = ctx;
+    return colorize(`\u{1F4B0} ${t.widgets.todayCost}: ${formatCost(data.dailyTotal)}`, getTheme().secondary);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3186,7 +3254,10 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["budget", budgetWidget],
   ["version", versionWidget],
   ["linesChanged", linesChangedWidget],
-  ["outputStyle", outputStyleWidget]
+  ["outputStyle", outputStyleWidget],
+  ["tokenSpeed", tokenSpeedWidget],
+  ["sessionName", sessionNameWidget],
+  ["todayCost", todayCostWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

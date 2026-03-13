@@ -14,7 +14,7 @@ sidebar:
 - **ID**: `model`
 - **데이터 소스**: stdin (모델 정보) + settings
 - **표시 내용**: 모델 이름과 이모지. Opus/Sonnet의 경우 노력 수준(H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
-- **출력 예시**: `🤖 Opus(H)`, `🤖 Opus(H) ↯`, `🤖 Sonnet(M)`, `🤖 Haiku`
+- **출력 예시**: `◆ Opus(H)`, `◆ Opus(H) ↯`, `◆ Sonnet(M)`, `◆ Haiku`
 
 ### context
 
@@ -79,6 +79,13 @@ sidebar:
 - **표시 내용**: 현재 세션의 전체 UUID를 표시합니다.
 - **출력 예시**: `🔑 a1b2c3d4-e5f6-7890-abcd-ef1234567890`
 
+### sessionName
+
+- **ID**: `sessionName`
+- **데이터 소스**: transcript (JSONL)
+- **표시 내용**: /rename 명령으로 설정된 세션 이름. 세션 이름이 없으면 위젯이 숨겨집니다.
+- **출력 예시**: `» feature-auth`, `» bug-fix-login`
+
 ### sessionDuration
 
 - **ID**: `sessionDuration`
@@ -124,6 +131,13 @@ sidebar:
 - **데이터 소스**: stdin (토큰) + session (경과 시간)
 - **표시 내용**: 분당 토큰 소비량 (세션 평균).
 - **출력 예시**: `🔥 5K/m`, `🔥 12K/m`
+
+### tokenSpeed
+
+- **ID**: `tokenSpeed`
+- **데이터 소스**: stdin
+- **표시 내용**: 출력 토큰 생성 속도. 초당 생성되는 토큰 수를 표시합니다.
+- **출력 예시**: `⚡ 67 tok/s`, `⚡ 120 tok/s`
 
 ### cacheHit
 
@@ -200,6 +214,13 @@ sidebar:
   - 80% 소진 시 경고 표시
   - 95% 소진 시 위험 표시
 - **출력 예시**: `💵 $5/$15`, `💵 $14/$15 ⚠️`, `💵 $15/$15 🚨`
+
+### todayCost
+
+- **ID**: `todayCost`
+- **데이터 소스**: stdin (비용) + 파일 (일일 비용 기록)
+- **표시 내용**: 오늘 전체 세션의 누적 비용을 표시합니다.
+- **출력 예시**: `💰 오늘: $4.83`, `💰 오늘: $12.50`
 
 ## Info
 

@@ -38,6 +38,8 @@ sidebar:
 | `F` | performance | `W` | forecast |
 | `U` | budget | `V` | version |
 | `L` | linesChanged | `Y` | outputStyle |
+| `Q` | tokenSpeed | `J` | sessionName |
+| `@` | todayCost | | |
 
 ## 예시
 

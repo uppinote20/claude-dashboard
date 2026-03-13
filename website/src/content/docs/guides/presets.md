@@ -38,6 +38,8 @@ This creates a 2-line layout:
 | `F` | performance | `W` | forecast |
 | `U` | budget | `V` | version |
 | `L` | linesChanged | `Y` | outputStyle |
+| `Q` | tokenSpeed | `J` | sessionName |
+| `@` | todayCost | | |
 
 ## Examples
 
