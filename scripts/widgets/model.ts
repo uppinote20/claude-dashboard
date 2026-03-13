@@ -86,7 +86,7 @@ export const modelWidget: Widget<ModelData> = {
 
   render(data: ModelData): string {
     const shortName = shortenModelName(data.displayName);
-    const icon = isZaiProvider() ? '🟠' : '🤖';
+    const icon = isZaiProvider() ? '🟠' : '◆';
 
     // Show effort suffix for Opus and Sonnet: (H), (M), (L). Haiku excluded.
     const supportsEffort = shortName === 'Opus' || shortName === 'Sonnet';
