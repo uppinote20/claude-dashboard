@@ -339,10 +339,10 @@ export function getLastUserPrompt(
     const entry = transcript.entries[i];
     if (entry.type === 'user' && entry.message?.content) {
       for (const block of entry.message.content) {
-        if (block.type === 'text' && typeof block.text === 'string' && block.text.trim()) {
+        if (block.type === 'text' && typeof block.text === 'string' && block.text.trim() && entry.timestamp) {
           return {
             text: block.text.replace(/\s+/g, ' ').trim(),
-            timestamp: entry.timestamp || new Date().toISOString(),
+            timestamp: entry.timestamp,
           };
         }
       }
