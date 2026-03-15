@@ -1259,7 +1259,7 @@ function normalizeGitUrl(url) {
   const sshMatch = url.match(/^(?:ssh:\/\/)?git@([^:/]+)[:/](.+?)(?:\.git)?$/);
   if (sshMatch)
     return `https://${sshMatch[1]}/${sshMatch[2]}`;
-  const httpsMatch = url.match(/^https?:\/\/(.+?)(?:\.git)?$/);
+  const httpsMatch = url.match(/^https?:\/\/(?:[^@/]+@)?(.+?)(?:\.git)?$/);
   if (httpsMatch)
     return `https://${httpsMatch[1]}`;
   return null;

@@ -77,8 +77,8 @@ function normalizeGitUrl(url: string): string | null {
   const sshMatch = url.match(/^(?:ssh:\/\/)?git@([^:/]+)[:/](.+?)(?:\.git)?$/);
   if (sshMatch) return `https://${sshMatch[1]}/${sshMatch[2]}`;
 
-  // HTTPS: strip .git suffix
-  const httpsMatch = url.match(/^https?:\/\/(.+?)(?:\.git)?$/);
+  // HTTPS: strip .git suffix and userinfo (user:token@)
+  const httpsMatch = url.match(/^https?:\/\/(?:[^@/]+@)?(.+?)(?:\.git)?$/);
   if (httpsMatch) return `https://${httpsMatch[1]}`;
 
   return null;
