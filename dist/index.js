@@ -1299,7 +1299,7 @@ var projectInfoWidget = {
       behind,
       subPath,
       worktreeName,
-      remoteUrl: remoteUrl && branch ? `${remoteUrl}/tree/${branch}` : void 0
+      remoteUrl: remoteUrl && branch ? `${remoteUrl}/tree/${branch.split("/").map(encodeURIComponent).join("/")}` : void 0
     };
   },
   render(data, _ctx) {

@@ -135,7 +135,9 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
       behind,
       subPath,
       worktreeName,
-      remoteUrl: remoteUrl && branch ? `${remoteUrl}/tree/${branch}` : undefined,
+      remoteUrl: remoteUrl && branch
+        ? `${remoteUrl}/tree/${branch.split('/').map(encodeURIComponent).join('/')}`
+        : undefined,
     };
   },
 
