@@ -8,7 +8,7 @@ import type { Widget } from './base.js';
 import type { WidgetContext, LastPromptData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import { truncate } from '../utils/formatters.js';
-import { getLastUserPrompt } from '../utils/transcript-parser.js';
+import { getLastUserPrompt } from '../utils/history-parser.js';
 
 export const lastPromptWidget: Widget<LastPromptData> = {
   id: 'lastPrompt',
