@@ -3511,6 +3511,23 @@ async function loadConfig() {
     return DEFAULT_CONFIG;
   }
 }
+function convertStdinLimit(window) {
+  return {
+    utilization: window.used_percentage,
+    resets_at: new Date(window.resets_at * 1e3).toISOString()
+  };
+}
+function parseStdinRateLimits(stdin) {
+  const rl = stdin.rate_limits;
+  if (!rl)
+    return null;
+  return {
+    five_hour: rl.five_hour ? convertStdinLimit(rl.five_hour) : null,
+    seven_day: rl.seven_day ? convertStdinLimit(rl.seven_day) : null,
+    seven_day_sonnet: null
+    // Not available in stdin
+  };
+}
 async function main() {
   const config = await loadConfig();
   setTheme(config.theme);
@@ -3521,7 +3538,16 @@ async function main() {
     console.log(colorize("\u26A0\uFE0F", COLORS.yellow));
     return;
   }
-  const rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+  const stdinLimits = parseStdinRateLimits(stdin);
+  let rateLimits;
+  if (!stdinLimits) {
+    rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+  } else if (config.plan === "max") {
+    const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+    rateLimits = { ...stdinLimits, seven_day_sonnet: apiLimits?.seven_day_sonnet ?? null };
+  } else {
+    rateLimits = stdinLimits;
+  }
   const ctx = {
     stdin,
     config,
