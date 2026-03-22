@@ -57,6 +57,7 @@ import { lastPromptWidget } from '../widgets/last-prompt.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
+import * as gitUtils from '../utils/git.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
 import * as budgetUtils from '../utils/budget.js';
@@ -1317,54 +1318,60 @@ describe('widgets', () => {
   });
 
   describe('linesChangedWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it('should have correct id and name', () => {
       expect(linesChangedWidget.id).toBe('linesChanged');
       expect(linesChangedWidget.name).toBe('Lines Changed');
     });
 
-    it('should return data when added and removed are present', async () => {
-      const ctx = createContext({
-        cost: { total_cost_usd: 0.5, total_lines_added: 156, total_lines_removed: 23 },
-      });
-      const data = await linesChangedWidget.getData(ctx);
+    // Each test uses a unique cwd to bypass the 10s TTL cache
+    let testCwd = 0;
+    function uniqueCtx() {
+      testCwd++;
+      return createContext({ workspace: { current_dir: `/test/lines-changed-${testCwd}` } });
+    }
+
+    it('should return data from git diff when changes exist', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 3 files changed, 156 insertions(+), 23 deletions(-)\n');
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(156);
       expect(data?.removed).toBe(23);
     });
 
-    it('should return null when both are 0', async () => {
-      const ctx = createContext({
-        cost: { total_cost_usd: 0.5, total_lines_added: 0, total_lines_removed: 0 },
-      });
-      const data = await linesChangedWidget.getData(ctx);
+    it('should return null when git diff is empty', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue('');
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
       expect(data).toBeNull();
     });
 
-    it('should return null when both are missing', async () => {
-      const ctx = createContext({
-        cost: { total_cost_usd: 0.5 },
-      });
-      const data = await linesChangedWidget.getData(ctx);
+    it('should return null when git diff fails', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockRejectedValue(new Error('not a git repo'));
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
       expect(data).toBeNull();
     });
 
-    it('should return data when only added is present', async () => {
-      const ctx = createContext({
-        cost: { total_cost_usd: 0.5, total_lines_added: 42 },
-      });
-      const data = await linesChangedWidget.getData(ctx);
+    it('should return data with only insertions', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 42 insertions(+)\n');
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(42);
       expect(data?.removed).toBe(0);
     });
 
-    it('should return data when only removed is present', async () => {
-      const ctx = createContext({
-        cost: { total_cost_usd: 0.5, total_lines_removed: 15 },
-      });
-      const data = await linesChangedWidget.getData(ctx);
+    it('should return data with only deletions', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 15 deletions(-)\n');
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(0);

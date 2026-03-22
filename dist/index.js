@@ -3308,13 +3308,6 @@ var linesChangedWidget = {
   id: "linesChanged",
   name: "Lines Changed",
   async getData(ctx) {
-    const stdinAdded = ctx.stdin.cost?.total_lines_added;
-    const stdinRemoved = ctx.stdin.cost?.total_lines_removed;
-    if (stdinAdded !== void 0 || stdinRemoved !== void 0) {
-      const added = stdinAdded ?? 0;
-      const removed = stdinRemoved ?? 0;
-      return added === 0 && removed === 0 ? null : { added, removed };
-    }
     const cwd = ctx.stdin.workspace?.current_dir;
     if (!cwd)
       return null;
