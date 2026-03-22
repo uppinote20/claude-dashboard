@@ -12,7 +12,7 @@ import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
 
-import type { StdinInput, Config, WidgetContext } from './types.js';
+import type { StdinInput, Config, WidgetContext, UsageLimits } from './types.js';
 import { DEFAULT_CONFIG, parsePreset } from './types.js';
 import { COLORS, colorize, setTheme, setSeparatorStyle } from './utils/colors.js';
 import { fetchUsageLimits } from './utils/api-client.js';
@@ -86,6 +86,31 @@ async function loadConfig(): Promise<Config> {
 }
 
 /**
+ * Convert a single stdin rate limit window (epoch seconds) to UsageLimits field format (ISO string).
+ */
+function convertStdinLimit(window: { used_percentage: number; resets_at: number }) {
+  return {
+    utilization: window.used_percentage,
+    resets_at: new Date(window.resets_at * 1000).toISOString(),
+  };
+}
+
+/**
+ * Convert stdin rate_limits (Unix epoch seconds) to UsageLimits format (ISO string).
+ * Returns null when stdin doesn't provide rate_limits (before first API response or older Claude Code).
+ */
+function parseStdinRateLimits(stdin: StdinInput): UsageLimits | null {
+  const rl = stdin.rate_limits;
+  if (!rl) return null;
+
+  return {
+    five_hour: rl.five_hour ? convertStdinLimit(rl.five_hour) : null,
+    seven_day: rl.seven_day ? convertStdinLimit(rl.seven_day) : null,
+    seven_day_sonnet: null, // Not available in stdin
+  };
+}
+
+/**
  * Main entry point
  */
 async function main(): Promise<void> {
@@ -106,8 +131,20 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Fetch rate limits (uses cache)
-  const rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+  // Build rate limits: prefer stdin, fallback to API
+  const stdinLimits = parseStdinRateLimits(stdin);
+  let rateLimits: UsageLimits | null;
+
+  if (!stdinLimits) {
+    // Stdin rate_limits not yet available — full API fallback
+    rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+  } else if (config.plan === 'max') {
+    // Hybrid: stdin for 5h/7d, API only for seven_day_sonnet
+    const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
+    rateLimits = { ...stdinLimits, seven_day_sonnet: apiLimits?.seven_day_sonnet ?? null };
+  } else {
+    rateLimits = stdinLimits;
+  }
 
   // Create widget context
   const ctx: WidgetContext = {

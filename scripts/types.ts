@@ -59,6 +59,28 @@ export interface StdinInput {
   transcript_path?: string;
   /** Claude Code version string */
   version?: string;
+  /** Whether total tokens from most recent API response exceeds 200k (fixed threshold) */
+  exceeds_200k_tokens?: boolean;
+  /**
+   * Rate limits from Claude Code stdin (Pro/Max subscribers, after first API response).
+   * Each window may be independently absent.
+   */
+  rate_limits?: {
+    five_hour?: {
+      used_percentage: number;
+      /** Unix epoch seconds */
+      resets_at: number;
+    };
+    seven_day?: {
+      used_percentage: number;
+      /** Unix epoch seconds */
+      resets_at: number;
+    };
+  };
+  /** Vim mode info (present only when vim mode is enabled) */
+  vim?: { mode: string };
+  /** Agent info (present only when running with --agent flag) */
+  agent?: { name: string };
   /** Session ID for duration tracking */
   session_id?: string;
 }
