@@ -1,8 +1,9 @@
 /**
  * OAuth credential extraction with platform-specific caching
  * @handbook 4.4-credential-caching
+ * @tested scripts/__tests__/credentials.test.ts
  */
-import { execFileSync } from 'child_process';
+import { execFile } from 'child_process';
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
 import { homedir } from 'os';
@@ -57,7 +58,26 @@ export async function getCredentials(): Promise<string | null> {
 }
 
 /**
- * Get credentials from macOS Keychain (with TTL-based cache + backoff on failure)
+ * Run macOS `security` command asynchronously.
+ * Unlike execFileSync, this does not block the event loop.
+ */
+function execKeychainAsync(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    execFile(
+      'security',
+      ['find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+      { encoding: 'utf-8', timeout: 3000 },
+      (error, stdout) => {
+        if (error) reject(error);
+        else resolve(stdout.trim());
+      }
+    );
+  });
+}
+
+/**
+ * Get credentials from macOS Keychain (with TTL-based cache + backoff on failure).
+ * Uses async execFile to avoid blocking the event loop.
  */
 async function getCredentialsFromKeychain(): Promise<string | null> {
   // Check backoff: skip keychain entirely during cooldown
@@ -74,11 +94,7 @@ async function getCredentialsFromKeychain(): Promise<string | null> {
   }
 
   try {
-    const result = execFileSync(
-      'security',
-      ['find-generic-password', '-s', 'Claude Code-credentials', '-w'],
-      { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
+    const result = await execKeychainAsync();
 
     const creds = JSON.parse(result);
     const token = creds?.claudeAiOauth?.accessToken ?? null;

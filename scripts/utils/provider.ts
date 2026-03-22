@@ -2,6 +2,7 @@
  * Provider detection utility
  * Detects whether Claude is running via Anthropic, z.ai, or ZHIPU
  * @handbook 7.2-provider-detection
+ * @tested scripts/__tests__/provider.test.ts
  */
 
 /**

@@ -1,5 +1,6 @@
 /**
  * @handbook 2.1-naming-conventions
+ * @tested scripts/__tests__/formatters.test.ts
  */
 import type { Translations } from '../types.js';
 
@@ -106,6 +107,14 @@ export function formatDuration(ms: number, t: { hours: string; minutes: string }
  */
 export function truncate(str: string, maxLen: number): string {
   return str.length <= maxLen ? str : str.slice(0, maxLen) + '…';
+}
+
+/**
+ * Clamp a value to the 0-100 percentage range.
+ * Useful for ensuring API-derived percentages are safe for display.
+ */
+export function clampPercent(value: number): number {
+  return Math.min(100, Math.max(0, Math.round(value)));
 }
 
 /**

@@ -5,6 +5,7 @@
  * Effort level: Shown for Opus and Sonnet (H/M/L), hidden for Haiku
  * Fast mode: Opus 4.6 exclusive feature, indicated by ↯ symbol
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import { readFile, stat } from 'fs/promises';

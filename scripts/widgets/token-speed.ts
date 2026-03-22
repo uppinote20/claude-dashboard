@@ -2,6 +2,7 @@
  * Token speed widget - displays output token generation speed
  * Uses total_output_tokens / total_api_duration_ms from stdin.
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';

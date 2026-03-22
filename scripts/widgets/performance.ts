@@ -1,6 +1,7 @@
 /**
  * Performance badge widget - composite score from cache hit rate + burn rate
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';

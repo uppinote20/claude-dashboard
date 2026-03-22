@@ -39,14 +39,3 @@ export interface WidgetRenderResult {
   output: string;
 }
 
-/**
- * Helper function to create a widget
- */
-export function createWidget<T extends WidgetData>(
-  id: WidgetId,
-  name: string,
-  getData: (ctx: WidgetContext) => Promise<T | null>,
-  render: (data: T, ctx: WidgetContext) => string
-): Widget<T> {
-  return { id, name, getData, render };
-}

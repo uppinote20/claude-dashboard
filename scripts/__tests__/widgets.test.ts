@@ -1,5 +1,31 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/widgets/model.ts
+ * @covers scripts/widgets/context.ts
+ * @covers scripts/widgets/cost.ts
+ * @covers scripts/widgets/todo-progress.ts
+ * @covers scripts/widgets/agent-status.ts
+ * @covers scripts/widgets/tool-activity.ts
+ * @covers scripts/widgets/project-info.ts
+ * @covers scripts/widgets/burn-rate.ts
+ * @covers scripts/widgets/cache-hit.ts
+ * @covers scripts/widgets/depletion-time.ts
+ * @covers scripts/widgets/codex-usage.ts
+ * @covers scripts/widgets/gemini-usage.ts
+ * @covers scripts/widgets/config-counts.ts
+ * @covers scripts/widgets/session-duration.ts
+ * @covers scripts/widgets/version.ts
+ * @covers scripts/widgets/lines-changed.ts
+ * @covers scripts/widgets/output-style.ts
+ * @covers scripts/widgets/token-speed.ts
+ * @covers scripts/widgets/session-name.ts
+ * @covers scripts/widgets/today-cost.ts
+ * @covers scripts/widgets/budget.ts
+ * @covers scripts/widgets/forecast.ts
+ * @covers scripts/widgets/performance.ts
+ * @covers scripts/widgets/token-breakdown.ts
+ * @covers scripts/widgets/zai-usage.ts
+ * @covers scripts/widgets/last-prompt.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget } from '../widgets/model.js';
@@ -22,7 +48,15 @@ import { outputStyleWidget } from '../widgets/output-style.js';
 import { tokenSpeedWidget } from '../widgets/token-speed.js';
 import { sessionNameWidget } from '../widgets/session-name.js';
 import { todayCostWidget } from '../widgets/today-cost.js';
+import { budgetWidget } from '../widgets/budget.js';
+import { forecastWidget } from '../widgets/forecast.js';
+import { performanceWidget } from '../widgets/performance.js';
+import { tokenBreakdownWidget } from '../widgets/token-breakdown.js';
+import { zaiUsageWidget } from '../widgets/zai-usage.js';
+import { lastPromptWidget } from '../widgets/last-prompt.js';
 import * as codexClient from '../utils/codex-client.js';
+import * as zaiClient from '../utils/zai-api-client.js';
+import * as historyParser from '../utils/history-parser.js';
 import * as geminiClient from '../utils/gemini-client.js';
 import * as sessionUtils from '../utils/session.js';
 import * as budgetUtils from '../utils/budget.js';
@@ -1488,10 +1522,17 @@ describe('widgets', () => {
     });
 
     it('should return null when transcript has no sessionName', async () => {
-      vi.spyOn(transcriptParser, 'parseTranscript').mockResolvedValue({
-        entries: [],
+      vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
         toolUses: new Map(),
         toolResults: new Set(),
+        runningToolIds: new Set(),
+        lastTodoWriteInput: null,
+        activeAgentIds: new Set(),
+        completedAgentCount: 0,
+        tasks: new Map(),
+        nextTaskId: 1,
+        pendingTaskCreates: new Map(),
+        pendingTaskUpdates: new Map(),
       });
 
       const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
@@ -1500,10 +1541,17 @@ describe('widgets', () => {
     });
 
     it('should return session name from transcript', async () => {
-      vi.spyOn(transcriptParser, 'parseTranscript').mockResolvedValue({
-        entries: [],
+      vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
         toolUses: new Map(),
         toolResults: new Set(),
+        runningToolIds: new Set(),
+        lastTodoWriteInput: null,
+        activeAgentIds: new Set(),
+        completedAgentCount: 0,
+        tasks: new Map(),
+        nextTaskId: 1,
+        pendingTaskCreates: new Map(),
+        pendingTaskUpdates: new Map(),
         sessionName: 'my-feature-work',
       });
 
@@ -1607,6 +1655,332 @@ describe('widgets', () => {
       const result = todayCostWidget.render(data, ctx);
 
       expect(result).toContain('$0.05');
+    });
+  });
+
+  describe('budgetWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(budgetWidget.id).toBe('budget');
+      expect(budgetWidget.name).toBe('Budget');
+    });
+
+    it('should return null when dailyBudget is not configured', async () => {
+      const ctx = createContext();
+      const data = await budgetWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return budget data when configured', async () => {
+      vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(5.0);
+
+      const ctx = { ...createContext(), config: { ...MOCK_CONFIG, dailyBudget: 20 } };
+      const data = await budgetWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.dailyTotal).toBe(5.0);
+      expect(data?.dailyBudget).toBe(20);
+      expect(data?.utilization).toBe(0.25);
+    });
+
+    it('should cap utilization at 1', async () => {
+      vi.spyOn(budgetUtils, 'recordCostAndGetDaily').mockResolvedValue(30.0);
+
+      const ctx = { ...createContext(), config: { ...MOCK_CONFIG, dailyBudget: 20 } };
+      const data = await budgetWidget.getData(ctx);
+
+      expect(data?.utilization).toBe(1);
+    });
+
+    it('should render safe icon for low utilization', () => {
+      const ctx = createContext();
+      const data = { dailyTotal: 5, dailyBudget: 20, utilization: 0.25 };
+      const result = budgetWidget.render(data, ctx);
+      expect(result).toContain('💵');
+      expect(result).toContain('$5.00');
+      expect(result).toContain('$20.00');
+    });
+
+    it('should render warning icon for high utilization', () => {
+      const ctx = createContext();
+      const data = { dailyTotal: 17, dailyBudget: 20, utilization: 0.85 };
+      const result = budgetWidget.render(data, ctx);
+      expect(result).toContain('⚠️');
+    });
+
+    it('should render danger icon for critical utilization', () => {
+      const ctx = createContext();
+      const data = { dailyTotal: 19.5, dailyBudget: 20, utilization: 0.975 };
+      const result = budgetWidget.render(data, ctx);
+      expect(result).toContain('🚨');
+    });
+  });
+
+  describe('forecastWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(forecastWidget.id).toBe('forecast');
+      expect(forecastWidget.name).toBe('Cost Forecast');
+    });
+
+    it('should return null when cost is 0', async () => {
+      const ctx = createContext({ cost: { total_cost_usd: 0 } });
+      const data = await forecastWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return forecast data when cost and session time available', async () => {
+      vi.spyOn(sessionUtils, 'getSessionElapsedMinutes').mockResolvedValue(30);
+
+      const ctx = createContext({ cost: { total_cost_usd: 1.5 } });
+      const data = await forecastWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.currentCost).toBe(1.5);
+      expect(data?.hourlyCost).toBe(3.0);
+    });
+
+    it('should render with arrow and hourly rate', () => {
+      const ctx = createContext();
+      const data = { currentCost: 1.5, hourlyCost: 3.0 };
+      const result = forecastWidget.render(data, ctx);
+      expect(result).toContain('📈');
+      expect(result).toContain('$1.50');
+      expect(result).toContain('~$3.00/h');
+    });
+  });
+
+  describe('performanceWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(performanceWidget.id).toBe('performance');
+      expect(performanceWidget.name).toBe('Performance');
+    });
+
+    it('should return null when no usage data', async () => {
+      const ctx = createContext({
+        context_window: { ...MOCK_STDIN.context_window, current_usage: null },
+      });
+      const data = await performanceWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should calculate composite score', async () => {
+      vi.spyOn(sessionUtils, 'getSessionElapsedMinutes').mockResolvedValue(10);
+
+      const ctx = createContext();
+      const data = await performanceWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.score).toBeGreaterThanOrEqual(0);
+      expect(data?.score).toBeLessThanOrEqual(100);
+      expect(data?.cacheHitRate).toBeDefined();
+      expect(data?.outputRatio).toBeDefined();
+    });
+
+    it('should render green badge for high score', () => {
+      const ctx = createContext();
+      const data = { score: 80, cacheHitRate: 70, outputRatio: 30 };
+      const result = performanceWidget.render(data, ctx);
+      expect(result).toContain('🟢');
+      expect(result).toContain('80%');
+    });
+
+    it('should render yellow badge for medium score', () => {
+      const ctx = createContext();
+      const data = { score: 50, cacheHitRate: 40, outputRatio: 20 };
+      const result = performanceWidget.render(data, ctx);
+      expect(result).toContain('🟡');
+    });
+
+    it('should render red badge for low score', () => {
+      const ctx = createContext();
+      const data = { score: 20, cacheHitRate: 10, outputRatio: 10 };
+      const result = performanceWidget.render(data, ctx);
+      expect(result).toContain('🔴');
+    });
+  });
+
+  describe('tokenBreakdownWidget', () => {
+    it('should have correct id and name', () => {
+      expect(tokenBreakdownWidget.id).toBe('tokenBreakdown');
+      expect(tokenBreakdownWidget.name).toBe('Token Breakdown');
+    });
+
+    it('should return null when no usage data', async () => {
+      const ctx = createContext({
+        context_window: { ...MOCK_STDIN.context_window, current_usage: null },
+      });
+      const data = await tokenBreakdownWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when all tokens are 0', async () => {
+      const ctx = createContext({
+        context_window: {
+          ...MOCK_STDIN.context_window,
+          current_usage: {
+            input_tokens: 0, output_tokens: 0,
+            cache_creation_input_tokens: 0, cache_read_input_tokens: 0,
+          },
+        },
+      });
+      const data = await tokenBreakdownWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return token breakdown data', async () => {
+      const ctx = createContext();
+      const data = await tokenBreakdownWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.inputTokens).toBe(5000);
+      expect(data?.outputTokens).toBe(2000);
+      expect(data?.cacheWriteTokens).toBe(1000);
+      expect(data?.cacheReadTokens).toBe(500);
+    });
+
+    it('should render with chart icon and labels', () => {
+      const ctx = createContext();
+      const data = { inputTokens: 5000, outputTokens: 2000, cacheWriteTokens: 1000, cacheReadTokens: 500 };
+      const result = tokenBreakdownWidget.render(data, ctx);
+      expect(result).toContain('📊');
+      expect(result).toContain('In');
+      expect(result).toContain('Out');
+    });
+
+    it('should omit zero-value parts', () => {
+      const ctx = createContext();
+      const data = { inputTokens: 5000, outputTokens: 0, cacheWriteTokens: 0, cacheReadTokens: 0 };
+      const result = tokenBreakdownWidget.render(data, ctx);
+      expect(result).toContain('In');
+      expect(result).not.toContain('Out');
+    });
+  });
+
+  describe('zaiUsageWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(zaiUsageWidget.id).toBe('zaiUsage');
+      expect(zaiUsageWidget.name).toBe('Z.ai Usage');
+    });
+
+    it('should return null when not installed', async () => {
+      vi.spyOn(zaiClient, 'isZaiInstalled').mockReturnValue(false);
+
+      const ctx = createContext();
+      const data = await zaiUsageWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return error state when API fails', async () => {
+      vi.spyOn(zaiClient, 'isZaiInstalled').mockReturnValue(true);
+      vi.spyOn(zaiClient, 'fetchZaiUsage').mockResolvedValue(null);
+
+      const ctx = createContext();
+      const data = await zaiUsageWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.isError).toBe(true);
+    });
+
+    it('should return usage data when available', async () => {
+      vi.spyOn(zaiClient, 'isZaiInstalled').mockReturnValue(true);
+      vi.spyOn(zaiClient, 'fetchZaiUsage').mockResolvedValue({
+        model: 'GLM',
+        tokensPercent: 45,
+        tokensResetAt: Date.now() + 3600000,
+        mcpPercent: 20,
+        mcpResetAt: Date.now() + 86400000,
+      });
+
+      const ctx = createContext();
+      const data = await zaiUsageWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.tokensPercent).toBe(45);
+      expect(data?.mcpPercent).toBe(20);
+    });
+
+    it('should render with warning on error', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'GLM', tokensPercent: null, tokensResetAt: null,
+        mcpPercent: null, mcpResetAt: null, isError: true,
+      };
+      const result = zaiUsageWidget.render(data, ctx);
+      expect(result).toContain('🟠');
+      expect(result).toContain('⚠️');
+    });
+
+    it('should render usage percentages', () => {
+      const ctx = createContext();
+      const data = {
+        model: 'GLM', tokensPercent: 45, tokensResetAt: null,
+        mcpPercent: 20, mcpResetAt: null,
+      };
+      const result = zaiUsageWidget.render(data, ctx);
+      expect(result).toContain('🟠');
+      expect(result).toContain('45%');
+      expect(result).toContain('20%');
+    });
+  });
+
+  describe('lastPromptWidget', () => {
+    beforeEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it('should have correct id and name', () => {
+      expect(lastPromptWidget.id).toBe('lastPrompt');
+      expect(lastPromptWidget.name).toBe('Last Prompt');
+    });
+
+    it('should return null when no session_id', async () => {
+      const ctx = createContext({ session_id: undefined });
+      const data = await lastPromptWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return prompt data from history', async () => {
+      vi.spyOn(historyParser, 'getLastUserPrompt').mockResolvedValue({
+        text: 'Fix the login bug',
+        timestamp: '2024-01-01T12:30:00Z',
+      });
+
+      const ctx = createContext();
+      const data = await lastPromptWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.text).toBe('Fix the login bug');
+    });
+
+    it('should render with time and text', () => {
+      const ctx = createContext();
+      const data = { text: 'Fix the login bug', timestamp: '2024-01-01T12:30:00Z' };
+      const result = lastPromptWidget.render(data, ctx);
+      expect(result).toContain('💬');
+      expect(result).toContain('Fix the login bug');
+    });
+
+    it('should truncate long prompts to 60 chars', () => {
+      const ctx = createContext();
+      const longText = 'A'.repeat(80);
+      const data = { text: longText, timestamp: '2024-01-01T12:30:00Z' };
+      const result = lastPromptWidget.render(data, ctx);
+      expect(result).toContain('…');
     });
   });
 });

@@ -722,15 +722,35 @@ export interface TranscriptEntry {
 }
 
 /**
- * Parsed transcript data
+ * Parsed transcript data.
+ * Incrementally tracked fields (running tools, agents, tasks, lastTodoWrite)
+ * are updated in processEntries() so extract functions read O(1).
  */
 export interface ParsedTranscript {
-  entries: TranscriptEntry[];
   toolUses: Map<string, { name: string; timestamp?: string; input?: unknown }>;
   toolResults: Set<string>;
   sessionStartTime?: number;
   /** Session name set by /rename command */
   sessionName?: string;
+
+  // --- Incremental tracking (updated in processEntries) ---
+
+  /** Tool IDs that have been dispatched but not yet returned */
+  runningToolIds: Set<string>;
+  /** Last completed TodoWrite input (for extractTodoProgress) */
+  lastTodoWriteInput: unknown;
+  /** Active agent (Task) tool IDs */
+  activeAgentIds: Set<string>;
+  /** Completed agent count */
+  completedAgentCount: number;
+  /** Tasks from TaskCreate/TaskUpdate, keyed by sequential ID */
+  tasks: Map<string, { subject: string; status: string }>;
+  /** Next sequential task ID for TaskCreate */
+  nextTaskId: number;
+  /** Pending TaskCreate tool_use IDs that haven't received results yet */
+  pendingTaskCreates: Map<string, { subject: string; status: string; seqId: string }>;
+  /** Pending TaskUpdate tool_use IDs */
+  pendingTaskUpdates: Map<string, { taskId: string; status?: string; subject?: string }>;
 }
 
 /**

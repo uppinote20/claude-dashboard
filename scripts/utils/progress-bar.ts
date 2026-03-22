@@ -1,5 +1,6 @@
 /**
  * @handbook 5.3-usage-based-color
+ * @tested scripts/__tests__/progress-bar.test.ts
  */
 import { getColorForPercent, RESET } from './colors.js';
 

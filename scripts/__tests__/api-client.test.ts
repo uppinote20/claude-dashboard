@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/utils/api-client.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdir, writeFile, rm, readdir, utimes, unlink } from 'fs/promises';

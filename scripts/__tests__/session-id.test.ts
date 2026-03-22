@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/widgets/session-id.ts
  */
 import { describe, it, expect } from 'vitest';
 import { sessionIdWidget, sessionIdFullWidget } from '../widgets/session-id.js';

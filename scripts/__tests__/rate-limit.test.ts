@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/widgets/rate-limit.ts
  */
 import { describe, it, expect } from 'vitest';
 import {

@@ -4,10 +4,11 @@
  * @handbook 7.1-common-api-pattern
  * @handbook 4.2-request-deduplication
  * @handbook 4.4-credential-caching
+ * @tested scripts/__tests__/gemini-client.test.ts
  */
 
 import { readFile, writeFile, stat } from 'fs/promises';
-import { execFileSync } from 'child_process';
+import { execFile } from 'child_process';
 import os from 'os';
 import path from 'path';
 import { NEGATIVE_CACHE_SECONDS, type GeminiUsageLimits, type CacheEntry } from '../types.js';
@@ -53,6 +54,13 @@ const pendingRefreshRequests: Map<string, Promise<GeminiCredentials | null>> = n
  * Cached OAuth credentials with mtime tracking
  */
 let cachedCredentials: { data: GeminiCredentials; mtime: number } | null = null;
+
+/**
+ * TTL-cached keychain result to avoid repeated execFileSync calls.
+ * Shared by isGeminiInstalled() and getGeminiCredentials().
+ */
+let keychainCache: { data: GeminiCredentials | null; timestamp: number } | null = null;
+const KEYCHAIN_CACHE_TTL_MS = 10_000;
 
 /**
  * Cached settings with mtime tracking
@@ -121,39 +129,53 @@ export async function isGeminiInstalled(): Promise<boolean> {
 }
 
 /**
- * Get OAuth token from macOS Keychain using security command
- * Uses execFileSync to prevent shell injection vulnerabilities
+ * Get OAuth token from macOS Keychain using security command.
+ * Uses TTL-based cache and async execFile to avoid blocking the event loop.
  */
 async function getTokenFromKeychain(): Promise<GeminiCredentials | null> {
   if (os.platform() !== 'darwin') {
     return null;
   }
 
+  // Return cached result within TTL
+  if (keychainCache && Date.now() - keychainCache.timestamp < KEYCHAIN_CACHE_TTL_MS) {
+    return keychainCache.data;
+  }
+
   try {
-    // Use security command to get password from keychain
-    // execFileSync is used instead of execSync for security
-    const result = execFileSync(
-      'security',
-      ['find-generic-password', '-s', KEYCHAIN_SERVICE_NAME, '-a', MAIN_ACCOUNT_KEY, '-w'],
-      { encoding: 'utf-8', timeout: 3000, stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
+    const result = await new Promise<string>((resolve, reject) => {
+      execFile(
+        'security',
+        ['find-generic-password', '-s', KEYCHAIN_SERVICE_NAME, '-a', MAIN_ACCOUNT_KEY, '-w'],
+        { encoding: 'utf-8', timeout: 3000 },
+        (error, stdout) => {
+          if (error) reject(error);
+          else resolve(stdout.trim());
+        }
+      );
+    });
 
     if (!result) {
+      keychainCache = { data: null, timestamp: Date.now() };
       return null;
     }
 
     // Parse the stored JSON
     const stored = JSON.parse(result);
     if (!stored.token?.accessToken) {
+      keychainCache = { data: null, timestamp: Date.now() };
       return null;
     }
 
-    return {
+    const data: GeminiCredentials = {
       accessToken: stored.token.accessToken,
       refreshToken: stored.token.refreshToken,
       expiryDate: stored.token.expiresAt,
     };
+    keychainCache = { data, timestamp: Date.now() };
+    return data;
   } catch {
+    keychainCache = { data: null, timestamp: Date.now() };
     return null;
   }
 }
@@ -644,4 +666,5 @@ export function clearGeminiCache(): void {
   pendingRefreshRequests.clear();
   cachedCredentials = null;
   cachedSettings = null;
+  keychainCache = null;
 }

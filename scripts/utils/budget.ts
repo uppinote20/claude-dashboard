@@ -7,6 +7,7 @@
  * then add that delta to the daily total. This prevents double-counting when the
  * status line runs multiple times per session.
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import { readFile, mkdir, writeFile } from 'fs/promises';
@@ -127,6 +128,9 @@ async function recordCostAndGetDailyImpl(
 
   const lastSeen = state.sessions[sessionId] ?? 0;
   const delta = Math.max(0, sessionCost - lastSeen);
+
+  // Skip save when nothing changed
+  if (delta === 0) return state.dailyTotal;
 
   state.dailyTotal += delta;
   state.sessions[sessionId] = sessionCost;

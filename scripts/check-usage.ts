@@ -4,6 +4,7 @@
  * Displays usage limits for all AI CLIs (Claude, Codex, Gemini, z.ai)
  * and recommends the one with the most available capacity.
  * @handbook 7.1-common-api-pattern
+ * @tested scripts/__tests__/check-usage.test.ts
  */
 
 import { fetchUsageLimits } from './utils/api-client.js';
@@ -60,12 +61,15 @@ function renderTitle(title: string): string {
 }
 
 /**
- * Render a CLI section
+ * Shared section envelope: handles label, not-installed, and error states.
+ * Calls contentFn only when data is available.
  */
-function renderClaudeSection(
+function renderSection(
   name: string,
   usage: CLIUsageInfo,
-  t: Translations
+  t: Translations,
+  contentFn: (lines: string[]) => void,
+  hasData = true,
 ): string[] {
   const lines: string[] = [];
   const label = colorize(`[${name}]`, COLORS.pastelCyan);
@@ -75,47 +79,50 @@ function renderClaudeSection(
     return lines;
   }
 
-  if (usage.error) {
+  if (usage.error || !hasData) {
     lines.push(`${label} ${colorize(`⚠️ ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
 
-  const parts: string[] = [];
-
-  // 5h usage
-  if (usage.fiveHourPercent !== null) {
-    const color5h = getColorForPercent(usage.fiveHourPercent);
-    const reset5h = usage.fiveHourReset
-      ? ` (${formatTimeRemaining(usage.fiveHourReset, t)})`
-      : '';
-    parts.push(`${t.labels['5h']}: ${colorize(`${usage.fiveHourPercent}%`, color5h)}${reset5h}`);
-  }
-
-  // 7d usage
-  if (usage.sevenDayPercent !== null) {
-    const color7d = getColorForPercent(usage.sevenDayPercent);
-    const reset7d = usage.sevenDayReset
-      ? ` (${formatTimeRemaining(usage.sevenDayReset, t)})`
-      : '';
-    parts.push(`${t.labels['7d']}: ${colorize(`${usage.sevenDayPercent}%`, color7d)}${reset7d}`);
-  }
-
-  // Plan info (for Codex)
-  if (usage.plan) {
-    parts.push(`Plan: ${colorize(usage.plan, COLORS.pastelGray)}`);
-  }
-
-  // Model info (for Gemini)
-  if (usage.model && name === 'Gemini') {
-    parts.push(`Model: ${colorize(usage.model, COLORS.pastelGray)}`);
-  }
-
   lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join('  |  ')}`);
-  }
-
+  contentFn(lines);
   return lines;
+}
+
+/**
+ * Render usage percent with color and optional reset time
+ */
+function formatUsageRow(label: string, percent: number, resetStr: string): string {
+  const color = getColorForPercent(percent);
+  return `${label}: ${colorize(`${percent}%`, color)}${resetStr ? ` (${resetStr})` : ''}`;
+}
+
+/**
+ * Render Claude/z.ai-style section from CLIUsageInfo
+ */
+function renderGenericSection(
+  name: string,
+  usage: CLIUsageInfo,
+  t: Translations,
+  extraParts?: (parts: string[]) => void,
+): string[] {
+  return renderSection(name, usage, t, (lines) => {
+    const parts: string[] = [];
+
+    if (usage.fiveHourPercent !== null) {
+      const reset = usage.fiveHourReset ? formatTimeRemaining(usage.fiveHourReset, t) : '';
+      parts.push(formatUsageRow(t.labels['5h'], usage.fiveHourPercent, reset));
+    }
+    if (usage.sevenDayPercent !== null) {
+      const reset = usage.sevenDayReset ? formatTimeRemaining(usage.sevenDayReset, t) : '';
+      parts.push(formatUsageRow(t.labels['7d'], usage.sevenDayPercent, reset));
+    }
+    extraParts?.(parts);
+
+    if (parts.length > 0) {
+      lines.push(`  ${parts.join('  |  ')}`);
+    }
+  });
 }
 
 /**
@@ -126,48 +133,29 @@ function renderCodexSection(
   codexData: CodexUsageLimits | null,
   t: Translations
 ): string[] {
-  const lines: string[] = [];
-  const label = colorize('[Codex]', COLORS.pastelCyan);
-
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
+  if (!codexData) {
+    return renderSection('Codex', usage, t, () => {}, false);
   }
 
-  if (usage.error || !codexData) {
-    lines.push(`${label} ${colorize(`⚠️ ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
+  return renderSection('Codex', usage, t, (lines) => {
+    const parts: string[] = [];
 
-  const parts: string[] = [];
+    if (codexData.primary) {
+      const percent = Math.round(codexData.primary.usedPercent);
+      parts.push(formatUsageRow(t.labels['5h'], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+    }
+    if (codexData.secondary) {
+      const percent = Math.round(codexData.secondary.usedPercent);
+      parts.push(formatUsageRow(t.labels['7d'], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+    }
+    if (codexData.planType) {
+      parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
+    }
 
-  // 5h usage (primary window)
-  if (codexData.primary) {
-    const percent = Math.round(codexData.primary.usedPercent);
-    const color5h = getColorForPercent(percent);
-    const reset5h = formatTimeFromTimestamp(codexData.primary.resetAt, t);
-    parts.push(`${t.labels['5h']}: ${colorize(`${percent}%`, color5h)} (${reset5h})`);
-  }
-
-  // 7d usage (secondary window)
-  if (codexData.secondary) {
-    const percent = Math.round(codexData.secondary.usedPercent);
-    const color7d = getColorForPercent(percent);
-    const reset7d = formatTimeFromTimestamp(codexData.secondary.resetAt, t);
-    parts.push(`${t.labels['7d']}: ${colorize(`${percent}%`, color7d)} (${reset7d})`);
-  }
-
-  // Plan info
-  if (codexData.planType) {
-    parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
-  }
-
-  lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join('  |  ')}`);
-  }
-
-  return lines;
+    if (parts.length > 0) {
+      lines.push(`  ${parts.join('  |  ')}`);
+    }
+  });
 }
 
 /**
@@ -178,43 +166,29 @@ function renderGeminiSection(
   geminiData: GeminiUsageLimits | null,
   t: Translations
 ): string[] {
-  const lines: string[] = [];
-  const label = colorize('[Gemini]', COLORS.pastelCyan);
-
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
+  if (!geminiData) {
+    return renderSection('Gemini', usage, t, () => {}, false);
   }
 
-  if (usage.error || !geminiData) {
-    lines.push(`${label} ${colorize(`⚠️ ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
+  return renderSection('Gemini', usage, t, (lines) => {
+    if (geminiData.buckets && geminiData.buckets.length > 0) {
+      const maxModelLen = Math.max(...geminiData.buckets.map(b => (b.modelId || 'unknown').length));
 
-  lines.push(`${label}`);
+      for (const bucket of geminiData.buckets) {
+        const modelName = bucket.modelId || 'unknown';
+        const paddedModel = modelName.padEnd(maxModelLen);
 
-  // Show all model buckets
-  if (geminiData.buckets && geminiData.buckets.length > 0) {
-    // Find max model name length for alignment
-    const maxModelLen = Math.max(...geminiData.buckets.map(b => (b.modelId || 'unknown').length));
-
-    for (const bucket of geminiData.buckets) {
-      const modelName = bucket.modelId || 'unknown';
-      const paddedModel = modelName.padEnd(maxModelLen);
-
-      if (bucket.usedPercent !== null) {
-        const color = getColorForPercent(bucket.usedPercent);
-        const reset = bucket.resetAt
-          ? ` (${formatTimeRemaining(bucket.resetAt, t)})`
-          : '';
-        lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
-      } else {
-        lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize('--', COLORS.gray)}`);
+        if (bucket.usedPercent !== null) {
+          const color = getColorForPercent(bucket.usedPercent);
+          const reset = bucket.resetAt
+            ? ` (${formatTimeRemaining(bucket.resetAt, t)})`
+            : '';
+          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
+        } else {
+          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize('--', COLORS.gray)}`);
+        }
       }
-    }
-  } else {
-    // Fallback to single usage display
-    if (geminiData.usedPercent !== null) {
+    } else if (geminiData.usedPercent !== null) {
       const color = getColorForPercent(geminiData.usedPercent);
       const reset = geminiData.resetAt
         ? ` (${formatTimeRemaining(geminiData.resetAt, t)})`
@@ -222,63 +196,7 @@ function renderGeminiSection(
       const modelInfo = geminiData.model ? `${geminiData.model}: ` : '';
       lines.push(`  ${modelInfo}${colorize(`${geminiData.usedPercent}%`, color)}${reset}`);
     }
-  }
-
-  return lines;
-}
-
-/**
- * Render z.ai-specific section
- */
-function renderZaiSection(
-  usage: CLIUsageInfo,
-  zaiData: ZaiUsageLimits | null,
-  t: Translations
-): string[] {
-  const lines: string[] = [];
-  const label = colorize('[z.ai]', COLORS.pastelCyan);
-
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
-  }
-
-  if (usage.error || !zaiData) {
-    lines.push(`${label} ${colorize(`⚠️ ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
-
-  const parts: string[] = [];
-
-  // Token usage (5h equivalent)
-  if (zaiData.tokensPercent !== null) {
-    const color = getColorForPercent(zaiData.tokensPercent);
-    const reset = zaiData.tokensResetAt
-      ? ` (${formatTimeRemaining(new Date(zaiData.tokensResetAt), t)})`
-      : '';
-    parts.push(`Tokens: ${colorize(`${zaiData.tokensPercent}%`, color)}${reset}`);
-  }
-
-  // MCP usage (monthly)
-  if (zaiData.mcpPercent !== null) {
-    const color = getColorForPercent(zaiData.mcpPercent);
-    const reset = zaiData.mcpResetAt
-      ? ` (${formatTimeRemaining(new Date(zaiData.mcpResetAt), t)})`
-      : '';
-    parts.push(`MCP: ${colorize(`${zaiData.mcpPercent}%`, color)}${reset}`);
-  }
-
-  // Model info
-  if (zaiData.model) {
-    parts.push(`Model: ${colorize(zaiData.model, COLORS.pastelGray)}`);
-  }
-
-  lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join('  |  ')}`);
-  }
-
-  return lines;
+  });
 }
 
 /**
@@ -447,9 +365,6 @@ export function parseZaiUsage(limits: ZaiUsageLimits | null, installed: boolean)
 }
 
 /**
- * Main function
- */
-/**
  * Parse --lang argument from command line
  */
 function parseLangArg(args: string[]): 'en' | 'ko' | null {
@@ -529,7 +444,9 @@ async function main(): Promise<void> {
   outputLines.push('');
 
   // Claude section (always available)
-  const claudeLines = renderClaudeSection('Claude', claudeUsage, t);
+  const claudeLines = renderGenericSection('Claude', claudeUsage, t, (parts) => {
+    if (claudeUsage.plan) parts.push(`Plan: ${colorize(claudeUsage.plan, COLORS.pastelGray)}`);
+  });
   if (claudeLines.length > 0) {
     outputLines.push(...claudeLines);
     outputLines.push('');
@@ -555,7 +472,9 @@ async function main(): Promise<void> {
 
   // z.ai section
   if (zaiInstalled) {
-    const zaiLines = renderZaiSection(zaiUsage, zaiLimits, t);
+    const zaiLines = renderGenericSection('z.ai', zaiUsage, t, (parts) => {
+      if (zaiUsage.model) parts.push(`Model: ${colorize(zaiUsage.model, COLORS.pastelGray)}`);
+    });
     if (zaiLines.length > 0) {
       outputLines.push(...zaiLines);
       outputLines.push('');

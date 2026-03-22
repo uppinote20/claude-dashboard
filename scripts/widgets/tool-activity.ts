@@ -1,13 +1,14 @@
 /**
  * Tool activity widget - displays running and completed tools
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';
 import type { WidgetContext, ToolActivityData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import {
-  parseTranscript,
+  getTranscript,
   getRunningTools,
   getCompletedToolCount,
 } from '../utils/transcript-parser.js';
@@ -17,15 +18,8 @@ export const toolActivityWidget: Widget<ToolActivityData> = {
   name: 'Tool Activity',
 
   async getData(ctx: WidgetContext): Promise<ToolActivityData | null> {
-    const transcriptPath = ctx.stdin.transcript_path;
-    if (!transcriptPath) {
-      return null;
-    }
-
-    const transcript = await parseTranscript(transcriptPath);
-    if (!transcript) {
-      return null;
-    }
+    const transcript = await getTranscript(ctx);
+    if (!transcript) return null;
 
     const running = getRunningTools(transcript);
     const completed = getCompletedToolCount(transcript);

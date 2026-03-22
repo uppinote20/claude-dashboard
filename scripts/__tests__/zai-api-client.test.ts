@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/utils/zai-api-client.ts
  */
 import { describe, it, expect } from 'vitest';
 import { clampPercent, calculateUsagePercent, parseUsagePercent } from '../utils/zai-api-client.js';

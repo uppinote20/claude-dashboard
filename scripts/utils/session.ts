@@ -1,6 +1,7 @@
 /**
  * Session utilities - shared session time management
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import { readFile, mkdir, open, readdir, unlink, stat } from 'fs/promises';

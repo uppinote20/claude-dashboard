@@ -1,6 +1,7 @@
 /**
  * Session ID widgets - display session identifier (short or full)
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/session-id.test.ts
  */
 
 import type { Widget } from './base.js';

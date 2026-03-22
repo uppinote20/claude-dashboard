@@ -2,7 +2,7 @@
 
 // scripts/utils/api-client.ts
 import { readFile as readFile2, writeFile, mkdir, readdir, stat as stat2, unlink } from "fs/promises";
-import { execFile } from "child_process";
+import { execFile as execFile2 } from "child_process";
 import os from "os";
 import path from "path";
 
@@ -10,7 +10,7 @@ import path from "path";
 var NEGATIVE_CACHE_SECONDS = 30;
 
 // scripts/utils/credentials.ts
-import { execFileSync } from "child_process";
+import { execFile } from "child_process";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
@@ -28,6 +28,21 @@ async function getCredentials() {
     return null;
   }
 }
+function execKeychainAsync() {
+  return new Promise((resolve, reject) => {
+    execFile(
+      "security",
+      ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
+      { encoding: "utf-8", timeout: 3e3 },
+      (error, stdout) => {
+        if (error)
+          reject(error);
+        else
+          resolve(stdout.trim());
+      }
+    );
+  });
+}
 async function getCredentialsFromKeychain() {
   if (keychainBackoffAt !== null && Date.now() - keychainBackoffAt < KEYCHAIN_BACKOFF_MS) {
     return await getCredentialsFromFile();
@@ -36,11 +51,7 @@ async function getCredentialsFromKeychain() {
     return credentialsCache.token;
   }
   try {
-    const result = execFileSync(
-      "security",
-      ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
-      { encoding: "utf-8", stdio: ["pipe", "pipe", "pipe"] }
-    ).trim();
+    const result = await execKeychainAsync();
     const creds = JSON.parse(result);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
     credentialsCache = { token, timestamp: Date.now() };
@@ -105,9 +116,13 @@ var usageCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests = /* @__PURE__ */ new Map();
 var lastTokenHash = null;
 var lastCleanupTime = 0;
+var dirEnsured = false;
 async function ensureCacheDir() {
+  if (dirEnsured)
+    return;
   try {
     await mkdir(CACHE_DIR, { recursive: true, mode: 448 });
+    dirEnsured = true;
   } catch {
   }
 }
@@ -200,7 +215,7 @@ async function makeRequest(token) {
 }
 async function makeRequestViaCurl(token) {
   return new Promise((resolve) => {
-    const child = execFile(
+    const child = execFile2(
       "curl",
       [
         "-s",
@@ -275,12 +290,23 @@ async function fetchFromApi(token, tokenHash) {
     return null;
   }
 }
+function validateLimitWindow(raw) {
+  if (!raw || typeof raw !== "object")
+    return null;
+  const w = raw;
+  if (typeof w.utilization !== "number")
+    return null;
+  return {
+    utilization: w.utilization,
+    resets_at: typeof w.resets_at === "string" ? w.resets_at : null
+  };
+}
 async function parseAndCacheLimits(data, tokenHash) {
-  const d = data;
+  const d = data && typeof data === "object" ? data : {};
   const limits = {
-    five_hour: d.five_hour ?? null,
-    seven_day: d.seven_day ?? null,
-    seven_day_sonnet: d.seven_day_sonnet ?? null
+    five_hour: validateLimitWindow(d.five_hour),
+    seven_day: validateLimitWindow(d.seven_day),
+    seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet)
   };
   usageCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
   await saveFileCache(tokenHash, limits);
@@ -349,7 +375,7 @@ async function cleanupExpiredCache() {
 
 // scripts/utils/codex-client.ts
 import { readFile as readFile3, stat as stat3, writeFile as writeFile2, mkdir as mkdir2 } from "fs/promises";
-import { execFileSync as execFileSync2 } from "child_process";
+import { execFile as execFile3 } from "child_process";
 import os2 from "os";
 import path2 from "path";
 var API_TIMEOUT_MS2 = 5e3;
@@ -432,24 +458,39 @@ async function saveModelCache(model, configMtime) {
     debugLog("codex", "saveModelCache: error", err);
   }
 }
-function detectModelFromCodexExec() {
+var modelDetectionFailedAt = null;
+var MODEL_DETECTION_BACKOFF_MS = 3e5;
+async function detectModelFromCodexExec() {
+  if (modelDetectionFailedAt !== null && Date.now() - modelDetectionFailedAt < MODEL_DETECTION_BACKOFF_MS) {
+    debugLog("codex", "detectModelFromCodexExec: skipping (backoff)");
+    return null;
+  }
   try {
     debugLog("codex", "detectModelFromCodexExec: running codex exec...");
-    const output = execFileSync2("codex", ["exec", "1+1="], {
-      encoding: "utf-8",
-      timeout: 1e4,
-      stdio: ["pipe", "pipe", "pipe"]
+    const output = await new Promise((resolve, reject) => {
+      execFile3("codex", ["exec", "1+1="], {
+        encoding: "utf-8",
+        timeout: 1e4
+      }, (error, stdout) => {
+        if (error)
+          reject(error);
+        else
+          resolve(stdout);
+      });
     });
     const match = output.match(/^model:\s*(.+)$/m);
     if (match) {
       const model = match[1].trim();
       debugLog("codex", "detectModelFromCodexExec: detected", model);
+      modelDetectionFailedAt = null;
       return model;
     }
     debugLog("codex", "detectModelFromCodexExec: no model line found");
+    modelDetectionFailedAt = Date.now();
     return null;
   } catch (err) {
     debugLog("codex", "detectModelFromCodexExec: error", err);
+    modelDetectionFailedAt = Date.now();
     return null;
   }
 }
@@ -464,7 +505,7 @@ async function getCodexModel() {
   if (cachedModel) {
     return cachedModel;
   }
-  const detectedModel = detectModelFromCodexExec();
+  const detectedModel = await detectModelFromCodexExec();
   if (detectedModel) {
     await saveModelCache(detectedModel, configMtime);
     return detectedModel;
@@ -493,7 +534,7 @@ async function fetchCodexUsage(ttlSeconds = 60) {
   if (pending) {
     return pending;
   }
-  const requestPromise = fetchFromCodexApi(auth);
+  const requestPromise = fetchFromCodexApi(auth, tokenHash);
   pendingRequests2.set(tokenHash, requestPromise);
   try {
     const result = await requestPromise;
@@ -514,7 +555,7 @@ async function fetchCodexUsage(ttlSeconds = 60) {
     pendingRequests2.delete(tokenHash);
   }
 }
-async function fetchFromCodexApi(auth) {
+async function fetchFromCodexApi(auth, tokenHash) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), API_TIMEOUT_MS2);
   try {
@@ -540,22 +581,20 @@ async function fetchFromCodexApi(auth) {
       debugLog("codex", "fetchFromCodexApi: invalid response structure");
       return null;
     }
-    const typedData = data;
-    debugLog("codex", "fetchFromCodexApi: got data", typedData.plan_type);
+    debugLog("codex", "fetchFromCodexApi: got data", data.plan_type);
     const model = await getCodexModel();
     const limits = {
       model: model ?? "unknown",
-      planType: typedData.plan_type,
-      primary: typedData.rate_limit.primary_window ? {
-        usedPercent: typedData.rate_limit.primary_window.used_percent,
-        resetAt: typedData.rate_limit.primary_window.reset_at
+      planType: data.plan_type,
+      primary: data.rate_limit.primary_window ? {
+        usedPercent: data.rate_limit.primary_window.used_percent,
+        resetAt: data.rate_limit.primary_window.reset_at
       } : null,
-      secondary: typedData.rate_limit.secondary_window ? {
-        usedPercent: typedData.rate_limit.secondary_window.used_percent,
-        resetAt: typedData.rate_limit.secondary_window.reset_at
+      secondary: data.rate_limit.secondary_window ? {
+        usedPercent: data.rate_limit.secondary_window.used_percent,
+        resetAt: data.rate_limit.secondary_window.reset_at
       } : null
     };
-    const tokenHash = hashToken(auth.accessToken);
     codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
     debugLog("codex", "fetchFromCodexApi: success", limits);
     return limits;
@@ -569,7 +608,7 @@ async function fetchFromCodexApi(auth) {
 
 // scripts/utils/gemini-client.ts
 import { readFile as readFile4, writeFile as writeFile3, stat as stat4 } from "fs/promises";
-import { execFileSync as execFileSync3 } from "child_process";
+import { execFile as execFile4 } from "child_process";
 import os3 from "os";
 import path3 from "path";
 var API_TIMEOUT_MS3 = 5e3;
@@ -588,6 +627,8 @@ var geminiCacheMap = /* @__PURE__ */ new Map();
 var pendingRequests3 = /* @__PURE__ */ new Map();
 var pendingRefreshRequests = /* @__PURE__ */ new Map();
 var cachedCredentials = null;
+var keychainCache = null;
+var KEYCHAIN_CACHE_TTL_MS2 = 1e4;
 var cachedSettings = null;
 function getGeminiDir() {
   return path3.join(os3.homedir(), GEMINI_DIR);
@@ -609,25 +650,41 @@ async function getTokenFromKeychain() {
   if (os3.platform() !== "darwin") {
     return null;
   }
+  if (keychainCache && Date.now() - keychainCache.timestamp < KEYCHAIN_CACHE_TTL_MS2) {
+    return keychainCache.data;
+  }
   try {
-    const result = execFileSync3(
-      "security",
-      ["find-generic-password", "-s", KEYCHAIN_SERVICE_NAME, "-a", MAIN_ACCOUNT_KEY, "-w"],
-      { encoding: "utf-8", timeout: 3e3, stdio: ["pipe", "pipe", "pipe"] }
-    ).trim();
+    const result = await new Promise((resolve, reject) => {
+      execFile4(
+        "security",
+        ["find-generic-password", "-s", KEYCHAIN_SERVICE_NAME, "-a", MAIN_ACCOUNT_KEY, "-w"],
+        { encoding: "utf-8", timeout: 3e3 },
+        (error, stdout) => {
+          if (error)
+            reject(error);
+          else
+            resolve(stdout.trim());
+        }
+      );
+    });
     if (!result) {
+      keychainCache = { data: null, timestamp: Date.now() };
       return null;
     }
     const stored = JSON.parse(result);
     if (!stored.token?.accessToken) {
+      keychainCache = { data: null, timestamp: Date.now() };
       return null;
     }
-    return {
+    const data = {
       accessToken: stored.token.accessToken,
       refreshToken: stored.token.refreshToken,
       expiryDate: stored.token.expiresAt
     };
+    keychainCache = { data, timestamp: Date.now() };
+    return data;
   } catch {
+    keychainCache = { data: null, timestamp: Date.now() };
     return null;
   }
 }
@@ -986,11 +1043,32 @@ function getZaiApiBaseUrl() {
   }
 }
 
-// scripts/utils/zai-api-client.ts
-var API_TIMEOUT_MS4 = 5e3;
+// scripts/utils/formatters.ts
+function formatTimeRemaining(resetAt, t) {
+  const reset = typeof resetAt === "string" ? new Date(resetAt) : resetAt;
+  const now = /* @__PURE__ */ new Date();
+  const diffMs = reset.getTime() - now.getTime();
+  if (diffMs <= 0)
+    return `0${t.time.minutes}`;
+  const totalMinutes = Math.floor(diffMs / (1e3 * 60));
+  const totalHours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = totalMinutes % 60;
+  if (days > 0) {
+    return `${days}${t.time.days}${hours}${t.time.hours}`;
+  }
+  if (hours > 0) {
+    return `${hours}${t.time.hours}${minutes}${t.time.minutes}`;
+  }
+  return `${minutes}${t.time.minutes}`;
+}
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
+
+// scripts/utils/zai-api-client.ts
+var API_TIMEOUT_MS4 = 5e3;
 function calculateUsagePercent(currentValue, remaining) {
   const total = currentValue + remaining;
   if (total <= 0) {
@@ -1138,27 +1216,6 @@ async function fetchFromZaiApi(baseUrl, authToken) {
     debugLog("zai", "fetchFromZaiApi: error", err);
     return null;
   }
-}
-
-// scripts/utils/formatters.ts
-function formatTimeRemaining(resetAt, t) {
-  const reset = typeof resetAt === "string" ? new Date(resetAt) : resetAt;
-  const now = /* @__PURE__ */ new Date();
-  const diffMs = reset.getTime() - now.getTime();
-  if (diffMs <= 0)
-    return `0${t.time.minutes}`;
-  const totalMinutes = Math.floor(diffMs / (1e3 * 60));
-  const totalHours = Math.floor(totalMinutes / 60);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  const minutes = totalMinutes % 60;
-  if (days > 0) {
-    return `${days}${t.time.days}${hours}${t.time.hours}`;
-  }
-  if (hours > 0) {
-    return `${hours}${t.time.hours}${minutes}${t.time.minutes}`;
-  }
-  return `${minutes}${t.time.minutes}`;
 }
 
 // scripts/utils/colors.ts
@@ -1621,138 +1678,91 @@ function renderTitle(title) {
   const padding = Math.max(0, Math.floor((BOX_WIDTH - title.length) / 2));
   return " ".repeat(padding) + colorize(title, COLORS.bold);
 }
-function renderClaudeSection(name, usage, t) {
+function renderSection(name, usage, t, contentFn, hasData = true) {
   const lines = [];
   const label = colorize(`[${name}]`, COLORS.pastelCyan);
   if (!usage.available) {
     lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
     return lines;
   }
-  if (usage.error) {
+  if (usage.error || !hasData) {
     lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
     return lines;
   }
-  const parts = [];
-  if (usage.fiveHourPercent !== null) {
-    const color5h = getColorForPercent(usage.fiveHourPercent);
-    const reset5h = usage.fiveHourReset ? ` (${formatTimeRemaining(usage.fiveHourReset, t)})` : "";
-    parts.push(`${t.labels["5h"]}: ${colorize(`${usage.fiveHourPercent}%`, color5h)}${reset5h}`);
-  }
-  if (usage.sevenDayPercent !== null) {
-    const color7d = getColorForPercent(usage.sevenDayPercent);
-    const reset7d = usage.sevenDayReset ? ` (${formatTimeRemaining(usage.sevenDayReset, t)})` : "";
-    parts.push(`${t.labels["7d"]}: ${colorize(`${usage.sevenDayPercent}%`, color7d)}${reset7d}`);
-  }
-  if (usage.plan) {
-    parts.push(`Plan: ${colorize(usage.plan, COLORS.pastelGray)}`);
-  }
-  if (usage.model && name === "Gemini") {
-    parts.push(`Model: ${colorize(usage.model, COLORS.pastelGray)}`);
-  }
   lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join("  |  ")}`);
-  }
+  contentFn(lines);
   return lines;
+}
+function formatUsageRow(label, percent, resetStr) {
+  const color = getColorForPercent(percent);
+  return `${label}: ${colorize(`${percent}%`, color)}${resetStr ? ` (${resetStr})` : ""}`;
+}
+function renderGenericSection(name, usage, t, extraParts) {
+  return renderSection(name, usage, t, (lines) => {
+    const parts = [];
+    if (usage.fiveHourPercent !== null) {
+      const reset = usage.fiveHourReset ? formatTimeRemaining(usage.fiveHourReset, t) : "";
+      parts.push(formatUsageRow(t.labels["5h"], usage.fiveHourPercent, reset));
+    }
+    if (usage.sevenDayPercent !== null) {
+      const reset = usage.sevenDayReset ? formatTimeRemaining(usage.sevenDayReset, t) : "";
+      parts.push(formatUsageRow(t.labels["7d"], usage.sevenDayPercent, reset));
+    }
+    extraParts?.(parts);
+    if (parts.length > 0) {
+      lines.push(`  ${parts.join("  |  ")}`);
+    }
+  });
 }
 function renderCodexSection(usage, codexData, t) {
-  const lines = [];
-  const label = colorize("[Codex]", COLORS.pastelCyan);
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
+  if (!codexData) {
+    return renderSection("Codex", usage, t, () => {
+    }, false);
   }
-  if (usage.error || !codexData) {
-    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
-  const parts = [];
-  if (codexData.primary) {
-    const percent = Math.round(codexData.primary.usedPercent);
-    const color5h = getColorForPercent(percent);
-    const reset5h = formatTimeFromTimestamp(codexData.primary.resetAt, t);
-    parts.push(`${t.labels["5h"]}: ${colorize(`${percent}%`, color5h)} (${reset5h})`);
-  }
-  if (codexData.secondary) {
-    const percent = Math.round(codexData.secondary.usedPercent);
-    const color7d = getColorForPercent(percent);
-    const reset7d = formatTimeFromTimestamp(codexData.secondary.resetAt, t);
-    parts.push(`${t.labels["7d"]}: ${colorize(`${percent}%`, color7d)} (${reset7d})`);
-  }
-  if (codexData.planType) {
-    parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
-  }
-  lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join("  |  ")}`);
-  }
-  return lines;
+  return renderSection("Codex", usage, t, (lines) => {
+    const parts = [];
+    if (codexData.primary) {
+      const percent = Math.round(codexData.primary.usedPercent);
+      parts.push(formatUsageRow(t.labels["5h"], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+    }
+    if (codexData.secondary) {
+      const percent = Math.round(codexData.secondary.usedPercent);
+      parts.push(formatUsageRow(t.labels["7d"], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+    }
+    if (codexData.planType) {
+      parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
+    }
+    if (parts.length > 0) {
+      lines.push(`  ${parts.join("  |  ")}`);
+    }
+  });
 }
 function renderGeminiSection(usage, geminiData, t) {
-  const lines = [];
-  const label = colorize("[Gemini]", COLORS.pastelCyan);
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
+  if (!geminiData) {
+    return renderSection("Gemini", usage, t, () => {
+    }, false);
   }
-  if (usage.error || !geminiData) {
-    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
-  lines.push(`${label}`);
-  if (geminiData.buckets && geminiData.buckets.length > 0) {
-    const maxModelLen = Math.max(...geminiData.buckets.map((b) => (b.modelId || "unknown").length));
-    for (const bucket of geminiData.buckets) {
-      const modelName = bucket.modelId || "unknown";
-      const paddedModel = modelName.padEnd(maxModelLen);
-      if (bucket.usedPercent !== null) {
-        const color = getColorForPercent(bucket.usedPercent);
-        const reset = bucket.resetAt ? ` (${formatTimeRemaining(bucket.resetAt, t)})` : "";
-        lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
-      } else {
-        lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize("--", COLORS.gray)}`);
+  return renderSection("Gemini", usage, t, (lines) => {
+    if (geminiData.buckets && geminiData.buckets.length > 0) {
+      const maxModelLen = Math.max(...geminiData.buckets.map((b) => (b.modelId || "unknown").length));
+      for (const bucket of geminiData.buckets) {
+        const modelName = bucket.modelId || "unknown";
+        const paddedModel = modelName.padEnd(maxModelLen);
+        if (bucket.usedPercent !== null) {
+          const color = getColorForPercent(bucket.usedPercent);
+          const reset = bucket.resetAt ? ` (${formatTimeRemaining(bucket.resetAt, t)})` : "";
+          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
+        } else {
+          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize("--", COLORS.gray)}`);
+        }
       }
-    }
-  } else {
-    if (geminiData.usedPercent !== null) {
+    } else if (geminiData.usedPercent !== null) {
       const color = getColorForPercent(geminiData.usedPercent);
       const reset = geminiData.resetAt ? ` (${formatTimeRemaining(geminiData.resetAt, t)})` : "";
       const modelInfo = geminiData.model ? `${geminiData.model}: ` : "";
       lines.push(`  ${modelInfo}${colorize(`${geminiData.usedPercent}%`, color)}${reset}`);
     }
-  }
-  return lines;
-}
-function renderZaiSection(usage, zaiData, t) {
-  const lines = [];
-  const label = colorize("[z.ai]", COLORS.pastelCyan);
-  if (!usage.available) {
-    lines.push(`${label} ${colorize(`(${t.checkUsage.notInstalled})`, COLORS.gray)}`);
-    return lines;
-  }
-  if (usage.error || !zaiData) {
-    lines.push(`${label} ${colorize(`\u26A0\uFE0F ${t.checkUsage.errorFetching}`, COLORS.pastelYellow)}`);
-    return lines;
-  }
-  const parts = [];
-  if (zaiData.tokensPercent !== null) {
-    const color = getColorForPercent(zaiData.tokensPercent);
-    const reset = zaiData.tokensResetAt ? ` (${formatTimeRemaining(new Date(zaiData.tokensResetAt), t)})` : "";
-    parts.push(`Tokens: ${colorize(`${zaiData.tokensPercent}%`, color)}${reset}`);
-  }
-  if (zaiData.mcpPercent !== null) {
-    const color = getColorForPercent(zaiData.mcpPercent);
-    const reset = zaiData.mcpResetAt ? ` (${formatTimeRemaining(new Date(zaiData.mcpResetAt), t)})` : "";
-    parts.push(`MCP: ${colorize(`${zaiData.mcpPercent}%`, color)}${reset}`);
-  }
-  if (zaiData.model) {
-    parts.push(`Model: ${colorize(zaiData.model, COLORS.pastelGray)}`);
-  }
-  lines.push(`${label}`);
-  if (parts.length > 0) {
-    lines.push(`  ${parts.join("  |  ")}`);
-  }
-  return lines;
+  });
 }
 function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, t) {
   const candidates = [];
@@ -1928,7 +1938,10 @@ async function main() {
   outputLines.push(renderTitle(t.checkUsage.title));
   outputLines.push(colorize(renderLine(), COLORS.gray));
   outputLines.push("");
-  const claudeLines = renderClaudeSection("Claude", claudeUsage, t);
+  const claudeLines = renderGenericSection("Claude", claudeUsage, t, (parts) => {
+    if (claudeUsage.plan)
+      parts.push(`Plan: ${colorize(claudeUsage.plan, COLORS.pastelGray)}`);
+  });
   if (claudeLines.length > 0) {
     outputLines.push(...claudeLines);
     outputLines.push("");
@@ -1948,7 +1961,10 @@ async function main() {
     }
   }
   if (zaiInstalled) {
-    const zaiLines = renderZaiSection(zaiUsage, zaiLimits, t);
+    const zaiLines = renderGenericSection("z.ai", zaiUsage, t, (parts) => {
+      if (zaiUsage.model)
+        parts.push(`Model: ${colorize(zaiUsage.model, COLORS.pastelGray)}`);
+    });
     if (zaiLines.length > 0) {
       outputLines.push(...zaiLines);
       outputLines.push("");

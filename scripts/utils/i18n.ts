@@ -1,6 +1,7 @@
 /**
  * Internationalization - language detection and translation loading
  * @handbook 5.4-i18n-structure
+ * @tested scripts/__tests__/i18n.test.ts
  */
 import type { Translations, Config } from '../types.js';
 

@@ -1,6 +1,7 @@
 /**
  * Token breakdown widget - displays input/cache_write/cache_read token breakdown
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';

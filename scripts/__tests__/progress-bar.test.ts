@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/utils/progress-bar.ts
  */
 import { describe, it, expect } from 'vitest';
 import {

@@ -5,6 +5,7 @@
  * allowing zaiUsage widget to display instead.
  * @handbook 3.3-widget-data-sources
  * @handbook 7.2-provider-detection
+ * @tested scripts/__tests__/rate-limit.test.ts
  */
 
 import type { Widget } from './base.js';

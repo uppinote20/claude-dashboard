@@ -1,6 +1,9 @@
 /**
- * Lines Changed widget - displays uncommitted lines added/removed via git diff
+ * Lines Changed widget - displays lines added/removed
+ * Prefers stdin data (total_lines_added/removed) when available,
+ * falls back to git diff --shortstat.
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';
@@ -25,6 +28,17 @@ export const linesChangedWidget: Widget<LinesChangedData> = {
   name: 'Lines Changed',
 
   async getData(ctx: WidgetContext): Promise<LinesChangedData | null> {
+    // Prefer stdin data when available (avoids git subprocess)
+    const stdinAdded = ctx.stdin.cost?.total_lines_added;
+    const stdinRemoved = ctx.stdin.cost?.total_lines_removed;
+
+    if (stdinAdded !== undefined || stdinRemoved !== undefined) {
+      const added = stdinAdded ?? 0;
+      const removed = stdinRemoved ?? 0;
+      return (added === 0 && removed === 0) ? null : { added, removed };
+    }
+
+    // Fallback to git diff
     const cwd = ctx.stdin.workspace?.current_dir;
     if (!cwd) return null;
 

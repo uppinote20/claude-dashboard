@@ -2,6 +2,7 @@
  * Last Prompt widget - displays the most recent user prompt in the session
  * Data source: ~/.claude/history.jsonl (contains only actual user input)
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';

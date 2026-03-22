@@ -1,6 +1,7 @@
 /**
  * Project info widget - displays directory name, git branch, and ahead/behind status
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import { basename, relative } from 'path';
@@ -9,6 +10,18 @@ import type { WidgetContext, ProjectInfoData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import { osc8Link } from '../utils/formatters.js';
 import { execGit } from '../utils/git.js';
+
+/**
+ * TTL-based cache for git data (5 seconds).
+ * Branch/remote rarely change; dirty status is the most volatile.
+ */
+const GIT_CACHE_TTL_MS = 5_000;
+
+let gitCache: {
+  cwd: string;
+  data: { branch?: string; dirty: boolean; ab: { ahead: number; behind: number } | null; remoteUrl?: string };
+  timestamp: number;
+} | null = null;
 
 /**
  * Get current git branch with timeout
@@ -84,6 +97,26 @@ function normalizeGitUrl(url: string): string | null {
   return null;
 }
 
+/**
+ * Get all git data with TTL cache to avoid spawning 4 subprocesses per render.
+ */
+async function getGitData(cwd: string) {
+  if (gitCache && gitCache.cwd === cwd && Date.now() - gitCache.timestamp < GIT_CACHE_TTL_MS) {
+    return gitCache.data;
+  }
+
+  const [branch, dirty, ab, remoteUrl] = await Promise.all([
+    getGitBranch(cwd),
+    isGitDirty(cwd),
+    getAheadBehind(cwd),
+    getGitRemoteUrl(cwd),
+  ]);
+
+  const data = { branch, dirty, ab, remoteUrl };
+  gitCache = { cwd, data, timestamp: Date.now() };
+  return data;
+}
+
 export const projectInfoWidget: Widget<ProjectInfoData> = {
   id: 'projectInfo',
   name: 'Project Info',
@@ -107,13 +140,7 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
     // Worktree name (only present in --worktree sessions)
     const worktreeName = ctx.stdin.worktree?.name || undefined;
 
-    // Run all git calls in parallel to reduce latency
-    const [branch, dirty, ab, remoteUrl] = await Promise.all([
-      getGitBranch(currentDir),
-      isGitDirty(currentDir),
-      getAheadBehind(currentDir),
-      getGitRemoteUrl(currentDir),
-    ]);
+    const { branch, dirty, ab, remoteUrl } = await getGitData(currentDir);
 
     let gitBranch: string | undefined;
     let ahead: number | undefined;

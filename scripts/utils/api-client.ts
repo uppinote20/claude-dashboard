@@ -4,6 +4,7 @@
  * @handbook 4.2-request-deduplication
  * @handbook 4.3-429-retry
  * @handbook 7.1-common-api-pattern
+ * @tested scripts/__tests__/api-client.test.ts
  */
 import { readFile, writeFile, mkdir, readdir, stat, unlink } from 'fs/promises';
 import { execFile } from 'child_process';
@@ -44,12 +45,17 @@ let lastTokenHash: string | null = null;
  */
 let lastCleanupTime = 0;
 
+/** Track whether CACHE_DIR has been created */
+let dirEnsured = false;
+
 /**
  * Ensure cache directory exists with secure permissions
  */
 async function ensureCacheDir(): Promise<void> {
+  if (dirEnsured) return;
   try {
     await mkdir(CACHE_DIR, { recursive: true, mode: 0o700 });
+    dirEnsured = true;
   } catch {
     // Directory may already exist or creation failed
   }
@@ -276,14 +282,30 @@ async function fetchFromApi(token: string, tokenHash: string): Promise<UsageLimi
 }
 
 /**
+ * Validate a single rate limit window from API response.
+ * Returns a valid window object or null.
+ */
+function validateLimitWindow(
+  raw: unknown
+): { utilization: number; resets_at: string | null } | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const w = raw as Record<string, unknown>;
+  if (typeof w.utilization !== 'number') return null;
+  return {
+    utilization: w.utilization,
+    resets_at: typeof w.resets_at === 'string' ? w.resets_at : null,
+  };
+}
+
+/**
  * Parse API response and update caches
  */
 async function parseAndCacheLimits(data: unknown, tokenHash: string): Promise<UsageLimits> {
-  const d = data as Record<string, unknown>;
+  const d = (data && typeof data === 'object' ? data : {}) as Record<string, unknown>;
   const limits: UsageLimits = {
-    five_hour: (d.five_hour as UsageLimits['five_hour']) ?? null,
-    seven_day: (d.seven_day as UsageLimits['seven_day']) ?? null,
-    seven_day_sonnet: (d.seven_day_sonnet as UsageLimits['seven_day_sonnet']) ?? null,
+    five_hour: validateLimitWindow(d.five_hour),
+    seven_day: validateLimitWindow(d.seven_day),
+    seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet),
   };
 
   usageCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });

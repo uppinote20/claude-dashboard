@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @covers scripts/utils/i18n.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {

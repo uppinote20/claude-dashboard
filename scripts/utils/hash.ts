@@ -1,5 +1,6 @@
 /**
  * @handbook 4.1-three-tier-cache
+ * @tested scripts/__tests__/hash.test.ts
  */
 import { createHash } from 'crypto';
 

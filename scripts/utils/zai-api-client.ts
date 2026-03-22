@@ -3,21 +3,19 @@
  * Fetches usage quota from z.ai or ZHIPU API
  * @handbook 7.1-common-api-pattern
  * @handbook 4.2-request-deduplication
+ * @tested scripts/__tests__/zai-api-client.test.ts
  */
 
 import { NEGATIVE_CACHE_SECONDS, type CacheEntry } from '../types.js';
 import { isZaiProvider, getZaiApiBaseUrl } from './provider.js';
 import { debugLog } from './debug.js';
 import { hashToken } from './hash.js';
+import { clampPercent } from './formatters.js';
+
+// Re-export for backward compatibility (used by tests)
+export { clampPercent };
 
 const API_TIMEOUT_MS = 5000;
-
-/**
- * Clamp percentage to safe 0-100 range
- */
-export function clampPercent(value: number): number {
-  return Math.min(100, Math.max(0, Math.round(value)));
-}
 
 /**
  * Calculate usage percentage from current value and remaining
