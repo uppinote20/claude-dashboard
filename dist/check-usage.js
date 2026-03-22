@@ -1762,7 +1762,7 @@ function renderGeminiSection(usage, geminiData, t) {
       const modelInfo = geminiData.model ? `${geminiData.model}: ` : "";
       lines.push(`  ${modelInfo}${colorize(`${geminiData.usedPercent}%`, color)}${reset}`);
     }
-  }, !!geminiData);
+  });
 }
 function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, t) {
   const candidates = [];

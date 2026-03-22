@@ -196,7 +196,7 @@ function renderGeminiSection(
       const modelInfo = geminiData.model ? `${geminiData.model}: ` : '';
       lines.push(`  ${modelInfo}${colorize(`${geminiData.usedPercent}%`, color)}${reset}`);
     }
-  }, !!geminiData);
+  });
 }
 
 /**
