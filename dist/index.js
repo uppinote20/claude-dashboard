@@ -53,7 +53,9 @@ var PRESET_CHAR_MAP = {
   Q: "tokenSpeed",
   J: "sessionName",
   "@": "todayCost",
-  "?": "lastPrompt"
+  "?": "lastPrompt",
+  m: "vimMode",
+  a: "apiDuration"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -1444,7 +1446,8 @@ var configCountsWidget = {
       countMcps(currentDir),
       countFiles(join3(claudeDir, "hooks"))
     ]);
-    const data = claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 ? null : { claudeMd, agentsMd, rules, mcps, hooks };
+    const addedDirs = ctx.stdin.workspace?.added_dirs?.length ?? 0;
+    const data = claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 && addedDirs === 0 ? null : { claudeMd, agentsMd, rules, mcps, hooks, addedDirs };
     configCountsCache = { projectDir: currentDir, data, timestamp: Date.now() };
     return data;
   },
@@ -1465,6 +1468,9 @@ var configCountsWidget = {
     }
     if (data.hooks > 0) {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
+    }
+    if (data.addedDirs > 0) {
+      parts.push(`+Dirs: ${data.addedDirs}`);
     }
     return colorize(parts.join(", "), getTheme().secondary);
   }
@@ -3491,6 +3497,42 @@ var lastPromptWidget = {
   }
 };
 
+// scripts/widgets/vim-mode.ts
+var vimModeWidget = {
+  id: "vimMode",
+  name: "Vim Mode",
+  async getData(ctx) {
+    const mode = ctx.stdin.vim?.mode;
+    if (!mode)
+      return null;
+    return { mode };
+  },
+  render(data, _ctx) {
+    const theme = getTheme();
+    const color = data.mode === "INSERT" ? theme.safe : theme.dim;
+    return colorize(data.mode, color);
+  }
+};
+
+// scripts/widgets/api-duration.ts
+var apiDurationWidget = {
+  id: "apiDuration",
+  name: "API Duration",
+  async getData(ctx) {
+    const totalMs = ctx.stdin.cost?.total_duration_ms;
+    const apiMs = ctx.stdin.cost?.total_api_duration_ms;
+    if (!totalMs || !apiMs || totalMs <= 0)
+      return null;
+    const percentage = Math.round(apiMs / totalMs * 100);
+    return { percentage: Math.min(percentage, 100) };
+  },
+  render(data, _ctx) {
+    const theme = getTheme();
+    const color = data.percentage > 70 ? theme.warning : theme.dim;
+    return colorize(`API ${data.percentage}%`, color);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3524,7 +3566,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["tokenSpeed", tokenSpeedWidget],
   ["sessionName", sessionNameWidget],
   ["todayCost", todayCostWidget],
-  ["lastPrompt", lastPromptWidget]
+  ["lastPrompt", lastPromptWidget],
+  ["vimMode", vimModeWidget],
+  ["apiDuration", apiDurationWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

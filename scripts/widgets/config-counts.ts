@@ -130,12 +130,13 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
       countMcps(currentDir),
       countFiles(join(claudeDir, 'hooks')),
     ]);
+    const addedDirs = ctx.stdin.workspace?.added_dirs?.length ?? 0;
 
     // Only show if there's something to display
     const data =
-      claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0
+      claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 && addedDirs === 0
         ? null
-        : { claudeMd, agentsMd, rules, mcps, hooks };
+        : { claudeMd, agentsMd, rules, mcps, hooks, addedDirs };
 
     // Cache result
     configCountsCache = { projectDir: currentDir, data, timestamp: Date.now() };
@@ -161,6 +162,9 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
     }
     if (data.hooks > 0) {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
+    }
+    if (data.addedDirs > 0) {
+      parts.push(`+Dirs: ${data.addedDirs}`);
     }
 
     return colorize(parts.join(', '), getTheme().secondary);

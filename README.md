@@ -67,7 +67,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `sessionName` | Session name from /rename command |
 | | `sessionDuration` | Session duration |
 | | `lastPrompt` | Last user prompt with timestamp |
-| | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks |
+| | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | **Activity** | `toolActivity` | Running/completed tools with targets (e.g., `Read(app.ts)`) |
 | | `agentStatus` | Subagent progress |
 | | `todoProgress` | Todo completion rate |
@@ -87,6 +87,8 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | **Info** | `linesChanged` | Uncommitted lines added/removed via git diff (+N -N) |
 | | `outputStyle` | Current output style (hidden when "default") |
 | | `version` | Claude Code version display |
+| | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |
+| | `apiDuration` | API time as % of total session time |
 
 > ¹ Assumes all utilization came from this session; improves as session runs longer.
 > ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config.

@@ -88,7 +88,9 @@ type WidgetId =
   | 'version'
   | 'linesChanged'
   | 'outputStyle'
-  | 'lastPrompt';
+  | 'lastPrompt'
+  | 'vimMode'
+  | 'apiDuration';
 ```
 
 ## 전체 설정 예시

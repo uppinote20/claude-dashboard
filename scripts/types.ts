@@ -132,7 +132,9 @@ export type WidgetId =
   | 'tokenSpeed'
   | 'sessionName'
   | 'todayCost'
-  | 'lastPrompt';
+  | 'lastPrompt'
+  | 'vimMode'
+  | 'apiDuration';
 
 /**
  * Display mode for status line output
@@ -239,6 +241,8 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   J: 'sessionName',
   '@': 'todayCost',
   '?': 'lastPrompt',
+  m: 'vimMode',
+  a: 'apiDuration',
 };
 
 /**
@@ -423,6 +427,7 @@ export interface ConfigCountsData {
   rules: number;
   mcps: number;
   hooks: number;
+  addedDirs: number;
 }
 
 export interface SessionDurationData {
@@ -671,6 +676,22 @@ export interface TodayCostData {
 }
 
 /**
+ * API duration data - percentage of session time spent in API calls
+ */
+export interface ApiDurationData {
+  /** API time as percentage of total session time (0-100) */
+  percentage: number;
+}
+
+/**
+ * Vim mode data - current vim mode when enabled
+ */
+export interface VimModeData {
+  /** Vim mode: "NORMAL" or "INSERT" */
+  mode: string;
+}
+
+/**
  * Last prompt data - most recent user prompt in this session
  */
 export interface LastPromptData {
@@ -712,7 +733,9 @@ export type WidgetData =
   | TokenSpeedData
   | SessionNameData
   | TodayCostData
-  | LastPromptData;
+  | LastPromptData
+  | VimModeData
+  | ApiDurationData;
 
 /**
  * Transcript entry from JSONL file

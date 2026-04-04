@@ -131,7 +131,7 @@ interface Widget<T extends WidgetData> {
 | `rateLimit7d` | API | 7-day rate limit (Max) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max) |
 | `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
-| `configCounts` | filesystem | CLAUDE.md, AGENTS.md, rules, MCPs, hooks |
+| `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | `sessionDuration` | file | Session duration |
 | `toolActivity` | transcript | Tool tracking with target display (e.g., `Read(app.ts)`, `Bash(npm test)`) |
 | `agentStatus` | transcript | Agent tracking |
@@ -154,6 +154,8 @@ interface Widget<T extends WidgetData> {
 | `sessionName` | transcript | Session name from /rename command |
 | `todayCost` | stdin + file | Total spending across all sessions today |
 | `lastPrompt` | transcript | Last user prompt with timestamp |
+| `vimMode` | stdin | Vim mode (NORMAL/INSERT), hidden when vim disabled |
+| `apiDuration` | stdin | API time as % of session time |
 
 ### Display Modes
 
@@ -205,6 +207,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `V` | version | `Y` | outputStyle |
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
+| `m` | vimMode | `a` | apiDuration |
 
 ### Theme System
 

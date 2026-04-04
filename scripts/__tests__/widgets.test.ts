@@ -1132,7 +1132,7 @@ describe('widgets', () => {
 
     it('should render claudeMd count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 2, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
+      const data = { claudeMd: 2, agentsMd: 0, rules: 0, mcps: 0, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md');
@@ -1141,7 +1141,7 @@ describe('widgets', () => {
 
     it('should render rules count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, agentsMd: 0, rules: 5, mcps: 0, hooks: 0 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 5, mcps: 0, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('Rules');
@@ -1150,7 +1150,7 @@ describe('widgets', () => {
 
     it('should render mcps count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 3, hooks: 0 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 3, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('MCP');
@@ -1159,7 +1159,7 @@ describe('widgets', () => {
 
     it('should render hooks count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 2 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 2, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('Hooks');
@@ -1168,7 +1168,7 @@ describe('widgets', () => {
 
     it('should render multiple counts', () => {
       const ctx = createContext();
-      const data = { claudeMd: 1, agentsMd: 0, rules: 3, mcps: 2, hooks: 1 };
+      const data = { claudeMd: 1, agentsMd: 0, rules: 3, mcps: 2, hooks: 1, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md: 1');
@@ -1179,7 +1179,7 @@ describe('widgets', () => {
 
     it('should only render non-zero counts', () => {
       const ctx = createContext();
-      const data = { claudeMd: 1, agentsMd: 0, rules: 0, mcps: 2, hooks: 0 };
+      const data = { claudeMd: 1, agentsMd: 0, rules: 0, mcps: 2, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md');
