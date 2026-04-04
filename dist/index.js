@@ -53,7 +53,9 @@ var PRESET_CHAR_MAP = {
   Q: "tokenSpeed",
   J: "sessionName",
   "@": "todayCost",
-  "?": "lastPrompt"
+  "?": "lastPrompt",
+  m: "vimMode",
+  a: "apiDuration"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -810,6 +812,8 @@ var en_default = {
     agent: "Agent",
     todos: "Tasks",
     claudeMd: "CLAUDE.md",
+    agentsMd: "AGENTS.md",
+    addedDirs: "+Dirs",
     rules: "Rules",
     mcps: "MCP",
     hooks: "Hooks",
@@ -820,7 +824,8 @@ var en_default = {
     budget: "Budget",
     performance: "Perf",
     tokenBreakdown: "Tokens",
-    todayCost: "Today"
+    todayCost: "Today",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -864,6 +869,8 @@ var ko_default = {
     agent: "\uC5D0\uC774\uC804\uD2B8",
     todos: "\uD560\uC77C",
     claudeMd: "CLAUDE.md",
+    agentsMd: "AGENTS.md",
+    addedDirs: "+\uB514\uB809\uD1A0\uB9AC",
     rules: "\uADDC\uCE59",
     mcps: "MCP",
     hooks: "\uD6C5",
@@ -874,7 +881,8 @@ var ko_default = {
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
     tokenBreakdown: "\uD1A0\uD070",
-    todayCost: "\uC624\uB298"
+    todayCost: "\uC624\uB298",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",
@@ -1369,6 +1377,7 @@ var projectInfoWidget = {
 import { readdir as readdir2, readFile as readFile4, stat as stat4 } from "fs/promises";
 import { join as join3 } from "path";
 var CONFIG_CACHE_TTL_MS = 3e4;
+var EMPTY_FS_COUNTS = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
 var configCountsCache = null;
 async function countFiles(dir, pattern) {
   try {
@@ -1395,6 +1404,13 @@ async function countClaudeMd(projectDir) {
     fileExists(join3(projectDir, ".claude", "CLAUDE.md"))
   ]);
   return (root ? 1 : 0) + (nested ? 1 : 0);
+}
+async function countAgentsMd(projectDir) {
+  const [root, agentFiles] = await Promise.all([
+    fileExists(join3(projectDir, "AGENTS.md")),
+    countFiles(join3(projectDir, ".claude", "agents"), /\.md$/)
+  ]);
+  return (root ? 1 : 0) + agentFiles;
 }
 async function countMcps(projectDir) {
   const homeDir = process.env.HOME || "";
@@ -1424,25 +1440,35 @@ var configCountsWidget = {
     if (!currentDir) {
       return null;
     }
+    const addedDirs = ctx.stdin.workspace?.added_dirs?.length ?? 0;
     if (configCountsCache?.projectDir === currentDir && Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS) {
-      return configCountsCache.data;
+      if (!configCountsCache.data && addedDirs === 0)
+        return null;
+      const fsData2 = configCountsCache.data ?? EMPTY_FS_COUNTS;
+      return { ...fsData2, addedDirs };
     }
     const claudeDir = join3(currentDir, ".claude");
-    const [claudeMd, rules, mcps, hooks] = await Promise.all([
+    const [claudeMd, agentsMd, rules, mcps, hooks] = await Promise.all([
       countClaudeMd(currentDir),
+      countAgentsMd(currentDir),
       countFiles(join3(claudeDir, "rules")),
       countMcps(currentDir),
       countFiles(join3(claudeDir, "hooks"))
     ]);
-    const data = claudeMd === 0 && rules === 0 && mcps === 0 && hooks === 0 ? null : { claudeMd, rules, mcps, hooks };
-    configCountsCache = { projectDir: currentDir, data, timestamp: Date.now() };
-    return data;
+    const fsData = claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 ? null : { claudeMd, agentsMd, rules, mcps, hooks };
+    configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
+    if (!fsData && addedDirs === 0)
+      return null;
+    return { ...fsData ?? EMPTY_FS_COUNTS, addedDirs };
   },
   render(data, ctx) {
     const { translations: t } = ctx;
     const parts = [];
     if (data.claudeMd > 0) {
       parts.push(`${t.widgets.claudeMd}: ${data.claudeMd}`);
+    }
+    if (data.agentsMd > 0) {
+      parts.push(`${t.widgets.agentsMd}: ${data.agentsMd}`);
     }
     if (data.rules > 0) {
       parts.push(`${t.widgets.rules}: ${data.rules}`);
@@ -1452,6 +1478,9 @@ var configCountsWidget = {
     }
     if (data.hooks > 0) {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
+    }
+    if (data.addedDirs > 0) {
+      parts.push(`${t.widgets.addedDirs}: ${data.addedDirs}`);
     }
     return colorize(parts.join(", "), getTheme().secondary);
   }
@@ -1604,7 +1633,7 @@ var cachedTranscript = null;
 function createParsedTranscript() {
   return {
     toolUses: /* @__PURE__ */ new Map(),
-    toolResults: /* @__PURE__ */ new Set(),
+    completedToolCount: 0,
     runningToolIds: /* @__PURE__ */ new Set(),
     lastTodoWriteInput: null,
     activeAgentIds: /* @__PURE__ */ new Set(),
@@ -1674,7 +1703,7 @@ function processEntries(entries, existing) {
     if (entry.type === "user" && entry.message?.content) {
       for (const block of entry.message.content) {
         if (block.type === "tool_result" && block.tool_use_id) {
-          existing.toolResults.add(block.tool_use_id);
+          existing.completedToolCount++;
           existing.runningToolIds.delete(block.tool_use_id);
           if (existing.activeAgentIds.delete(block.tool_use_id)) {
             existing.completedAgentCount++;
@@ -1702,6 +1731,7 @@ function processEntries(entries, existing) {
             }
             existing.pendingTaskUpdates.delete(block.tool_use_id);
           }
+          existing.toolUses.delete(block.tool_use_id);
         }
       }
     }
@@ -1775,7 +1805,7 @@ function getRunningTools(transcript) {
   return running;
 }
 function getCompletedToolCount(transcript) {
-  return transcript.toolResults.size;
+  return transcript.completedToolCount;
 }
 function normalizeTaskStatus(status) {
   switch (status) {
@@ -3382,6 +3412,8 @@ var sessionNameWidget = {
   id: "sessionName",
   name: "Session Name",
   async getData(ctx) {
+    if (ctx.stdin.session_name)
+      return { name: ctx.stdin.session_name };
     const transcript = await getTranscript(ctx);
     if (!transcript?.sessionName)
       return null;
@@ -3475,6 +3507,42 @@ var lastPromptWidget = {
   }
 };
 
+// scripts/widgets/vim-mode.ts
+var vimModeWidget = {
+  id: "vimMode",
+  name: "Vim Mode",
+  async getData(ctx) {
+    const mode = ctx.stdin.vim?.mode;
+    if (!mode)
+      return null;
+    return { mode };
+  },
+  render(data, _ctx) {
+    const theme = getTheme();
+    const color = data.mode === "INSERT" ? theme.safe : theme.dim;
+    return colorize(data.mode, color);
+  }
+};
+
+// scripts/widgets/api-duration.ts
+var apiDurationWidget = {
+  id: "apiDuration",
+  name: "API Duration",
+  async getData(ctx) {
+    const totalMs = ctx.stdin.cost?.total_duration_ms;
+    const apiMs = ctx.stdin.cost?.total_api_duration_ms;
+    if (!totalMs || !apiMs || totalMs <= 0)
+      return null;
+    const percentage = Math.round(apiMs / totalMs * 100);
+    return { percentage: Math.min(percentage, 100) };
+  },
+  render(data, ctx) {
+    const theme = getTheme();
+    const color = data.percentage > 70 ? theme.warning : theme.dim;
+    return colorize(`${ctx.translations.widgets.apiDuration} ${data.percentage}%`, color);
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3508,7 +3576,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["tokenSpeed", tokenSpeedWidget],
   ["sessionName", sessionNameWidget],
   ["todayCost", todayCostWidget],
-  ["lastPrompt", lastPromptWidget]
+  ["lastPrompt", lastPromptWidget],
+  ["vimMode", vimModeWidget],
+  ["apiDuration", apiDurationWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

@@ -16,12 +16,14 @@ import { colorize, getTheme } from '../utils/colors.js';
  */
 const CONFIG_CACHE_TTL_MS = 30_000;
 
-/**
- * Cached config counts keyed by project directory
- */
+/** Filesystem-only counts (addedDirs excluded — comes from stdin) */
+type FsCountsData = Omit<ConfigCountsData, 'addedDirs'>;
+
+const EMPTY_FS_COUNTS: FsCountsData = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
+
 let configCountsCache: {
   projectDir: string;
-  data: ConfigCountsData | null;
+  data: FsCountsData | null;
   timestamp: number;
 } | null = null;
 
@@ -64,6 +66,17 @@ async function countClaudeMd(projectDir: string): Promise<number> {
 }
 
 /**
+ * Count AGENTS.md files (project root and .claude/agents/)
+ */
+async function countAgentsMd(projectDir: string): Promise<number> {
+  const [root, agentFiles] = await Promise.all([
+    fileExists(join(projectDir, 'AGENTS.md')),
+    countFiles(join(projectDir, '.claude', 'agents'), /\.md$/),
+  ]);
+  return (root ? 1 : 0) + agentFiles;
+}
+
+/**
  * Count MCP server configurations from project and global configs.
  * Reads files directly and catches ENOENT (no TOCTOU).
  */
@@ -101,34 +114,40 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
       return null;
     }
 
-    // Check TTL-based cache
+    // addedDirs comes from stdin (always fresh), not filesystem
+    const addedDirs = ctx.stdin.workspace?.added_dirs?.length ?? 0;
+
+    // Check TTL-based cache for filesystem counts
     if (
       configCountsCache?.projectDir === currentDir &&
       Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS
     ) {
-      return configCountsCache.data;
+      if (!configCountsCache.data && addedDirs === 0) return null;
+      const fsData = configCountsCache.data ?? EMPTY_FS_COUNTS;
+      return { ...fsData, addedDirs };
     }
 
     const claudeDir = join(currentDir, '.claude');
 
-    // Count all configs in parallel
-    const [claudeMd, rules, mcps, hooks] = await Promise.all([
+    // Count all filesystem configs in parallel
+    const [claudeMd, agentsMd, rules, mcps, hooks] = await Promise.all([
       countClaudeMd(currentDir),
+      countAgentsMd(currentDir),
       countFiles(join(claudeDir, 'rules')),
       countMcps(currentDir),
       countFiles(join(claudeDir, 'hooks')),
     ]);
 
-    // Only show if there's something to display
-    const data =
-      claudeMd === 0 && rules === 0 && mcps === 0 && hooks === 0
+    // Cache filesystem counts only (addedDirs is always live from stdin)
+    const fsData =
+      claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0
         ? null
-        : { claudeMd, rules, mcps, hooks };
+        : { claudeMd, agentsMd, rules, mcps, hooks };
 
-    // Cache result
-    configCountsCache = { projectDir: currentDir, data, timestamp: Date.now() };
+    configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
 
-    return data;
+    if (!fsData && addedDirs === 0) return null;
+    return { ...(fsData ?? EMPTY_FS_COUNTS), addedDirs };
   },
 
   render(data: ConfigCountsData, ctx: WidgetContext): string {
@@ -138,6 +157,9 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
     if (data.claudeMd > 0) {
       parts.push(`${t.widgets.claudeMd}: ${data.claudeMd}`);
     }
+    if (data.agentsMd > 0) {
+      parts.push(`${t.widgets.agentsMd}: ${data.agentsMd}`);
+    }
     if (data.rules > 0) {
       parts.push(`${t.widgets.rules}: ${data.rules}`);
     }
@@ -146,6 +168,9 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
     }
     if (data.hooks > 0) {
       parts.push(`${t.widgets.hooks}: ${data.hooks}`);
+    }
+    if (data.addedDirs > 0) {
+      parts.push(`${t.widgets.addedDirs}: ${data.addedDirs}`);
     }
 
     return colorize(parts.join(', '), getTheme().secondary);

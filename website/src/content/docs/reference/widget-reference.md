@@ -187,12 +187,12 @@ abc12345-6789-0def-ghij-klmnopqrstuv
 | Property | Value |
 |----------|-------|
 | **Widget ID** | `configCounts` |
-| **Data Source** | filesystem |
-| **Description** | Counts and displays the number of CLAUDE.md files, rules, MCP servers, and hooks configured in the project. |
+| **Data Source** | filesystem + stdin |
+| **Description** | Counts and displays the number of CLAUDE.md files, AGENTS.md files, rules, MCP servers, hooks, and added directories configured in the project. |
 
 **Example output:**
 ```
-CLAUDE.md: 2 | rules: 3 | MCPs: 1 | hooks: 0
+CLAUDE.md: 2 | AGENTS.md: 1 | rules: 3 | MCPs: 1 | hooks: 0 | +Dirs: 2
 ```
 
 ## Activity Widgets
@@ -465,4 +465,34 @@ v1.0.80
 ```
 concise
 verbose
+```
+
+### vimMode
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `vimMode` |
+| **Data Source** | stdin (vim.mode) |
+| **Description** | Shows the current vim mode (NORMAL or INSERT). Auto-hides when vim mode is not enabled. |
+| **Preset Char** | `m` |
+
+**Example output:**
+```
+NORMAL
+INSERT
+```
+
+### apiDuration
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `apiDuration` |
+| **Data Source** | stdin (cost.total_duration_ms, cost.total_api_duration_ms) |
+| **Description** | Shows what percentage of session time was spent waiting for API responses. Useful for identifying whether a session is API-bound or tool-execution-bound. |
+| **Preset Char** | `a` |
+
+**Example output:**
+```
+API 45%
+API 72%
 ```

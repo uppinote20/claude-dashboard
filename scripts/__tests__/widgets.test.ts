@@ -26,6 +26,8 @@
  * @covers scripts/widgets/token-breakdown.ts
  * @covers scripts/widgets/zai-usage.ts
  * @covers scripts/widgets/last-prompt.ts
+ * @covers scripts/widgets/vim-mode.ts
+ * @covers scripts/widgets/api-duration.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget } from '../widgets/model.js';
@@ -54,6 +56,8 @@ import { performanceWidget } from '../widgets/performance.js';
 import { tokenBreakdownWidget } from '../widgets/token-breakdown.js';
 import { zaiUsageWidget } from '../widgets/zai-usage.js';
 import { lastPromptWidget } from '../widgets/last-prompt.js';
+import { vimModeWidget } from '../widgets/vim-mode.js';
+import { apiDurationWidget } from '../widgets/api-duration.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
@@ -1132,7 +1136,7 @@ describe('widgets', () => {
 
     it('should render claudeMd count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 2, rules: 0, mcps: 0, hooks: 0 };
+      const data = { claudeMd: 2, agentsMd: 0, rules: 0, mcps: 0, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md');
@@ -1141,7 +1145,7 @@ describe('widgets', () => {
 
     it('should render rules count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, rules: 5, mcps: 0, hooks: 0 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 5, mcps: 0, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('Rules');
@@ -1150,7 +1154,7 @@ describe('widgets', () => {
 
     it('should render mcps count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, rules: 0, mcps: 3, hooks: 0 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 3, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('MCP');
@@ -1159,7 +1163,7 @@ describe('widgets', () => {
 
     it('should render hooks count', () => {
       const ctx = createContext();
-      const data = { claudeMd: 0, rules: 0, mcps: 0, hooks: 2 };
+      const data = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 2, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('Hooks');
@@ -1168,7 +1172,7 @@ describe('widgets', () => {
 
     it('should render multiple counts', () => {
       const ctx = createContext();
-      const data = { claudeMd: 1, rules: 3, mcps: 2, hooks: 1 };
+      const data = { claudeMd: 1, agentsMd: 0, rules: 3, mcps: 2, hooks: 1, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md: 1');
@@ -1179,13 +1183,29 @@ describe('widgets', () => {
 
     it('should only render non-zero counts', () => {
       const ctx = createContext();
-      const data = { claudeMd: 1, rules: 0, mcps: 2, hooks: 0 };
+      const data = { claudeMd: 1, agentsMd: 0, rules: 0, mcps: 2, hooks: 0, addedDirs: 0 };
       const result = configCountsWidget.render(data, ctx);
 
       expect(result).toContain('CLAUDE.md');
       expect(result).toContain('MCP');
       expect(result).not.toContain('Rules');
       expect(result).not.toContain('Hooks');
+    });
+
+    it('should render agentsMd count', () => {
+      const ctx = createContext();
+      const data = { claudeMd: 1, agentsMd: 2, rules: 0, mcps: 0, hooks: 0, addedDirs: 0 };
+      const result = configCountsWidget.render(data, ctx);
+      expect(result).toContain('AGENTS.md');
+      expect(result).toContain('2');
+    });
+
+    it('should render addedDirs count', () => {
+      const ctx = createContext();
+      const data = { claudeMd: 1, agentsMd: 0, rules: 0, mcps: 0, hooks: 0, addedDirs: 3 };
+      const result = configCountsWidget.render(data, ctx);
+      expect(result).toContain('+Dirs');
+      expect(result).toContain('3');
     });
   });
 
@@ -1531,7 +1551,7 @@ describe('widgets', () => {
     it('should return null when transcript has no sessionName', async () => {
       vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
         toolUses: new Map(),
-        toolResults: new Set(),
+        completedToolCount: 0,
         runningToolIds: new Set(),
         lastTodoWriteInput: null,
         activeAgentIds: new Set(),
@@ -1547,10 +1567,17 @@ describe('widgets', () => {
       expect(data).toBeNull();
     });
 
+    it('should prefer stdin session_name over transcript', async () => {
+      const ctx = createContext({ session_name: 'stdin-session', transcript_path: '/tmp/transcript.jsonl' });
+      const data = await sessionNameWidget.getData(ctx);
+      expect(data).not.toBeNull();
+      expect(data?.name).toBe('stdin-session');
+    });
+
     it('should return session name from transcript', async () => {
       vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
         toolUses: new Map(),
-        toolResults: new Set(),
+        completedToolCount: 0,
         runningToolIds: new Set(),
         lastTodoWriteInput: null,
         activeAgentIds: new Set(),
@@ -1988,6 +2015,89 @@ describe('widgets', () => {
       const data = { text: longText, timestamp: '2024-01-01T12:30:00Z' };
       const result = lastPromptWidget.render(data, ctx);
       expect(result).toContain('…');
+    });
+  });
+
+  describe('vimModeWidget', () => {
+    it('should have correct id and name', () => {
+      expect(vimModeWidget.id).toBe('vimMode');
+      expect(vimModeWidget.name).toBe('Vim Mode');
+    });
+
+    it('should return null when vim is not enabled', async () => {
+      const ctx = createContext();
+      const data = await vimModeWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return mode when vim is enabled', async () => {
+      const ctx = createContext({ vim: { mode: 'NORMAL' } });
+      const data = await vimModeWidget.getData(ctx);
+      expect(data).not.toBeNull();
+      expect(data?.mode).toBe('NORMAL');
+    });
+
+    it('should return INSERT mode', async () => {
+      const ctx = createContext({ vim: { mode: 'INSERT' } });
+      const data = await vimModeWidget.getData(ctx);
+      expect(data?.mode).toBe('INSERT');
+    });
+
+    it('should render NORMAL with dim color', () => {
+      const ctx = createContext();
+      const result = vimModeWidget.render({ mode: 'NORMAL' }, ctx);
+      expect(result).toContain('NORMAL');
+    });
+
+    it('should render INSERT with safe color', () => {
+      const ctx = createContext();
+      const result = vimModeWidget.render({ mode: 'INSERT' }, ctx);
+      expect(result).toContain('INSERT');
+    });
+  });
+
+  describe('apiDurationWidget', () => {
+    it('should have correct id and name', () => {
+      expect(apiDurationWidget.id).toBe('apiDuration');
+      expect(apiDurationWidget.name).toBe('API Duration');
+    });
+
+    it('should return null when duration data is missing', async () => {
+      const ctx = createContext({ cost: { total_cost_usd: 0.5 } });
+      const data = await apiDurationWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return null when total_duration_ms is 0', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_duration_ms: 0, total_api_duration_ms: 100 },
+      });
+      const data = await apiDurationWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should calculate percentage correctly', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_duration_ms: 10000, total_api_duration_ms: 4500 },
+      });
+      const data = await apiDurationWidget.getData(ctx);
+      expect(data).not.toBeNull();
+      expect(data?.percentage).toBe(45);
+    });
+
+    it('should cap percentage at 100', async () => {
+      const ctx = createContext({
+        cost: { total_cost_usd: 0.5, total_duration_ms: 1000, total_api_duration_ms: 1500 },
+      });
+      const data = await apiDurationWidget.getData(ctx);
+      expect(data?.percentage).toBe(100);
+    });
+
+    it('should render with API prefix', () => {
+      const ctx = createContext();
+      const result = apiDurationWidget.render({ percentage: 45 }, ctx);
+      expect(result).toContain('API');
+      expect(result).toContain('45%');
     });
   });
 });

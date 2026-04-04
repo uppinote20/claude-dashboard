@@ -29,7 +29,7 @@ let cachedTranscript: {
 function createParsedTranscript(): ParsedTranscript {
   return {
     toolUses: new Map(),
-    toolResults: new Set(),
+    completedToolCount: 0,
     runningToolIds: new Set(),
     lastTodoWriteInput: null,
     activeAgentIds: new Set(),
@@ -122,7 +122,7 @@ function processEntries(
     if (entry.type === 'user' && entry.message?.content) {
       for (const block of entry.message.content) {
         if (block.type === 'tool_result' && block.tool_use_id) {
-          existing.toolResults.add(block.tool_use_id);
+          existing.completedToolCount++;
           existing.runningToolIds.delete(block.tool_use_id);
 
           // Track agent (Task) completions
@@ -156,6 +156,9 @@ function processEntries(
             }
             existing.pendingTaskUpdates.delete(block.tool_use_id);
           }
+
+          // Prune completed tool from Map (no longer needed for display)
+          existing.toolUses.delete(block.tool_use_id);
         }
       }
     }
@@ -272,7 +275,7 @@ export function getRunningTools(
  * Get completed tool count
  */
 export function getCompletedToolCount(transcript: ParsedTranscript): number {
-  return transcript.toolResults.size;
+  return transcript.completedToolCount;
 }
 
 /**

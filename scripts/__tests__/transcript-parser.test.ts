@@ -94,7 +94,7 @@ describe('transcript-parser', () => {
       const { parseTranscript } = await import('../utils/transcript-parser.js');
       const result = await parseTranscript(TEST_FILE);
 
-      expect(result?.toolResults.has('tool-1')).toBe(true);
+      expect(result?.completedToolCount).toBe(1);
     });
 
     it('should skip malformed JSON lines', async () => {

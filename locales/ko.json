@@ -28,6 +28,8 @@
     "agent": "에이전트",
     "todos": "할일",
     "claudeMd": "CLAUDE.md",
+    "agentsMd": "AGENTS.md",
+    "addedDirs": "+디렉토리",
     "rules": "규칙",
     "mcps": "MCP",
     "hooks": "훅",
@@ -38,7 +40,8 @@
     "budget": "예산",
     "performance": "성능",
     "tokenBreakdown": "토큰",
-    "todayCost": "오늘"
+    "todayCost": "오늘",
+    "apiDuration": "API"
   },
   "checkUsage": {
     "title": "CLI 사용량 대시보드",

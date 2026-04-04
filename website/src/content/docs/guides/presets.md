@@ -40,6 +40,7 @@ This creates a 2-line layout:
 | `L` | linesChanged | `Y` | outputStyle |
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
+| `m` | vimMode | `a` | apiDuration |
 
 ## Examples
 

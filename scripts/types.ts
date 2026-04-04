@@ -18,6 +18,8 @@ export interface StdinInput {
     current_dir: string;
     /** Directory where Claude Code was launched (may differ from current_dir) */
     project_dir?: string;
+    /** Directories added via /add-dir (since v2.1.77) */
+    added_dirs?: string[];
   };
   /** Worktree info (present only during --worktree sessions) */
   worktree?: {
@@ -78,11 +80,21 @@ export interface StdinInput {
     };
   };
   /** Vim mode info (present only when vim mode is enabled) */
-  vim?: { mode: string };
+  vim?: { mode: 'NORMAL' | 'INSERT' };
   /** Agent info (present only when running with --agent flag) */
   agent?: { name: string };
   /** Session ID for duration tracking */
   session_id?: string;
+  /** Session name set via /rename command (since v2.1.77) */
+  session_name?: string;
+  /** Current permission mode (base hook field) */
+  permission_mode?: string;
+  /** Remote session info (present only in remote/bridge mode) */
+  remote?: { session_id: string };
+  /** Subagent identifier (present only in subagent context) */
+  agent_id?: string;
+  /** Subagent type name (present only in subagent context) */
+  agent_type?: string;
 }
 
 /**
@@ -120,7 +132,9 @@ export type WidgetId =
   | 'tokenSpeed'
   | 'sessionName'
   | 'todayCost'
-  | 'lastPrompt';
+  | 'lastPrompt'
+  | 'vimMode'
+  | 'apiDuration';
 
 /**
  * Display mode for status line output
@@ -227,6 +241,8 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   J: 'sessionName',
   '@': 'todayCost',
   '?': 'lastPrompt',
+  m: 'vimMode',
+  a: 'apiDuration',
 };
 
 /**
@@ -290,6 +306,8 @@ export interface Translations {
     agent: string;
     todos: string;
     claudeMd: string;
+    agentsMd: string;
+    addedDirs: string;
     rules: string;
     mcps: string;
     hooks: string;
@@ -301,6 +319,7 @@ export interface Translations {
     performance: string;
     tokenBreakdown: string;
     todayCost: string;
+    apiDuration: string;
   };
   /** Check-usage command labels */
   checkUsage: {
@@ -406,9 +425,11 @@ export interface ProjectInfoData {
 
 export interface ConfigCountsData {
   claudeMd: number;
+  agentsMd: number;
   rules: number;
   mcps: number;
   hooks: number;
+  addedDirs: number;
 }
 
 export interface SessionDurationData {
@@ -657,6 +678,22 @@ export interface TodayCostData {
 }
 
 /**
+ * API duration data - percentage of session time spent in API calls
+ */
+export interface ApiDurationData {
+  /** API time as percentage of total session time (0-100) */
+  percentage: number;
+}
+
+/**
+ * Vim mode data - current vim mode when enabled
+ */
+export interface VimModeData {
+  /** Vim mode */
+  mode: 'NORMAL' | 'INSERT';
+}
+
+/**
  * Last prompt data - most recent user prompt in this session
  */
 export interface LastPromptData {
@@ -698,7 +735,9 @@ export type WidgetData =
   | TokenSpeedData
   | SessionNameData
   | TodayCostData
-  | LastPromptData;
+  | LastPromptData
+  | VimModeData
+  | ApiDurationData;
 
 /**
  * Transcript entry from JSONL file
@@ -728,7 +767,8 @@ export interface TranscriptEntry {
  */
 export interface ParsedTranscript {
   toolUses: Map<string, { name: string; timestamp?: string; input?: unknown }>;
-  toolResults: Set<string>;
+  /** Count of completed tools (replaces unbounded Set for memory efficiency) */
+  completedToolCount: number;
   sessionStartTime?: number;
   /** Session name set by /rename command */
   sessionName?: string;

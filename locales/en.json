@@ -28,6 +28,8 @@
     "agent": "Agent",
     "todos": "Tasks",
     "claudeMd": "CLAUDE.md",
+    "agentsMd": "AGENTS.md",
+    "addedDirs": "+Dirs",
     "rules": "Rules",
     "mcps": "MCP",
     "hooks": "Hooks",
@@ -38,7 +40,8 @@
     "budget": "Budget",
     "performance": "Perf",
     "tokenBreakdown": "Tokens",
-    "todayCost": "Today"
+    "todayCost": "Today",
+    "apiDuration": "API"
   },
   "checkUsage": {
     "title": "CLI Usage Dashboard",

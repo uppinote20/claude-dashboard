@@ -40,6 +40,7 @@ sidebar:
 | `L` | linesChanged | `Y` | outputStyle |
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
+| `m` | vimMode | `a` | apiDuration |
 
 ## 예시
 

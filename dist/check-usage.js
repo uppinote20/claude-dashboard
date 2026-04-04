@@ -1565,6 +1565,8 @@ var en_default = {
     agent: "Agent",
     todos: "Tasks",
     claudeMd: "CLAUDE.md",
+    agentsMd: "AGENTS.md",
+    addedDirs: "+Dirs",
     rules: "Rules",
     mcps: "MCP",
     hooks: "Hooks",
@@ -1575,7 +1577,8 @@ var en_default = {
     budget: "Budget",
     performance: "Perf",
     tokenBreakdown: "Tokens",
-    todayCost: "Today"
+    todayCost: "Today",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -1619,6 +1622,8 @@ var ko_default = {
     agent: "\uC5D0\uC774\uC804\uD2B8",
     todos: "\uD560\uC77C",
     claudeMd: "CLAUDE.md",
+    agentsMd: "AGENTS.md",
+    addedDirs: "+\uB514\uB809\uD1A0\uB9AC",
     rules: "\uADDC\uCE59",
     mcps: "MCP",
     hooks: "\uD6C5",
@@ -1629,7 +1634,8 @@ var ko_default = {
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
     tokenBreakdown: "\uD1A0\uD070",
-    todayCost: "\uC624\uB298"
+    todayCost: "\uC624\uB298",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",

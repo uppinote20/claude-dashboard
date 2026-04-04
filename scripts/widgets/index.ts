@@ -44,6 +44,8 @@ import { tokenSpeedWidget } from './token-speed.js';
 import { sessionNameWidget } from './session-name.js';
 import { todayCostWidget } from './today-cost.js';
 import { lastPromptWidget } from './last-prompt.js';
+import { vimModeWidget } from './vim-mode.js';
+import { apiDurationWidget } from './api-duration.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -81,6 +83,8 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['sessionName', sessionNameWidget],
   ['todayCost', todayCostWidget],
   ['lastPrompt', lastPromptWidget],
+  ['vimMode', vimModeWidget],
+  ['apiDuration', apiDurationWidget],
 ] as [WidgetId, Widget][]);
 
 /**

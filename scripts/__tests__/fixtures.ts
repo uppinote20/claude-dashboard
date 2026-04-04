@@ -18,6 +18,8 @@ export const MOCK_TRANSLATIONS: Translations = {
     agent: 'Agent',
     todos: 'Todos',
     claudeMd: 'CLAUDE.md',
+    agentsMd: 'AGENTS.md',
+    addedDirs: '+Dirs',
     rules: 'Rules',
     mcps: 'MCP',
     hooks: 'Hooks',
@@ -29,6 +31,7 @@ export const MOCK_TRANSLATIONS: Translations = {
     performance: 'Perf',
     tokenBreakdown: 'Tokens',
     todayCost: 'Today',
+    apiDuration: 'API',
   },
   checkUsage: {
     title: 'CLI Usage Dashboard',

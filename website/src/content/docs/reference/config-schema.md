@@ -81,7 +81,9 @@ type WidgetId =
   | 'version'
   | 'linesChanged'
   | 'outputStyle'
-  | 'lastPrompt';
+  | 'lastPrompt'
+  | 'vimMode'
+  | 'apiDuration';
 ```
 
 See the [Widget Reference](/reference/widget-reference/) for detailed information about each widget.

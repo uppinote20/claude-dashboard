@@ -104,8 +104,8 @@ sidebar:
 
 - **ID**: `configCounts`
 - **데이터 소스**: 파일시스템
-- **표시 내용**: 프로젝트에 설정된 CLAUDE.md 파일 수, 규칙 수, MCP 서버 수, 훅 수.
-- **출력 예시**: `CLAUDE.md: 2 │ Rules: 3 │ MCPs: 1 │ Hooks: 2`
+- **표시 내용**: 프로젝트에 설정된 CLAUDE.md 파일 수, AGENTS.md 파일 수, 규칙 수, MCP 서버 수, 훅 수, 추가 디렉토리 수.
+- **출력 예시**: `CLAUDE.md: 2 │ AGENTS.md: 1 │ Rules: 3 │ MCPs: 1 │ Hooks: 2 │ +Dirs: 2`
 
 ## Activity
 
@@ -251,3 +251,19 @@ sidebar:
 - **데이터 소스**: stdin (output_style)
 - **표시 내용**: 현재 출력 스타일 이름. "default"이거나 설정되지 않은 경우 위젯이 숨겨집니다.
 - **출력 예시**: `concise`, `verbose`
+
+### vimMode
+
+- **ID**: `vimMode`
+- **데이터 소스**: stdin (vim.mode)
+- **표시 내용**: 현재 vim 모드 (NORMAL 또는 INSERT). vim 모드가 비활성화되면 숨겨집니다.
+- **프리셋 문자**: `m`
+- **출력 예시**: `NORMAL`, `INSERT`
+
+### apiDuration
+
+- **ID**: `apiDuration`
+- **데이터 소스**: stdin (cost.total_duration_ms, cost.total_api_duration_ms)
+- **표시 내용**: 세션 시간 중 API 응답 대기에 사용된 비율. 세션이 API 바운드인지 도구 실행 바운드인지 파악에 유용합니다.
+- **프리셋 문자**: `a`
+- **출력 예시**: `API 45%`, `API 72%`
