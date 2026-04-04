@@ -1577,7 +1577,8 @@ var en_default = {
     budget: "Budget",
     performance: "Perf",
     tokenBreakdown: "Tokens",
-    todayCost: "Today"
+    todayCost: "Today",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -1633,7 +1634,8 @@ var ko_default = {
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
     tokenBreakdown: "\uD1A0\uD070",
-    todayCost: "\uC624\uB298"
+    todayCost: "\uC624\uB298",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",

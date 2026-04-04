@@ -31,6 +31,7 @@ export const MOCK_TRANSLATIONS: Translations = {
     performance: 'Perf',
     tokenBreakdown: 'Tokens',
     todayCost: 'Today',
+    apiDuration: 'API',
   },
   checkUsage: {
     title: 'CLI Usage Dashboard',

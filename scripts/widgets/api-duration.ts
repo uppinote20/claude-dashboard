@@ -22,9 +22,9 @@ export const apiDurationWidget: Widget<ApiDurationData> = {
     return { percentage: Math.min(percentage, 100) };
   },
 
-  render(data: ApiDurationData, _ctx: WidgetContext): string {
+  render(data: ApiDurationData, ctx: WidgetContext): string {
     const theme = getTheme();
     const color = data.percentage > 70 ? theme.warning : theme.dim;
-    return colorize(`API ${data.percentage}%`, color);
+    return colorize(`${ctx.translations.widgets.apiDuration} ${data.percentage}%`, color);
   },
 };

@@ -16,11 +16,10 @@ import { colorize, getTheme } from '../utils/colors.js';
  */
 const CONFIG_CACHE_TTL_MS = 30_000;
 
-/**
- * Cached config counts keyed by project directory
- */
 /** Filesystem-only counts (addedDirs excluded — comes from stdin) */
 type FsCountsData = Omit<ConfigCountsData, 'addedDirs'>;
+
+const EMPTY_FS_COUNTS: FsCountsData = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
 
 let configCountsCache: {
   projectDir: string;
@@ -124,7 +123,7 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
       Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS
     ) {
       if (!configCountsCache.data && addedDirs === 0) return null;
-      const fsData = configCountsCache.data ?? { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
+      const fsData = configCountsCache.data ?? EMPTY_FS_COUNTS;
       return { ...fsData, addedDirs };
     }
 
@@ -148,7 +147,7 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
     configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
 
     if (!fsData && addedDirs === 0) return null;
-    return { ...(fsData ?? { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 }), addedDirs };
+    return { ...(fsData ?? EMPTY_FS_COUNTS), addedDirs };
   },
 
   render(data: ConfigCountsData, ctx: WidgetContext): string {

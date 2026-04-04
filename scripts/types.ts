@@ -319,6 +319,7 @@ export interface Translations {
     performance: string;
     tokenBreakdown: string;
     todayCost: string;
+    apiDuration: string;
   };
   /** Check-usage command labels */
   checkUsage: {

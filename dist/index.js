@@ -824,7 +824,8 @@ var en_default = {
     budget: "Budget",
     performance: "Perf",
     tokenBreakdown: "Tokens",
-    todayCost: "Today"
+    todayCost: "Today",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -880,7 +881,8 @@ var ko_default = {
     budget: "\uC608\uC0B0",
     performance: "\uC131\uB2A5",
     tokenBreakdown: "\uD1A0\uD070",
-    todayCost: "\uC624\uB298"
+    todayCost: "\uC624\uB298",
+    apiDuration: "API"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",
@@ -1375,6 +1377,7 @@ var projectInfoWidget = {
 import { readdir as readdir2, readFile as readFile4, stat as stat4 } from "fs/promises";
 import { join as join3 } from "path";
 var CONFIG_CACHE_TTL_MS = 3e4;
+var EMPTY_FS_COUNTS = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
 var configCountsCache = null;
 async function countFiles(dir, pattern) {
   try {
@@ -1441,7 +1444,7 @@ var configCountsWidget = {
     if (configCountsCache?.projectDir === currentDir && Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS) {
       if (!configCountsCache.data && addedDirs === 0)
         return null;
-      const fsData2 = configCountsCache.data ?? { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
+      const fsData2 = configCountsCache.data ?? EMPTY_FS_COUNTS;
       return { ...fsData2, addedDirs };
     }
     const claudeDir = join3(currentDir, ".claude");
@@ -1456,7 +1459,7 @@ var configCountsWidget = {
     configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
     if (!fsData && addedDirs === 0)
       return null;
-    return { ...fsData ?? { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 }, addedDirs };
+    return { ...fsData ?? EMPTY_FS_COUNTS, addedDirs };
   },
   render(data, ctx) {
     const { translations: t } = ctx;
@@ -3533,10 +3536,10 @@ var apiDurationWidget = {
     const percentage = Math.round(apiMs / totalMs * 100);
     return { percentage: Math.min(percentage, 100) };
   },
-  render(data, _ctx) {
+  render(data, ctx) {
     const theme = getTheme();
     const color = data.percentage > 70 ? theme.warning : theme.dim;
-    return colorize(`API ${data.percentage}%`, color);
+    return colorize(`${ctx.translations.widgets.apiDuration} ${data.percentage}%`, color);
   }
 };
 
