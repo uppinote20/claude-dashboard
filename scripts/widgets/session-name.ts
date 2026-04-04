@@ -15,6 +15,9 @@ export const sessionNameWidget: Widget<SessionNameData> = {
   name: 'Session Name',
 
   async getData(ctx: WidgetContext): Promise<SessionNameData | null> {
+    // Prefer stdin (zero-cost) over transcript parsing
+    if (ctx.stdin.session_name) return { name: ctx.stdin.session_name };
+
     const transcript = await getTranscript(ctx);
     if (!transcript?.sessionName) return null;
 

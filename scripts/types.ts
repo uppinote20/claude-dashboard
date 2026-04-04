@@ -18,6 +18,8 @@ export interface StdinInput {
     current_dir: string;
     /** Directory where Claude Code was launched (may differ from current_dir) */
     project_dir?: string;
+    /** Directories added via /add-dir (since v2.1.77) */
+    added_dirs?: string[];
   };
   /** Worktree info (present only during --worktree sessions) */
   worktree?: {
@@ -83,6 +85,16 @@ export interface StdinInput {
   agent?: { name: string };
   /** Session ID for duration tracking */
   session_id?: string;
+  /** Session name set via /rename command (since v2.1.77) */
+  session_name?: string;
+  /** Current permission mode (base hook field) */
+  permission_mode?: string;
+  /** Remote session info (present only in remote/bridge mode) */
+  remote?: { session_id: string };
+  /** Subagent identifier (present only in subagent context) */
+  agent_id?: string;
+  /** Subagent type name (present only in subagent context) */
+  agent_type?: string;
 }
 
 /**
@@ -290,6 +302,7 @@ export interface Translations {
     agent: string;
     todos: string;
     claudeMd: string;
+    agentsMd: string;
     rules: string;
     mcps: string;
     hooks: string;
@@ -406,6 +419,7 @@ export interface ProjectInfoData {
 
 export interface ConfigCountsData {
   claudeMd: number;
+  agentsMd: number;
   rules: number;
   mcps: number;
   hooks: number;
@@ -728,7 +742,8 @@ export interface TranscriptEntry {
  */
 export interface ParsedTranscript {
   toolUses: Map<string, { name: string; timestamp?: string; input?: unknown }>;
-  toolResults: Set<string>;
+  /** Count of completed tools (replaces unbounded Set for memory efficiency) */
+  completedToolCount: number;
   sessionStartTime?: number;
   /** Session name set by /rename command */
   sessionName?: string;
