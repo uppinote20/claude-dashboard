@@ -84,7 +84,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `budget` | Daily spending vs configured budget limit⁵ |
 | | `tokenSpeed` | Output token generation speed (tok/s) |
 | | `todayCost` | Total spending across all sessions today |
-| **Info** | `linesChanged` | Uncommitted lines added/removed via git diff (+N -N) |
+| **Info** | `linesChanged` | Uncommitted lines added/removed, including untracked files (+N -N) |
 | | `outputStyle` | Current output style (hidden when "default") |
 | | `version` | Claude Code version display |
 | | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |

@@ -443,8 +443,8 @@ v1.0.80
 | Property | Value |
 |----------|-------|
 | **Widget ID** | `linesChanged` |
-| **Data Source** | git (`git diff HEAD --shortstat`) |
-| **Description** | Shows uncommitted lines added and removed via git diff. Resets naturally on commit. Hidden when no changes exist. |
+| **Data Source** | git (`git diff HEAD --shortstat` + `git ls-files --others`) |
+| **Description** | Shows uncommitted lines added and removed, including untracked (new) files. Resets naturally on commit. Hidden when no changes exist. |
 
 **Example output:**
 ```

@@ -76,7 +76,7 @@ claude-dashboard provides 31 widgets organized by category. Each widget can be i
 | Widget | Description |
 |--------|-------------|
 | `version` | Claude Code version display |
-| `linesChanged` | Lines added/removed count (e.g., `+156 -23`) |
+| `linesChanged` | Lines added/removed count, including untracked files (e.g., `+156 -23`) |
 | `outputStyle` | Current output style (hidden when default) |
 | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |
 | `apiDuration` | API time as % of total session time |

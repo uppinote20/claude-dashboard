@@ -241,8 +241,8 @@ sidebar:
 ### linesChanged
 
 - **ID**: `linesChanged`
-- **데이터 소스**: git (`git diff HEAD --shortstat`)
-- **표시 내용**: 커밋되지 않은 추가/삭제된 줄 수. 커밋하면 자연스럽게 리셋. 변경이 없으면 위젯이 숨겨집니다.
+- **데이터 소스**: git (`git diff HEAD --shortstat` + `git ls-files --others`)
+- **표시 내용**: 커밋되지 않은 추가/삭제된 줄 수 (untracked 신규 파일 포함). 커밋하면 자연스럽게 리셋. 변경이 없으면 위젯이 숨겨집니다.
 - **출력 예시**: `+156 -23`, `+42`, `-15`
 
 ### outputStyle

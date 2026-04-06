@@ -643,6 +643,7 @@ export interface VersionData {
 export interface LinesChangedData {
   added: number;
   removed: number;
+  untracked: number;
 }
 
 /**

@@ -1356,16 +1356,43 @@ describe('widgets', () => {
 
     it('should return data from git diff when changes exist', async () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 3 files changed, 156 insertions(+), 23 deletions(-)\n');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
       const data = await linesChangedWidget.getData(uniqueCtx());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(156);
       expect(data?.removed).toBe(23);
+      expect(data?.untracked).toBe(0);
     });
 
-    it('should return null when git diff is empty', async () => {
+    it('should include untracked file lines in added count', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 10 insertions(+)\n');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(50);
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
+
+      expect(data).not.toBeNull();
+      expect(data?.added).toBe(60);
+      expect(data?.removed).toBe(0);
+      expect(data?.untracked).toBe(50);
+    });
+
+    it('should return data when only untracked files exist', async () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue('');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(30);
+
+      const data = await linesChangedWidget.getData(uniqueCtx());
+
+      expect(data).not.toBeNull();
+      expect(data?.added).toBe(30);
+      expect(data?.removed).toBe(0);
+      expect(data?.untracked).toBe(30);
+    });
+
+    it('should return null when git diff is empty and no untracked', async () => {
+      vi.spyOn(gitUtils, 'execGit').mockResolvedValue('');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
       const data = await linesChangedWidget.getData(uniqueCtx());
       expect(data).toBeNull();
@@ -1373,6 +1400,7 @@ describe('widgets', () => {
 
     it('should return null when git diff fails', async () => {
       vi.spyOn(gitUtils, 'execGit').mockRejectedValue(new Error('not a git repo'));
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
       const data = await linesChangedWidget.getData(uniqueCtx());
       expect(data).toBeNull();
@@ -1380,6 +1408,7 @@ describe('widgets', () => {
 
     it('should return data with only insertions', async () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 42 insertions(+)\n');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
       const data = await linesChangedWidget.getData(uniqueCtx());
 
@@ -1390,6 +1419,7 @@ describe('widgets', () => {
 
     it('should return data with only deletions', async () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 15 deletions(-)\n');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
       const data = await linesChangedWidget.getData(uniqueCtx());
 
@@ -1400,7 +1430,7 @@ describe('widgets', () => {
 
     it('should render only removed part when added is 0', () => {
       const ctx = createContext();
-      const data = { added: 0, removed: 15 };
+      const data = { added: 0, removed: 15, untracked: 0 };
       const result = linesChangedWidget.render(data, ctx);
 
       expect(result).toContain('-15');
@@ -1409,7 +1439,7 @@ describe('widgets', () => {
 
     it('should render only added part when removed is 0', () => {
       const ctx = createContext();
-      const data = { added: 100, removed: 0 };
+      const data = { added: 100, removed: 0, untracked: 30 };
       const result = linesChangedWidget.render(data, ctx);
 
       expect(result).toContain('+100');
@@ -1418,7 +1448,7 @@ describe('widgets', () => {
 
     it('should render both added and removed', () => {
       const ctx = createContext();
-      const data = { added: 156, removed: 23 };
+      const data = { added: 156, removed: 23, untracked: 0 };
       const result = linesChangedWidget.render(data, ctx);
 
       expect(result).toContain('+156');

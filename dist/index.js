@@ -1251,6 +1251,19 @@ function execGit(args, cwd, timeout) {
     });
   });
 }
+function countUntrackedLines(cwd, timeout) {
+  return new Promise((resolve) => {
+    execFile3(
+      "sh",
+      ["-c", "git --no-optional-locks ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l"],
+      { cwd, encoding: "utf-8", timeout },
+      (_error, stdout) => {
+        const match = stdout?.match(/(\d+)/);
+        resolve(match ? parseInt(match[1], 10) : 0);
+      }
+    );
+  });
+}
 
 // scripts/widgets/project-info.ts
 var GIT_CACHE_TTL_MS = 5e3;
@@ -3345,16 +3358,16 @@ var linesChangedWidget = {
       return diffCache.data;
     }
     try {
-      const output = await execGit(["diff", "HEAD", "--shortstat"], cwd, 1e3);
-      if (!output.trim()) {
-        diffCache = { cwd, data: null, timestamp: Date.now() };
-        return null;
-      }
-      const insertMatch = output.match(/(\d+) insertion/);
-      const deleteMatch = output.match(/(\d+) deletion/);
-      const added = insertMatch ? parseInt(insertMatch[1], 10) : 0;
+      const [diffOutput, untracked] = await Promise.all([
+        execGit(["diff", "HEAD", "--shortstat"], cwd, 1e3),
+        countUntrackedLines(cwd, 1e3)
+      ]);
+      const insertMatch = diffOutput.match(/(\d+) insertion/);
+      const deleteMatch = diffOutput.match(/(\d+) deletion/);
+      const tracked = insertMatch ? parseInt(insertMatch[1], 10) : 0;
       const removed = deleteMatch ? parseInt(deleteMatch[1], 10) : 0;
-      const data = added === 0 && removed === 0 ? null : { added, removed };
+      const added = tracked + untracked;
+      const data = added === 0 && removed === 0 ? null : { added, removed, untracked };
       diffCache = { cwd, data, timestamp: Date.now() };
       return data;
     } catch {

@@ -20,3 +20,22 @@ export function execGit(args: string[], cwd: string, timeout: number): Promise<s
     });
   });
 }
+
+/**
+ * Count total lines in untracked (new) files.
+ * Pipes all content through a single `wc -l` to avoid xargs batching undercounts
+ * (batched `xargs wc -l | tail -1` only captures the last batch's total).
+ */
+export function countUntrackedLines(cwd: string, timeout: number): Promise<number> {
+  return new Promise((resolve) => {
+    execFile(
+      'sh',
+      ['-c', "git --no-optional-locks ls-files --others --exclude-standard -z | xargs -0 cat 2>/dev/null | wc -l"],
+      { cwd, encoding: 'utf-8', timeout },
+      (_error, stdout) => {
+        const match = stdout?.match(/(\d+)/);
+        resolve(match ? parseInt(match[1], 10) : 0);
+      },
+    );
+  });
+}

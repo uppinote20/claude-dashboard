@@ -67,7 +67,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `tokenSpeed` | Output token generation speed (e.g., `67 tok/s`) |
 | `sessionName` | Session name from /rename command |
 | `todayCost` | Total spending across all sessions today |
-| `linesChanged` | Uncommitted lines added/removed via git diff (+N -N) |
+| `linesChanged` | Uncommitted lines added/removed, including untracked files (+N -N) |
 | `outputStyle` | Current output style (hidden when "default") |
 | `version` | Claude Code version display |
 | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |

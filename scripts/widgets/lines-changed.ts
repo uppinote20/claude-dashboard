@@ -1,5 +1,6 @@
 /**
  * Lines Changed widget - displays uncommitted lines added/removed via git diff
+ * Includes untracked (new) files in the added count
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
  */
@@ -7,7 +8,7 @@
 import type { Widget } from './base.js';
 import type { WidgetContext, LinesChangedData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
-import { execGit } from '../utils/git.js';
+import { execGit, countUntrackedLines } from '../utils/git.js';
 
 /**
  * Cache TTL for git diff stats (10 seconds)
@@ -38,21 +39,22 @@ export const linesChangedWidget: Widget<LinesChangedData> = {
     }
 
     try {
-      const output = await execGit(['diff', 'HEAD', '--shortstat'], cwd, 1000);
-      if (!output.trim()) {
-        diffCache = { cwd, data: null, timestamp: Date.now() };
-        return null;
-      }
+      const [diffOutput, untracked] = await Promise.all([
+        execGit(['diff', 'HEAD', '--shortstat'], cwd, 1000),
+        countUntrackedLines(cwd, 1000),
+      ]);
 
-      const insertMatch = output.match(/(\d+) insertion/);
-      const deleteMatch = output.match(/(\d+) deletion/);
-      const added = insertMatch ? parseInt(insertMatch[1], 10) : 0;
+      const insertMatch = diffOutput.match(/(\d+) insertion/);
+      const deleteMatch = diffOutput.match(/(\d+) deletion/);
+      const tracked = insertMatch ? parseInt(insertMatch[1], 10) : 0;
       const removed = deleteMatch ? parseInt(deleteMatch[1], 10) : 0;
+      const added = tracked + untracked;
 
-      const data = (added === 0 && removed === 0) ? null : { added, removed };
+      const data = (added === 0 && removed === 0) ? null : { added, removed, untracked };
       diffCache = { cwd, data, timestamp: Date.now() };
       return data;
     } catch {
+      // Also discards untracked lines (e.g., empty repo with no HEAD)
       diffCache = { cwd, data: null, timestamp: Date.now() };
       return null;
     }
