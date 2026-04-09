@@ -3460,6 +3460,14 @@ import { open as open3, stat as stat9 } from "fs/promises";
 import { homedir as homedir5 } from "os";
 var HISTORY_PATH = `${homedir5()}/.claude/history.jsonl`;
 var CHUNK = 16 * 1024;
+function resolvePastedText(display, pastedContents) {
+  if (!pastedContents)
+    return display;
+  return display.replace(
+    /\[Pasted text #(\d+)[^\]]*\]/g,
+    (match, id) => pastedContents[id]?.content ?? match
+  );
+}
 var historyCache = null;
 async function getLastUserPrompt(sessionId) {
   try {
@@ -3484,8 +3492,9 @@ async function getLastUserPrompt(sessionId) {
         try {
           const entry = JSON.parse(lines[i]);
           if (entry.sessionId === sessionId && entry.display?.trim() && entry.timestamp) {
+            const text = resolvePastedText(entry.display, entry.pastedContents);
             const result = {
-              text: entry.display.replace(/\s+/g, " ").trim(),
+              text: text.replace(/\s+/g, " ").trim(),
               timestamp: entry.timestamp
             };
             historyCache.results.set(sessionId, result);
