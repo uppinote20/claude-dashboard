@@ -84,6 +84,45 @@ describe('history-parser', () => {
       expect(result?.text).toBe('Valid');
     });
 
+    it('should resolve [Pasted text] placeholders from pastedContents', async () => {
+      await writeFile(HISTORY_FILE, JSON.stringify({
+        sessionId: 'sess-1',
+        display: '[Pasted text #1 +4 lines]',
+        pastedContents: { '1': { content: 'Line one\nLine two\nLine three\nLine four' } },
+        timestamp: '2024-01-01T10:00:00Z',
+      }));
+
+      const { getLastUserPrompt } = await import('../utils/history-parser.js');
+      const result = await getLastUserPrompt('sess-1');
+      expect(result?.text).toBe('Line one Line two Line three Line four');
+    });
+
+    it('should resolve pasted text mixed with typed text', async () => {
+      await writeFile(HISTORY_FILE, JSON.stringify({
+        sessionId: 'sess-1',
+        display: 'Here is [Pasted text #1 +2 lines] and some more text',
+        pastedContents: { '1': { content: 'pasted\ncontent' } },
+        timestamp: '2024-01-01T10:00:00Z',
+      }));
+
+      const { getLastUserPrompt } = await import('../utils/history-parser.js');
+      const result = await getLastUserPrompt('sess-1');
+      expect(result?.text).toBe('Here is pasted content and some more text');
+    });
+
+    it('should keep placeholder when pastedContents is missing', async () => {
+      await writeFile(HISTORY_FILE, JSON.stringify({
+        sessionId: 'sess-1',
+        display: '[Pasted text #1 +3 lines]',
+        pastedContents: {},
+        timestamp: '2024-01-01T10:00:00Z',
+      }));
+
+      const { getLastUserPrompt } = await import('../utils/history-parser.js');
+      const result = await getLastUserPrompt('sess-1');
+      expect(result?.text).toBe('[Pasted text #1 +3 lines]');
+    });
+
     it('should use cached result when file size unchanged', async () => {
       await writeFile(HISTORY_FILE, JSON.stringify({
         sessionId: 'sess-1', display: 'Cached prompt', timestamp: '2024-01-01T10:00:00Z',

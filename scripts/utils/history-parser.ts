@@ -4,6 +4,7 @@
  * via the `display` field, excluding skill/command expansions.
  *
  * Uses size-based caching: only re-reads when file has grown.
+ * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/history-parser.test.ts
  */
 

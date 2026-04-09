@@ -1,6 +1,7 @@
 /**
  * Git utilities - shared async git command execution
  * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts (countUntrackedLines via mock)
  */
 
 import { execFile } from 'child_process';
