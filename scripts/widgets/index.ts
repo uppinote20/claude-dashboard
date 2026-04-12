@@ -46,6 +46,7 @@ import { todayCostWidget } from './today-cost.js';
 import { lastPromptWidget } from './last-prompt.js';
 import { vimModeWidget } from './vim-mode.js';
 import { apiDurationWidget } from './api-duration.js';
+import { peakHoursWidget } from './peak-hours.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -85,6 +86,7 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['lastPrompt', lastPromptWidget],
   ['vimMode', vimModeWidget],
   ['apiDuration', apiDurationWidget],
+  ['peakHours', peakHoursWidget],
 ] as [WidgetId, Widget][]);
 
 /**

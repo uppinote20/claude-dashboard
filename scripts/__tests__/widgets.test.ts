@@ -28,6 +28,7 @@
  * @covers scripts/widgets/last-prompt.ts
  * @covers scripts/widgets/vim-mode.ts
  * @covers scripts/widgets/api-duration.ts
+ * @covers scripts/widgets/peak-hours.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget } from '../widgets/model.js';
@@ -58,6 +59,7 @@ import { zaiUsageWidget } from '../widgets/zai-usage.js';
 import { lastPromptWidget } from '../widgets/last-prompt.js';
 import { vimModeWidget } from '../widgets/vim-mode.js';
 import { apiDurationWidget } from '../widgets/api-duration.js';
+import { peakHoursWidget, isPeakTime } from '../widgets/peak-hours.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
@@ -2083,6 +2085,60 @@ describe('widgets', () => {
       const ctx = createContext();
       const result = vimModeWidget.render({ mode: 'INSERT' }, ctx);
       expect(result).toContain('INSERT');
+    });
+  });
+
+  describe('peakHoursWidget', () => {
+    it('should have correct id and name', () => {
+      expect(peakHoursWidget.id).toBe('peakHours');
+      expect(peakHoursWidget.name).toBe('Peak Hours');
+    });
+
+    it('should always return data', async () => {
+      const ctx = createContext();
+      const data = await peakHoursWidget.getData(ctx);
+      expect(data).not.toBeNull();
+      expect(typeof data?.isPeak).toBe('boolean');
+      expect(typeof data?.minutesToTransition).toBe('number');
+    });
+
+    // isPeakTime unit tests (exported pure function)
+    it('isPeakTime returns true for weekday peak hours', () => {
+      expect(isPeakTime({ hour: 5, minute: 0, dayOfWeek: 1 })).toBe(true);   // Mon 5:00 AM
+      expect(isPeakTime({ hour: 8, minute: 30, dayOfWeek: 3 })).toBe(true);  // Wed 8:30 AM
+      expect(isPeakTime({ hour: 10, minute: 59, dayOfWeek: 5 })).toBe(true); // Fri 10:59 AM
+    });
+
+    it('isPeakTime returns false at off-peak boundary', () => {
+      expect(isPeakTime({ hour: 11, minute: 0, dayOfWeek: 3 })).toBe(false);  // Wed 11:00 AM
+      expect(isPeakTime({ hour: 4, minute: 59, dayOfWeek: 2 })).toBe(false);  // Tue 4:59 AM
+      expect(isPeakTime({ hour: 14, minute: 0, dayOfWeek: 4 })).toBe(false);  // Thu 2:00 PM
+    });
+
+    it('isPeakTime returns false on weekends even during peak hours', () => {
+      expect(isPeakTime({ hour: 8, minute: 0, dayOfWeek: 0 })).toBe(false);  // Sun 8:00 AM
+      expect(isPeakTime({ hour: 8, minute: 0, dayOfWeek: 6 })).toBe(false);  // Sat 8:00 AM
+    });
+
+    it('should render Peak label during peak', () => {
+      const ctx = createContext();
+      const result = peakHoursWidget.render({ isPeak: true, minutesToTransition: 150 }, ctx);
+      expect(result).toContain('Peak');
+      expect(result).toContain('(2h30m)');
+    });
+
+    it('should render Off-Peak label during off-peak', () => {
+      const ctx = createContext();
+      const result = peakHoursWidget.render({ isPeak: false, minutesToTransition: 90 }, ctx);
+      expect(result).toContain('Off-Peak');
+      expect(result).toContain('(1h30m)');
+    });
+
+    it('should render large countdown for weekend', () => {
+      const ctx = createContext();
+      const result = peakHoursWidget.render({ isPeak: false, minutesToTransition: 3900 }, ctx);
+      expect(result).toContain('Off-Peak');
+      expect(result).toContain('2d17h');
     });
   });
 

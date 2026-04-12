@@ -8,14 +8,14 @@ import { homedir as homedir6 } from "os";
 // scripts/types.ts
 var DISPLAY_PRESETS = {
   compact: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"]
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"]
   ],
   normal: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"],
     ["projectInfo", "sessionId", "sessionDuration", "burnRate", "todoProgress"]
   ],
   detailed: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"],
     ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
     ["tokenBreakdown", "forecast", "budget", "todayCost"],
@@ -55,7 +55,8 @@ var PRESET_CHAR_MAP = {
   "@": "todayCost",
   "?": "lastPrompt",
   m: "vimMode",
-  a: "apiDuration"
+  a: "apiDuration",
+  p: "peakHours"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -825,7 +826,9 @@ var en_default = {
     performance: "Perf",
     tokenBreakdown: "Tokens",
     todayCost: "Today",
-    apiDuration: "API"
+    apiDuration: "API",
+    peakHours: "Peak",
+    offPeak: "Off-Peak"
   },
   checkUsage: {
     title: "CLI Usage Dashboard",
@@ -882,7 +885,9 @@ var ko_default = {
     performance: "\uC131\uB2A5",
     tokenBreakdown: "\uD1A0\uD070",
     todayCost: "\uC624\uB298",
-    apiDuration: "API"
+    apiDuration: "API",
+    peakHours: "\uD53C\uD06C",
+    offPeak: "\uBE44\uD53C\uD06C"
   },
   checkUsage: {
     title: "CLI \uC0AC\uC6A9\uB7C9 \uB300\uC2DC\uBCF4\uB4DC",
@@ -3565,6 +3570,83 @@ var apiDurationWidget = {
   }
 };
 
+// scripts/widgets/peak-hours.ts
+var PEAK_START_HOUR = 5;
+var PEAK_END_HOUR = 11;
+function getPacificTime() {
+  const now = /* @__PURE__ */ new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    hourCycle: "h23",
+    hour: "numeric",
+    minute: "numeric",
+    weekday: "short"
+  }).formatToParts(now);
+  const hour = parseInt(parts.find((p) => p.type === "hour").value, 10);
+  const minute = parseInt(parts.find((p) => p.type === "minute").value, 10);
+  const weekday = parts.find((p) => p.type === "weekday").value;
+  const dayMap = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6
+  };
+  return { hour, minute, dayOfWeek: dayMap[weekday] ?? 0 };
+}
+function isWeekday(dayOfWeek) {
+  return dayOfWeek >= 1 && dayOfWeek <= 5;
+}
+function isPeakTime(pt) {
+  return isWeekday(pt.dayOfWeek) && pt.hour >= PEAK_START_HOUR && pt.hour < PEAK_END_HOUR;
+}
+function getMinutesToTransition(pt) {
+  const currentMinutes = pt.hour * 60 + pt.minute;
+  if (isPeakTime(pt)) {
+    return PEAK_END_HOUR * 60 - currentMinutes;
+  }
+  if (isWeekday(pt.dayOfWeek) && currentMinutes < PEAK_START_HOUR * 60) {
+    return PEAK_START_HOUR * 60 - currentMinutes;
+  }
+  let daysUntilNextWeekday;
+  if (pt.dayOfWeek === 5) {
+    daysUntilNextWeekday = 3;
+  } else if (pt.dayOfWeek === 6) {
+    daysUntilNextWeekday = 2;
+  } else if (pt.dayOfWeek === 0) {
+    daysUntilNextWeekday = 1;
+  } else {
+    daysUntilNextWeekday = 1;
+  }
+  const minutesRemainingToday = 24 * 60 - currentMinutes;
+  return minutesRemainingToday + (daysUntilNextWeekday - 1) * 24 * 60 + PEAK_START_HOUR * 60;
+}
+var peakHoursWidget = {
+  id: "peakHours",
+  name: "Peak Hours",
+  async getData() {
+    const pt = getPacificTime();
+    return {
+      isPeak: isPeakTime(pt),
+      minutesToTransition: getMinutesToTransition(pt)
+    };
+  },
+  render(data, ctx) {
+    const { translations: t } = ctx;
+    const theme = getTheme();
+    const transitionAt = new Date(Date.now() + data.minutesToTransition * 60 * 1e3);
+    const countdown = formatTimeRemaining(transitionAt, t);
+    if (data.isPeak) {
+      const label2 = t.widgets.peakHours ?? "Peak";
+      return `${colorize(label2, theme.danger)} (${countdown})`;
+    }
+    const label = t.widgets.offPeak ?? "Off-Peak";
+    return `${colorize(label, theme.safe)} (${countdown})`;
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3600,7 +3682,8 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["todayCost", todayCostWidget],
   ["lastPrompt", lastPromptWidget],
   ["vimMode", vimModeWidget],
-  ["apiDuration", apiDurationWidget]
+  ["apiDuration", apiDurationWidget],
+  ["peakHours", peakHoursWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

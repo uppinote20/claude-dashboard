@@ -34,7 +34,7 @@ git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/c
 
 ![Compact](images/compact.png)
 
-> Model, context progress bar, cost, rate limits (5h/7d/7d-Sonnet) or z.ai usage (mutually exclusive by provider)
+> Model, context progress bar, cost, rate limits (5h/7d/7d-Sonnet) or z.ai usage (mutually exclusive by provider), peak hours
 
 **Normal (2 lines):**
 
@@ -84,6 +84,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `budget` | Daily spending vs configured budget limit⁵ |
 | | `tokenSpeed` | Output token generation speed (tok/s) |
 | | `todayCost` | Total spending across all sessions today |
+| **Status** | `peakHours` | Peak hours indicator with countdown ([based on PeakClaude](https://github.com/pforret/PeakClaude))⁶ |
 | **Info** | `linesChanged` | Uncommitted lines added/removed, including untracked files (+N -N) |
 | | `outputStyle` | Current output style (hidden when "default") |
 | | `version` | Claude Code version display |
@@ -91,7 +92,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `apiDuration` | API time as % of total session time |
 
 > ¹ Assumes all utilization came from this session; improves as session runs longer.
-> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config.
+> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config. ⁶ Peak = weekdays 5-11 AM PT; shows countdown to next transition.
 
 i18n: English and Korean supported (auto-detect or set via setup).
 
@@ -124,9 +125,9 @@ i18n: English and Korean supported (auto-detect or set via setup).
 
 | Mode | Lines | Widgets |
 |------|-------|---------|
-| `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage |
+| `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage, peakHours |
 | `normal` | 2 | + projectInfo, sessionId, sessionDuration, burnRate, todoProgress |
-| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version, lastPrompt |
+| `detailed` | 5 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version, lastPrompt |
 
 **Configuration file** (`~/.claude/claude-dashboard.local.json`):
 
@@ -160,7 +161,7 @@ Or use preset shorthand for quick configuration:
 
 **Separators:** `pipe` (│, default) / `space` / `dot` (·) / `arrow` (›)
 
-**Preset Shortcuts:** Quick layout with single characters — `"preset": "MC$R|BDO"` (M=model, C=context, $=cost, R=rateLimit5h, etc.)
+**Preset Shortcuts:** Quick layout with single characters — `"preset": "MC$R|BDO"` (M=model, C=context, $=cost, R=rateLimit5h, p=peakHours, etc.)
 
 **Budget Tracking:** Set `"dailyBudget": 15` to track daily spending. Shows ⚠️ at 80% and 🚨 at 95%.
 

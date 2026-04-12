@@ -32,6 +32,8 @@ export const MOCK_TRANSLATIONS: Translations = {
     tokenBreakdown: 'Tokens',
     todayCost: 'Today',
     apiDuration: 'API',
+    peakHours: 'Peak',
+    offPeak: 'Off-Peak',
   },
   checkUsage: {
     title: 'CLI Usage Dashboard',

@@ -51,7 +51,8 @@ claude-dashboard/
 │   │   ├── token-speed.ts   # Token speed widget
 │   │   ├── session-name.ts  # Session name widget
 │   │   ├── today-cost.ts    # Today cost widget
-│   │   └── last-prompt.ts   # Last prompt widget
+│   │   ├── last-prompt.ts   # Last prompt widget
+│   │   └── peak-hours.ts   # Peak hours widget
 │   └── utils/
 │       ├── api-client.ts    # OAuth API client with caching
 │       ├── codex-client.ts  # Codex CLI API client
@@ -156,6 +157,7 @@ interface Widget<T extends WidgetData> {
 | `lastPrompt` | transcript | Last user prompt with timestamp |
 | `vimMode` | stdin | Vim mode (NORMAL/INSERT), hidden when vim disabled |
 | `apiDuration` | stdin | API time as % of session time |
+| `peakHours` | system clock | Peak hours indicator with countdown (weekdays 5-11 AM PT) |
 
 ### Display Modes
 
@@ -165,14 +167,14 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 // Additive approach: each mode adds lines, widgets stay in same position
 const DISPLAY_PRESETS = {
   compact: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
   ],
   normal: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'todoProgress'],
   ],
   detailed: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
@@ -208,6 +210,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
 | `m` | vimMode | `a` | apiDuration |
+| `p` | peakHours | | |
 
 ### Theme System
 

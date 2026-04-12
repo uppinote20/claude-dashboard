@@ -41,7 +41,9 @@
     "performance": "Perf",
     "tokenBreakdown": "Tokens",
     "todayCost": "Today",
-    "apiDuration": "API"
+    "apiDuration": "API",
+    "peakHours": "Peak",
+    "offPeak": "Off-Peak"
   },
   "checkUsage": {
     "title": "CLI Usage Dashboard",

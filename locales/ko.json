@@ -41,7 +41,9 @@
     "performance": "성능",
     "tokenBreakdown": "토큰",
     "todayCost": "오늘",
-    "apiDuration": "API"
+    "apiDuration": "API",
+    "peakHours": "피크",
+    "offPeak": "비피크"
   },
   "checkUsage": {
     "title": "CLI 사용량 대시보드",
