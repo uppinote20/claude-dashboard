@@ -8,18 +8,18 @@ import { homedir as homedir6 } from "os";
 // scripts/types.ts
 var DISPLAY_PRESETS = {
   compact: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"]
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"]
   ],
   normal: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
     ["projectInfo", "sessionId", "sessionDuration", "burnRate", "todoProgress"]
   ],
   detailed: [
-    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage", "peakHours"],
+    ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "zaiUsage"],
     ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
     ["tokenBreakdown", "forecast", "budget", "todayCost"],
-    ["codexUsage", "geminiUsage", "linesChanged", "outputStyle", "version"],
+    ["codexUsage", "geminiUsage", "linesChanged", "outputStyle", "version", "peakHours"],
     ["lastPrompt"]
   ]
 };
@@ -3573,15 +3573,15 @@ var apiDurationWidget = {
 // scripts/widgets/peak-hours.ts
 var PEAK_START_HOUR = 5;
 var PEAK_END_HOUR = 11;
+var PACIFIC_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Los_Angeles",
+  hourCycle: "h23",
+  hour: "numeric",
+  minute: "numeric",
+  weekday: "short"
+});
 function getPacificTime() {
-  const now = /* @__PURE__ */ new Date();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
-    hourCycle: "h23",
-    hour: "numeric",
-    minute: "numeric",
-    weekday: "short"
-  }).formatToParts(now);
+  const parts = PACIFIC_FORMATTER.formatToParts(/* @__PURE__ */ new Date());
   const hour = parseInt(parts.find((p) => p.type === "hour").value, 10);
   const minute = parseInt(parts.find((p) => p.type === "minute").value, 10);
   const weekday = parts.find((p) => p.type === "weekday").value;
@@ -3626,7 +3626,7 @@ function getMinutesToTransition(pt) {
 var peakHoursWidget = {
   id: "peakHours",
   name: "Peak Hours",
-  async getData() {
+  async getData(_ctx) {
     const pt = getPacificTime();
     return {
       isPeak: isPeakTime(pt),

@@ -3,6 +3,8 @@
  * Based on https://github.com/pforret/PeakClaude
  * Peak: Weekdays 5:00 AM - 10:59 AM Pacific Time
  * Off-peak: Weekends + all other hours
+ * @handbook 3.3-widget-data-sources
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget } from './base.js';
@@ -13,6 +15,14 @@ import { formatTimeRemaining } from '../utils/formatters.js';
 const PEAK_START_HOUR = 5;  // 5:00 AM PT
 const PEAK_END_HOUR = 11;   // 11:00 AM PT (peak is 5:00-10:59)
 
+const PACIFIC_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Los_Angeles',
+  hourCycle: 'h23',
+  hour: 'numeric',
+  minute: 'numeric',
+  weekday: 'short',
+});
+
 interface PacificTime {
   hour: number;
   minute: number;
@@ -20,14 +30,7 @@ interface PacificTime {
 }
 
 export function getPacificTime(): PacificTime {
-  const now = new Date();
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Los_Angeles',
-    hourCycle: 'h23',
-    hour: 'numeric',
-    minute: 'numeric',
-    weekday: 'short',
-  }).formatToParts(now);
+  const parts = PACIFIC_FORMATTER.formatToParts(new Date());
 
   const hour = parseInt(parts.find((p) => p.type === 'hour')!.value, 10);
   const minute = parseInt(parts.find((p) => p.type === 'minute')!.value, 10);
@@ -48,7 +51,7 @@ export function isPeakTime(pt: PacificTime): boolean {
   return isWeekday(pt.dayOfWeek) && pt.hour >= PEAK_START_HOUR && pt.hour < PEAK_END_HOUR;
 }
 
-function getMinutesToTransition(pt: PacificTime): number {
+export function getMinutesToTransition(pt: PacificTime): number {
   const currentMinutes = pt.hour * 60 + pt.minute;
 
   if (isPeakTime(pt)) {
@@ -86,7 +89,7 @@ export const peakHoursWidget: Widget<PeakHoursData> = {
   id: 'peakHours',
   name: 'Peak Hours',
 
-  async getData(): Promise<PeakHoursData> {
+  async getData(_ctx: WidgetContext): Promise<PeakHoursData | null> {
     const pt = getPacificTime();
     return {
       isPeak: isPeakTime(pt),
