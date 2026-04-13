@@ -34,7 +34,7 @@ git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/c
 
 ![Compact](images/compact.png)
 
-> Model, context progress bar, cost, rate limits (5h/7d/7d-Sonnet) or z.ai usage (mutually exclusive by provider), peak hours
+> Model, context progress bar, cost, rate limits (5h/7d/7d-Sonnet) or z.ai usage (mutually exclusive by provider)
 
 **Normal (2 lines):**
 
@@ -125,9 +125,9 @@ i18n: English and Korean supported (auto-detect or set via setup).
 
 | Mode | Lines | Widgets |
 |------|-------|---------|
-| `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage, peakHours |
+| `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage |
 | `normal` | 2 | + projectInfo, sessionId, sessionDuration, burnRate, todoProgress |
-| `detailed` | 5 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version, lastPrompt |
+| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours, lastPrompt |
 
 **Configuration file** (`~/.claude/claude-dashboard.local.json`):
 
@@ -161,7 +161,7 @@ Or use preset shorthand for quick configuration:
 
 **Separators:** `pipe` (│, default) / `space` / `dot` (·) / `arrow` (›)
 
-**Preset Shortcuts:** Quick layout with single characters — `"preset": "MC$R|BDO"` (M=model, C=context, $=cost, R=rateLimit5h, p=peakHours, etc.)
+**Preset Shortcuts:** Quick layout with single characters — `"preset": "MC$R|BDO"` (M=model, C=context, $=cost, R=rateLimit5h, etc.)
 
 **Budget Tracking:** Set `"dailyBudget": 15` to track daily spending. Shows ⚠️ at 80% and 🚨 at 95%.
 

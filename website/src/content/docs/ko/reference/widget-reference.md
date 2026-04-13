@@ -267,3 +267,13 @@ sidebar:
 - **표시 내용**: 세션 시간 중 API 응답 대기에 사용된 비율. 세션이 API 바운드인지 도구 실행 바운드인지 파악에 유용합니다.
 - **프리셋 문자**: `a`
 - **출력 예시**: `API 45%`, `API 72%`
+
+## Status
+
+### peakHours
+
+- **ID**: `peakHours`
+- **데이터 소스**: 시스템 시계 (Pacific Time, `Intl.DateTimeFormat` 사용)
+- **표시 내용**: 현재 시각이 Anthropic API 피크 시간(평일 5:00-10:59 AM PT) 내인지 표시합니다. 다음 전환까지 카운트다운을 함께 보여줍니다. [PeakClaude](https://github.com/pforret/PeakClaude) 기반.
+- **프리셋 문자**: `p`
+- **출력 예시**: `피크 (3h17m)`, `비피크 (23h9m)`, `비피크 (2d17h)`

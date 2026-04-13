@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-claude-dashboard provides 31 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
+claude-dashboard provides 32 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
 
 ## Core
 
@@ -81,6 +81,12 @@ claude-dashboard provides 31 widgets organized by category. Each widget can be i
 | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |
 | `apiDuration` | API time as % of total session time |
 
+## Status
+
+| Widget | Description |
+|--------|-------------|
+| `peakHours` | Peak hours indicator with countdown ([based on PeakClaude](https://github.com/pforret/PeakClaude))[6] |
+
 ## Notes
 
 1. **depletionTime** assumes all utilization came from the current session; accuracy improves as the session runs longer.
@@ -88,6 +94,7 @@ claude-dashboard provides 31 widgets organized by category. Each widget can be i
 3. **geminiUsage** and **geminiUsageAll** auto-hide if `~/.gemini/oauth_creds.json` is not found.
 4. **zaiUsage** auto-hides if not detected via `ANTHROPIC_BASE_URL`.
 5. **budget** requires `"dailyBudget"` to be set in the configuration file.
+6. **peakHours** peak = weekdays 5-11 AM PT; shows countdown to next transition.
 
 ## Language Support
 

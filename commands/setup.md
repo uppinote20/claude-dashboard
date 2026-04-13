@@ -16,9 +16,9 @@ Configure the claude-dashboard status line plugin with widget system support.
 ### Direct Mode Arguments
 
 - `$1`: Display mode
-  - `compact` (default): 1 line (model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage, peakHours)
+  - `compact` (default): 1 line (model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage)
   - `normal`: 2 lines (+ projectInfo, sessionId, sessionDuration, burnRate, todoProgress)
-  - `detailed`: 6 lines (+ sessionName, tokenSpeed, depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, todayCost, codexUsage, geminiUsage, linesChanged, outputStyle, version, lastPrompt)
+  - `detailed`: 6 lines (+ sessionName, tokenSpeed, depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, todayCost, codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours, lastPrompt)
   - `custom`: Custom widget configuration (requires `$4`)
 
 - `$2`: Language preference

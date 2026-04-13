@@ -13,6 +13,8 @@ The compact mode displays essential metrics on a single line. This is the defaul
 
 **Widgets:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
 
+> `peakHours` is available in detailed mode (line 5). Add it to any mode via custom preset shortcuts (`p`).
+
 ```
 ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
 ```
@@ -45,7 +47,7 @@ Shows all available widgets across six lines, including analytics, tool activity
 **Line 2:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
 **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
 **Line 4:** tokenBreakdown, forecast, budget, todayCost<br/>
-**Line 5:** codexUsage, geminiUsage, linesChanged, outputStyle, version<br/>
+**Line 5:** codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours<br/>
 **Line 6:** lastPrompt
 
 ```
@@ -53,7 +55,7 @@ Shows all available widgets across six lines, including analytics, tool activity
 📁 project (main ↑3) │ » feature-auth │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⚡ 67 tok/s │ ⏳ 2h │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
 📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 Today: $4.83
-🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80
+🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80 │ Off-Peak (23h9m)
 💬 14:32 Fix the authentication bug in middleware
 ```
 

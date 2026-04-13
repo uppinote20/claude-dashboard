@@ -167,18 +167,18 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 // Additive approach: each mode adds lines, widgets stay in same position
 const DISPLAY_PRESETS = {
   compact: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
   ],
   normal: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'todoProgress'],
   ],
   detailed: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage', 'peakHours'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
-    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version'],
+    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt'],
   ],
 };

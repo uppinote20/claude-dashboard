@@ -41,6 +41,7 @@ This creates a 2-line layout:
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
 | `m` | vimMode | `a` | apiDuration |
+| `p` | peakHours | | |
 
 ## Examples
 

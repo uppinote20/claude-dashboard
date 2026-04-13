@@ -496,3 +496,21 @@ INSERT
 API 45%
 API 72%
 ```
+
+## Status Widgets
+
+### peakHours
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `peakHours` |
+| **Data Source** | system clock (Pacific Time via `Intl.DateTimeFormat`) |
+| **Description** | Shows whether the current time falls within Anthropic API peak hours (weekdays 5:00-10:59 AM PT). Displays a countdown to the next transition. Based on [PeakClaude](https://github.com/pforret/PeakClaude). |
+| **Preset Char** | `p` |
+
+**Example output:**
+```
+Peak (3h17m)
+Off-Peak (23h9m)
+Off-Peak (2d17h)
+```

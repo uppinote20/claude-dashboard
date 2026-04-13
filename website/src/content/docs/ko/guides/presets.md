@@ -41,6 +41,7 @@ sidebar:
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
 | `m` | vimMode | `a` | apiDuration |
+| `p` | peakHours | | |
 
 ## 예시
 
