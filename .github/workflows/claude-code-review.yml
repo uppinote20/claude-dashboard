@@ -6,8 +6,8 @@ on:
 
 jobs:
   claude-review:
+    if: ${{ !github.event.pull_request.head.repo.fork }}
     runs-on: ubuntu-latest
-    environment: ${{ github.event.pull_request.head.repo.fork && 'fork-pr-review' || '' }}
     permissions:
       contents: read
       pull-requests: write

@@ -1,13 +1,11 @@
 name: Release Notes Drafter
 
 on:
-  pull_request:
-    types: [closed]
+  push:
     branches: [main]
 
 jobs:
   draft-release-notes:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -15,24 +13,34 @@ jobs:
       id-token: write
 
     steps:
+      - name: Find merged PR
+        id: find-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=$(gh api repos/${{ github.repository }}/commits/${{ github.sha }}/pulls --jq '.[0].number // empty' 2>/dev/null || true)
+          echo "pr_number=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
+        if: steps.find-pr.outputs.pr_number != ''
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Draft Release Notes
+        if: steps.find-pr.outputs.pr_number != ''
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            PR #${{ github.event.pull_request.number }} has been merged.
+            PR #${{ steps.find-pr.outputs.pr_number }} has been merged.
 
             Your task: analyze this merged PR and append its release notes to an existing draft GitHub release.
 
             ## Steps
 
-            1. Run `gh pr view ${{ github.event.pull_request.number }} --json title,body,files` to understand the PR.
-            2. Run `gh pr diff ${{ github.event.pull_request.number }}` to see the actual code changes.
+            1. Run `gh pr view ${{ steps.find-pr.outputs.pr_number }} --json title,body,files` to understand the PR.
+            2. Run `gh pr diff ${{ steps.find-pr.outputs.pr_number }}` to see the actual code changes.
             3. Check for an existing draft release: `gh release list --json tagName,isDraft,name | head -5`
             4. Write a concise release note entry in English for this PR:
                - One line summary with PR reference (e.g., "- Add budget tracking widget (#42)")
