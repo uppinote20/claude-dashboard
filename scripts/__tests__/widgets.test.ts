@@ -59,7 +59,7 @@ import { zaiUsageWidget } from '../widgets/zai-usage.js';
 import { lastPromptWidget } from '../widgets/last-prompt.js';
 import { vimModeWidget } from '../widgets/vim-mode.js';
 import { apiDurationWidget } from '../widgets/api-duration.js';
-import { peakHoursWidget, isPeakTime } from '../widgets/peak-hours.js';
+import { peakHoursWidget, isPeakTime, getMinutesToTransition } from '../widgets/peak-hours.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
@@ -2139,6 +2139,44 @@ describe('widgets', () => {
       const result = peakHoursWidget.render({ isPeak: false, minutesToTransition: 3900 }, ctx);
       expect(result).toContain('Off-Peak');
       expect(result).toContain('2d17h');
+    });
+
+    // getMinutesToTransition unit tests (exported pure function)
+    it('getMinutesToTransition returns remaining peak minutes during peak', () => {
+      // Wed 8:30 AM → 11:00 AM = 150 minutes
+      expect(getMinutesToTransition({ hour: 8, minute: 30, dayOfWeek: 3 })).toBe(150);
+      // Mon 5:00 AM → 11:00 AM = 360 minutes
+      expect(getMinutesToTransition({ hour: 5, minute: 0, dayOfWeek: 1 })).toBe(360);
+      // Fri 10:59 AM → 11:00 AM = 1 minute
+      expect(getMinutesToTransition({ hour: 10, minute: 59, dayOfWeek: 5 })).toBe(1);
+    });
+
+    it('getMinutesToTransition returns minutes to peak for weekday before peak', () => {
+      // Tue 4:59 AM → 5:00 AM = 1 minute
+      expect(getMinutesToTransition({ hour: 4, minute: 59, dayOfWeek: 2 })).toBe(1);
+      // Mon 0:00 AM → 5:00 AM = 300 minutes
+      expect(getMinutesToTransition({ hour: 0, minute: 0, dayOfWeek: 1 })).toBe(300);
+    });
+
+    it('getMinutesToTransition returns minutes to next Monday for weekend', () => {
+      // Sat 12:00 PM → Mon 5:00 AM = 41h = 2460 min
+      expect(getMinutesToTransition({ hour: 12, minute: 0, dayOfWeek: 6 })).toBe(2460);
+      // Sun 12:00 PM → Mon 5:00 AM = 17h = 1020 min
+      expect(getMinutesToTransition({ hour: 12, minute: 0, dayOfWeek: 0 })).toBe(1020);
+    });
+
+    it('getMinutesToTransition returns minutes to next day for weekday after peak', () => {
+      // Wed 3:00 PM → Thu 5:00 AM = 14h = 840 min
+      expect(getMinutesToTransition({ hour: 15, minute: 0, dayOfWeek: 3 })).toBe(840);
+      // Wed 11:00 AM → Thu 5:00 AM = 18h = 1080 min
+      expect(getMinutesToTransition({ hour: 11, minute: 0, dayOfWeek: 3 })).toBe(1080);
+    });
+
+    it('getMinutesToTransition handles Friday after peak to Monday', () => {
+      // Fri 11:00 AM → Mon 5:00 AM = 66h = 3960 min
+      expect(getMinutesToTransition({ hour: 11, minute: 0, dayOfWeek: 5 })).toBe(3960);
+      // Fri 3:00 PM → Mon 5:00 AM = 62h = 3720 min
+      expect(getMinutesToTransition({ hour: 15, minute: 0, dayOfWeek: 5 })).toBe(3720);
     });
   });
 
