@@ -158,6 +158,7 @@ interface Widget<T extends WidgetData> {
 | `vimMode` | stdin | Vim mode (NORMAL/INSERT), hidden when vim disabled |
 | `apiDuration` | stdin | API time as % of session time |
 | `peakHours` | system clock | Peak hours indicator with countdown (weekdays 5-11 AM PT) |
+| `tagStatus` | git | Distance (commits ahead) from matched git tags. Supports multiple glob patterns via `tagPatterns` config (default `["v*"]`). Hidden when no pattern matches. |
 
 ### Display Modes
 
@@ -210,7 +211,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
 | `m` | vimMode | `a` | apiDuration |
-| `p` | peakHours | | |
+| `p` | peakHours | `t` | tagStatus |
 
 ### Theme System
 
