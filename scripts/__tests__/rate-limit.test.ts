@@ -77,14 +77,14 @@ describe('rate-limit widgets', () => {
   });
 
   describe('rateLimit7dWidget', () => {
-    it('should return null for non-max plan', async () => {
+    it('should return data for pro plan when seven_day is available', async () => {
       const ctx = createContext(
         { five_hour: null, seven_day: { utilization: 50, resets_at: null }, seven_day_sonnet: null },
         { plan: 'pro' }
       );
       const data = await rateLimit7dWidget.getData(ctx);
 
-      expect(data).toBeNull();
+      expect(data).toEqual({ utilization: 50, resetsAt: null });
     });
 
     it('should return null when API failed (different from 5h widget)', async () => {

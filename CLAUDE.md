@@ -129,7 +129,7 @@ interface Widget<T extends WidgetData> {
 | `context` | stdin | Progress bar, %, tokens |
 | `cost` | stdin | Session cost |
 | `rateLimit5h` | API | 5-hour rate limit |
-| `rateLimit7d` | API | 7-day rate limit (Max) |
+| `rateLimit7d` | API | 7-day rate limit (Pro/Max) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max) |
 | `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
 | `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |

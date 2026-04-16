@@ -29,9 +29,9 @@ Running `/claude-dashboard:setup` without arguments launches interactive mode, w
 | Feature | Max | Pro |
 |---------|-----|-----|
 | 5h rate limit + countdown | Yes | Yes |
-| 7d all models | Yes | No |
+| 7d all models | Yes | Yes |
 
-Pro plan users will not see the 7-day rate limit widgets (`rateLimit7d`, `rateLimit7dSonnet`), as these limits only apply to the Max plan.
+Pro plan users will not see the 7-day Sonnet rate limit widget (`rateLimit7dSonnet`), as Sonnet-specific quota buckets only apply to the Max plan. The `rateLimit7d` widget is available for both Pro and Max plans.
 
 ## Configuration File
 

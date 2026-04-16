@@ -91,7 +91,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit7d` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 7-day rate limit utilization. Max plan only. |
+| **Description** | Shows the 7-day rate limit utilization. Available on Pro and Max plans. |
 
 **Example output:**
 ```

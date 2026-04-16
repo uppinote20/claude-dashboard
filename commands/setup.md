@@ -43,8 +43,8 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `context` | Progress bar, percentage, tokens |
 | `cost` | Session cost in USD |
 | `rateLimit5h` | 5-hour rate limit |
-| `rateLimit7d` | 7-day rate limit (Max only) |
-| `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
+| `rateLimit7d` | 7-day rate limit (Pro/Max) |
+| `rateLimit7dSonnet` | 7-day Sonnet limit (Max) |
 | `projectInfo` | Directory name + git branch + ahead/behind (↑↓), subpath from project_dir, worktree indicator |
 | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs counts |
 | `sessionId` | Session ID (short 8 chars) |

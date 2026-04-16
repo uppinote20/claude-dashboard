@@ -1214,8 +1214,6 @@ var rateLimit7dWidget = {
   async getData(ctx) {
     if (shouldHideAnthropicLimits())
       return null;
-    if (ctx.config.plan !== "max")
-      return null;
     return getLimitData(ctx.rateLimits, "seven_day");
   },
   render(data, ctx) {
