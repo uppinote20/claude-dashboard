@@ -126,6 +126,33 @@ const THEMES: Record<ThemeId, ThemeColors> = {
     gray: '\x1b[38;2;127;132;156m',
   },
 
+  catppuccinLatte: {
+    dim: '\x1b[2m',
+    bold: '\x1b[1m',
+
+    model: '\x1b[38;2;30;102;245m',      // #1e66f5 blue
+    folder: '\x1b[38;2;223;142;29m',     // #df8e1d yellow
+    branch: '\x1b[38;2;234;118;203m',    // #ea76cb pink
+    safe: '\x1b[38;2;64;160;43m',        // #40a02b green
+    warning: '\x1b[38;2;254;100;11m',    // #fe640b peach
+    danger: '\x1b[38;2;210;15;57m',      // #d20f39 red
+    secondary: '\x1b[38;2;140;143;161m', // #8c8fa1 overlay1
+    accent: '\x1b[38;2;254;100;11m',     // #fe640b peach
+    info: '\x1b[38;2;32;159;181m',       // #209fb5 sapphire
+
+    barFilled: '\x1b[38;2;64;160;43m',   // #40a02b green
+    barEmpty: '\x1b[38;2;188;192;204m',  // #bcc0cc surface1
+
+    red: '\x1b[38;2;210;15;57m',
+    green: '\x1b[38;2;64;160;43m',
+    yellow: '\x1b[38;2;223;142;29m',
+    blue: '\x1b[38;2;30;102;245m',
+    magenta: '\x1b[38;2;136;57;239m',    // #8839ef mauve
+    cyan: '\x1b[38;2;23;146;153m',       // #179299 teal
+    white: '\x1b[38;2;76;79;105m',       // #4c4f69 text
+    gray: '\x1b[38;2;140;143;161m',
+  },
+
   gruvbox: {
     dim: '\x1b[2m',
     bold: '\x1b[1m',

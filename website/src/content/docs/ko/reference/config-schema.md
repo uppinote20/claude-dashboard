@@ -42,7 +42,7 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 색상 테마 타입입니다.
 
 ```typescript
-type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
+type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'catppuccinLatte' | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
 ```
 
 | 값 | 스타일 |
@@ -50,6 +50,7 @@ type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox' | 'n
 | `default` | 파스텔 색상 (cyan, yellow, pink, green) |
 | `minimal` | 모노크롬 (white + gray) |
 | `catppuccin` | Catppuccin Mocha 팔레트 |
+| `catppuccinLatte` | Catppuccin Latte 팔레트 (라이트 모드 터미널용) |
 | `dracula` | Dracula 팔레트 |
 | `gruvbox` | Gruvbox 팔레트 |
 | `nord` | Nord polar night/frost 팔레트 |
