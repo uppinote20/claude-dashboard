@@ -103,6 +103,7 @@ claude-dashboard/
 | 위젯 구현 (기본) | `scripts/widgets/cost.ts` |
 | 위젯 구현 (API) | `scripts/widgets/rate-limit.ts` |
 | 위젯 구현 (transcript) | `scripts/widgets/tool-activity.ts` |
+| 위젯 구현 (파생/공유 getData) | `scripts/widgets/context.ts`, `scripts/widgets/session-id.ts` |
 | API 클라이언트 | `scripts/utils/api-client.ts` |
 | 포매팅 유틸리티 | `scripts/utils/formatters.ts` |
 

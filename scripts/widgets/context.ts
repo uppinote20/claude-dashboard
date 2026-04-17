@@ -1,6 +1,7 @@
 /**
  * Context widgets - full display plus bar/percentage/usage sub-widgets
  * @handbook 3.3-widget-data-sources
+ * @handbook 3.6-derived-widgets
  * @tested scripts/__tests__/widgets.test.ts
  */
 
