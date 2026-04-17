@@ -440,17 +440,10 @@ describe('widgets', () => {
       expect(result).not.toContain('25%');
     });
 
-    it('sub-widgets share the same getData as contextWidget', async () => {
-      const ctx = createContext();
-      const [full, bar, pct, usage] = await Promise.all([
-        contextWidget.getData(ctx),
-        contextBarWidget.getData(ctx),
-        contextPercentageWidget.getData(ctx),
-        contextUsageWidget.getData(ctx),
-      ]);
-      expect(bar).toEqual(full);
-      expect(pct).toEqual(full);
-      expect(usage).toEqual(full);
+    it('sub-widgets share the same getData reference as contextWidget', () => {
+      expect(contextBarWidget.getData).toBe(contextWidget.getData);
+      expect(contextPercentageWidget.getData).toBe(contextWidget.getData);
+      expect(contextUsageWidget.getData).toBe(contextWidget.getData);
     });
   });
 
