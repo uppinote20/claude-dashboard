@@ -20,6 +20,7 @@ The configuration file is located at `~/.claude/claude-dashboard.local.json`. Th
 | `separator` | `SeparatorStyle` | `"pipe"` | Character used between widgets on the same line. |
 | `preset` | `string` | -- | Preset shorthand string for quick layout. When set, overrides `displayMode` with `"custom"` and generates `lines` from the string. |
 | `dailyBudget` | `number` | -- | Daily budget limit in USD. Enables the `budget` widget. |
+| `tagPatterns` | `string[]` | `["v*"]` | Glob patterns for the `tagStatus` widget. Each pattern resolves to at most one tag (the most recent reachable from HEAD). Widget hides when no pattern matches a tag. |
 | `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 300 }` | Cache settings. `ttlSeconds` controls how long API responses are cached. |
 
 ## DisplayMode
@@ -71,7 +72,7 @@ type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow';
 
 ```typescript
 type WidgetId =
-  | 'model' | 'context' | 'cost'
+  | 'model' | 'context' | 'contextBar' | 'contextPercentage' | 'contextUsage' | 'cost'
   | 'rateLimit5h' | 'rateLimit7d' | 'rateLimit7dSonnet'
   | 'projectInfo' | 'configCounts'
   | 'sessionDuration' | 'sessionId' | 'sessionIdFull' | 'sessionName'
@@ -84,7 +85,9 @@ type WidgetId =
   | 'outputStyle'
   | 'lastPrompt'
   | 'vimMode'
-  | 'apiDuration';
+  | 'apiDuration'
+  | 'peakHours'
+  | 'tagStatus';
 ```
 
 See the [Widget Reference](/reference/widget-reference/) for detailed information about each widget.

@@ -41,7 +41,9 @@ This creates a 2-line layout:
 | `Q` | tokenSpeed | `J` | sessionName |
 | `@` | todayCost | `?` | lastPrompt |
 | `m` | vimMode | `a` | apiDuration |
-| `p` | peakHours | | |
+| `p` | peakHours | `t` | tagStatus |
+| `b` | contextBar | `%` | contextPercentage |
+| `#` | contextUsage | | |
 
 ## Examples
 

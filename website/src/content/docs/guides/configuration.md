@@ -84,6 +84,18 @@ Set a daily budget limit in USD to track your spending:
 
 The `budget` widget shows daily spending versus your configured limit. Warning indicators appear at 80% usage and critical alerts at 95%.
 
+## Tag Status Patterns
+
+The `tagStatus` widget shows commits ahead of each matched git tag. Configure which tags to track via `tagPatterns`:
+
+```json
+{
+  "tagPatterns": ["v*", "release-*"]
+}
+```
+
+Each glob pattern resolves to at most one tag — the most recent one reachable from `HEAD`. The default is `["v*"]`. The widget auto-hides when no pattern matches a reachable tag.
+
 ## Widget Toggle
 
 Add widget IDs to `disabledWidgets` to hide specific widgets from any display mode (including presets and custom layouts):

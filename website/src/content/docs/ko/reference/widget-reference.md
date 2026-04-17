@@ -26,6 +26,24 @@ sidebar:
   - 🔴 81-100%: 위험
 - **출력 예시**: `██████░░░░ 58% 120K`
 
+### contextBar / contextPercentage / contextUsage
+
+`context`의 세 구성 요소 중 하나만 표시하는 서브 위젯입니다. 분할 터미널처럼 공간이 좁은 환경에서 필요한 정보만 골라 status line을 컴팩트하게 유지할 수 있습니다. 모든 서브 위젯은 `context`와 동일한 데이터 소스를 공유하므로 색상과 백분율이 항상 일치합니다.
+
+| 위젯 ID | 표시 내용 |
+|---------|-----------|
+| `contextBar` | 프로그레스 바만 |
+| `contextPercentage` | 백분율만 (예: `45%`) |
+| `contextUsage` | 토큰 수만 (예: `90K/200K`) |
+
+**예시 레이아웃:**
+```jsonc
+// .claude/claude-dashboard.local.json
+"lines": [
+  ["projectInfo", "contextBar", "contextPercentage", "rateLimit5h"]
+]
+```
+
 ### cost
 
 - **ID**: `cost`
@@ -277,3 +295,11 @@ sidebar:
 - **표시 내용**: 현재 시각이 Anthropic API 피크 시간(평일 5:00-10:59 AM PT) 내인지 표시합니다. 다음 전환까지 카운트다운을 함께 보여줍니다. [PeakClaude](https://github.com/pforret/PeakClaude) 기반.
 - **프리셋 문자**: `p`
 - **출력 예시**: `피크 (3h17m)`, `비피크 (23h9m)`, `비피크 (2d17h)`
+
+### tagStatus
+
+- **ID**: `tagStatus`
+- **데이터 소스**: git (`describe` + `rev-list --count`)
+- **표시 내용**: 매칭된 각 git 태그로부터 HEAD까지의 커밋 수를 표시합니다. `"tagPatterns"` 설정으로 패턴 배열을 지정할 수 있으며 기본값은 `["v*"]`. 어떤 패턴도 매칭되지 않으면 위젯이 숨겨집니다.
+- **프리셋 문자**: `t`
+- **출력 예시**: `v1.2.3 +5`, `v1.2.3 +5, beta-3 +2`

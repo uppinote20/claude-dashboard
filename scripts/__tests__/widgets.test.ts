@@ -33,7 +33,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget, getDefaultEffort } from '../widgets/model.js';
-import { contextWidget } from '../widgets/context.js';
+import {
+  contextWidget,
+  contextBarWidget,
+  contextPercentageWidget,
+  contextUsageWidget,
+} from '../widgets/context.js';
 import { costWidget } from '../widgets/cost.js';
 import { todoProgressWidget } from '../widgets/todo-progress.js';
 import { agentStatusWidget } from '../widgets/agent-status.js';
@@ -386,6 +391,59 @@ describe('widgets', () => {
 
       expect(result).toContain('25%');
       expect(result).toContain('50K/200K');
+    });
+  });
+
+  describe('context sub-widgets', () => {
+    const sampleData = {
+      inputTokens: 50000,
+      outputTokens: 10000,
+      totalTokens: 60000,
+      contextSize: 200000,
+      percentage: 25,
+    };
+
+    it('contextBarWidget has correct id and name', () => {
+      expect(contextBarWidget.id).toBe('contextBar');
+      expect(contextBarWidget.name).toBe('Context (Bar)');
+    });
+
+    it('contextBarWidget renders only the progress bar (no percent, no tokens)', () => {
+      const ctx = createContext();
+      const result = contextBarWidget.render(sampleData, ctx);
+      expect(result).not.toContain('25%');
+      expect(result).not.toContain('50K/200K');
+      expect(result.length).toBeGreaterThan(0);
+    });
+
+    it('contextPercentageWidget has correct id and name', () => {
+      expect(contextPercentageWidget.id).toBe('contextPercentage');
+      expect(contextPercentageWidget.name).toBe('Context (Percentage)');
+    });
+
+    it('contextPercentageWidget renders only the percentage', () => {
+      const ctx = createContext();
+      const result = contextPercentageWidget.render(sampleData, ctx);
+      expect(result).toContain('25%');
+      expect(result).not.toContain('50K/200K');
+    });
+
+    it('contextUsageWidget has correct id and name', () => {
+      expect(contextUsageWidget.id).toBe('contextUsage');
+      expect(contextUsageWidget.name).toBe('Context (Usage)');
+    });
+
+    it('contextUsageWidget renders only the token count', () => {
+      const ctx = createContext();
+      const result = contextUsageWidget.render(sampleData, ctx);
+      expect(result).toContain('50K/200K');
+      expect(result).not.toContain('25%');
+    });
+
+    it('sub-widgets share the same getData reference as contextWidget', () => {
+      expect(contextBarWidget.getData).toBe(contextWidget.getData);
+      expect(contextPercentageWidget.getData).toBe(contextWidget.getData);
+      expect(contextUsageWidget.getData).toBe(contextWidget.getData);
     });
   });
 

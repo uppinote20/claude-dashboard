@@ -57,6 +57,9 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 |----------|--------|-------------|
 | **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (X/H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
+| | `contextBar` | Progress bar only (sub-widget of `context`) |
+| | `contextPercentage` | Percentage only (sub-widget of `context`) |
+| | `contextUsage` | Token count only, e.g. `42K/200K` (sub-widget of `context`) |
 | | `cost` | Session cost in USD |
 | | `projectInfo` | Directory + git branch (clickable OSC8 link) + ahead/behind (↑↓), subpath from project_dir, worktree indicator (🌳) |
 | **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
@@ -85,6 +88,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `tokenSpeed` | Output token generation speed (tok/s) |
 | | `todayCost` | Total spending across all sessions today |
 | **Status** | `peakHours` | Peak hours indicator with countdown ([based on PeakClaude](https://github.com/pforret/PeakClaude))⁶ |
+| | `tagStatus` | Commits ahead of matched git tags (default pattern `v*`, customize via `tagPatterns`)⁷ |
 | **Info** | `linesChanged` | Uncommitted lines added/removed, including untracked files (+N -N) |
 | | `outputStyle` | Current output style (hidden when "default") |
 | | `version` | Claude Code version display |
@@ -92,7 +96,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `apiDuration` | API time as % of total session time |
 
 > ¹ Assumes all utilization came from this session; improves as session runs longer.
-> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config. ⁶ Peak = weekdays 5-11 AM PT; shows countdown to next transition.
+> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config. ⁶ Peak = weekdays 5-11 AM PT; shows countdown to next transition. ⁷ Uses `tagPatterns` config (default `["v*"]`); auto-hides when no pattern matches a reachable tag.
 
 i18n: English and Korean supported (auto-detect or set via setup).
 
@@ -164,6 +168,8 @@ Or use preset shorthand for quick configuration:
 **Preset Shortcuts:** Quick layout with single characters — `"preset": "MC$R|BDO"` (M=model, C=context, $=cost, R=rateLimit5h, etc.)
 
 **Budget Tracking:** Set `"dailyBudget": 15` to track daily spending. Shows ⚠️ at 80% and 🚨 at 95%.
+
+**Tag Status:** Customize `tagStatus` patterns via `"tagPatterns": ["v*", "release-*"]`. Default is `["v*"]`. The widget auto-hides when no pattern matches a reachable tag.
 
 **Widget Toggle:** Add widget IDs to `disabledWidgets` to hide them from any display mode.
 

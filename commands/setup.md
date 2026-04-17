@@ -41,6 +41,9 @@ Configure the claude-dashboard status line plugin with widget system support.
 |--------|-------------|
 | `model` | Model name with emoji, effort level (Opus/Sonnet), fast mode (Opus) |
 | `context` | Progress bar, percentage, tokens |
+| `contextBar` | Progress bar only (sub-widget of `context`) |
+| `contextPercentage` | Percentage only (sub-widget of `context`) |
+| `contextUsage` | Token count only, e.g. `42K/200K` (sub-widget of `context`) |
 | `cost` | Session cost in USD |
 | `rateLimit5h` | 5-hour rate limit |
 | `rateLimit7d` | 7-day rate limit (Pro/Max) |
@@ -73,6 +76,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `vimMode` | Vim mode (NORMAL/INSERT), auto-hides when vim disabled |
 | `apiDuration` | API time as % of total session time |
 | `peakHours` | Peak hours indicator with countdown (weekdays 5-11 AM PT) |
+| `tagStatus` | Commits ahead of matched git tags (uses `tagPatterns` config, default `["v*"]`) |
 
 ## Tasks
 
@@ -157,7 +161,7 @@ Create `~/.claude/claude-dashboard.local.json`:
 }
 ```
 
-Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version, `Q`=tokenSpeed, `J`=sessionName, `@`=todayCost, `p`=peakHours. Use `|` to separate lines.
+Preset characters: `M`=model, `C`=context, `b`=contextBar, `%`=contextPercentage, `#`=contextUsage, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `X`=codexUsage, `G`=geminiUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version, `Q`=tokenSpeed, `J`=sessionName, `@`=todayCost, `?`=lastPrompt, `m`=vimMode, `a`=apiDuration, `p`=peakHours, `t`=tagStatus. Use `|` to separate lines.
 
 **For custom mode:**
 ```json
@@ -185,7 +189,14 @@ Preset characters: `M`=model, `C`=context, `$`=cost, `R`=rateLimit5h, `7`=rateLi
 }
 ```
 
-**Note**: Omit `"disabledWidgets"` field entirely if user chose not to hide any widgets. Omit `"dailyBudget"` if not using budget tracking. Omit `"separator"` if using default pipe style.
+**For tagStatus patterns** (add to any config, default is `["v*"]`):
+```json
+{
+  "tagPatterns": ["v*", "release-*"]
+}
+```
+
+**Note**: Omit `"disabledWidgets"` field entirely if user chose not to hide any widgets. Omit `"dailyBudget"` if not using budget tracking. Omit `"tagPatterns"` to use the default `["v*"]`. Omit `"separator"` if using default pipe style.
 
 ### 3. Update settings.json
 

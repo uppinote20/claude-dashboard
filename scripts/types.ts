@@ -103,6 +103,9 @@ export interface StdinInput {
 export type WidgetId =
   | 'model'
   | 'context'
+  | 'contextBar'
+  | 'contextPercentage'
+  | 'contextUsage'
   | 'cost'
   | 'rateLimit5h'
   | 'rateLimit7d'
@@ -220,6 +223,9 @@ export interface Config {
 export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   M: 'model',
   C: 'context',
+  b: 'contextBar',
+  '%': 'contextPercentage',
+  '#': 'contextUsage',
   $: 'cost',
   R: 'rateLimit5h',
   '7': 'rateLimit7d',

@@ -38,6 +38,24 @@ Opus(X↯)
 ████---- 80% 160K
 ```
 
+### contextBar / contextPercentage / contextUsage
+
+Sub-widgets of `context` that render just one of its three components. Use them when you need to keep the status line compact (e.g., on a split terminal) while still surfacing the most important context information. All sub-widgets share the same data source as `context`, so colors and percentages stay in sync.
+
+| Widget ID | Shows |
+|-----------|-------|
+| `contextBar` | Progress bar only |
+| `contextPercentage` | Percentage only (e.g. `45%`) |
+| `contextUsage` | Token count only (e.g. `90K/200K`) |
+
+**Example layout:**
+```jsonc
+// .claude/claude-dashboard.local.json
+"lines": [
+  ["projectInfo", "contextBar", "contextPercentage", "rateLimit5h"]
+]
+```
+
 ### cost
 
 | Property | Value |
@@ -513,4 +531,19 @@ API 72%
 Peak (3h17m)
 Off-Peak (23h9m)
 Off-Peak (2d17h)
+```
+
+### tagStatus
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `tagStatus` |
+| **Data Source** | git (`describe` + `rev-list --count`) |
+| **Description** | Shows the number of commits ahead of each matched git tag. Configure patterns via `"tagPatterns"` (default `["v*"]`). Widget hides when no pattern matches a reachable tag. |
+| **Preset Char** | `t` |
+
+**Example output:**
+```
+v1.2.3 +5
+v1.2.3 +5, beta-3 +2
 ```

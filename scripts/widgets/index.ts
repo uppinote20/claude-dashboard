@@ -17,7 +17,12 @@ import { debugLog } from '../utils/debug.js';
 
 // Widget imports
 import { modelWidget } from './model.js';
-import { contextWidget } from './context.js';
+import {
+  contextWidget,
+  contextBarWidget,
+  contextPercentageWidget,
+  contextUsageWidget,
+} from './context.js';
 import { costWidget } from './cost.js';
 import { rateLimit5hWidget, rateLimit7dWidget, rateLimit7dSonnetWidget } from './rate-limit.js';
 import { projectInfoWidget } from './project-info.js';
@@ -55,6 +60,9 @@ import { tagStatusWidget } from './tag-status.js';
 const widgetRegistry = new Map<WidgetId, Widget>([
   ['model', modelWidget],
   ['context', contextWidget],
+  ['contextBar', contextBarWidget],
+  ['contextPercentage', contextPercentageWidget],
+  ['contextUsage', contextUsageWidget],
   ['cost', costWidget],
   ['rateLimit5h', rateLimit5hWidget],
   ['rateLimit7d', rateLimit7dWidget],
