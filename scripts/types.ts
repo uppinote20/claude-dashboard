@@ -170,7 +170,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
 /**
  * Theme identifiers
  */
-export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
+export type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'catppuccinLatte' | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
 
 /**
  * Separator styles for widget dividers

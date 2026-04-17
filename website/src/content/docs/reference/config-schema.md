@@ -38,8 +38,8 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 ## ThemeId
 
 ```typescript
-type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula'
-             | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
+type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'catppuccinLatte'
+             | 'dracula' | 'gruvbox' | 'nord' | 'tokyoNight' | 'solarized';
 ```
 
 | Value | Style |
@@ -47,6 +47,7 @@ type ThemeId = 'default' | 'minimal' | 'catppuccin' | 'dracula'
 | `default` | Pastel colors (cyan, yellow, pink, green) |
 | `minimal` | Monochrome (white + gray) |
 | `catppuccin` | Catppuccin Mocha palette |
+| `catppuccinLatte` | Catppuccin Latte palette (light-mode terminals) |
 | `dracula` | Dracula palette |
 | `gruvbox` | Gruvbox palette |
 | `nord` | Nord polar night/frost palette |

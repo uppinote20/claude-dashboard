@@ -1,11 +1,11 @@
 ---
 title: Themes
-description: 8 color themes and separator styles
+description: 9 color themes and separator styles
 sidebar:
   order: 3
 ---
 
-claude-dashboard supports 8 color themes and 4 separator styles to customize the visual appearance of your status line.
+claude-dashboard supports 9 color themes and 4 separator styles to customize the visual appearance of your status line.
 
 ## Color Themes
 
@@ -24,6 +24,7 @@ Set the theme in your configuration file (`~/.claude/claude-dashboard.local.json
 | `default` | Pastel colors (cyan, yellow, pink, green) |
 | `minimal` | Monochrome (white + gray) |
 | `catppuccin` | Catppuccin Mocha palette |
+| `catppuccinLatte` | Catppuccin Latte palette (light-mode terminals) |
 | `dracula` | Dracula palette |
 | `gruvbox` | Gruvbox palette |
 | `nord` | Nord polar night/frost palette |
@@ -44,6 +45,9 @@ Each preview below uses the actual hex colors from the theme definition.
 
 **catppuccin** — Catppuccin Mocha
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#89b4fa">◆ Opus(H)</span> <span style="color:#6c7086">│</span> <span style="color:#a6e3a1">██░░ 45%</span> <span style="color:#6c7086">│</span> <span style="color:#f9e2af">$1.25</span> <span style="color:#6c7086">│</span> <span style="color:#a6e3a1">5h: 42%</span> <span style="color:#6c7086">│</span> <span style="color:#fab387">7d: 69%</span></div>
+
+**catppuccinLatte** — Catppuccin Latte (light-mode terminals)
+<div style="background:#eff1f5; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#1e66f5">◆ Opus(H)</span> <span style="color:#8c8fa1">│</span> <span style="color:#40a02b">██░░ 45%</span> <span style="color:#8c8fa1">│</span> <span style="color:#fe640b">$1.25</span> <span style="color:#8c8fa1">│</span> <span style="color:#40a02b">5h: 42%</span> <span style="color:#8c8fa1">│</span> <span style="color:#fe640b">7d: 69%</span></div>
 
 **dracula** — Dracula
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#bd93f9">◆ Opus(H)</span> <span style="color:#6272a4">│</span> <span style="color:#50fa7b">██░░ 45%</span> <span style="color:#6272a4">│</span> <span style="color:#ffb86c">$1.25</span> <span style="color:#6272a4">│</span> <span style="color:#50fa7b">5h: 42%</span> <span style="color:#6272a4">│</span> <span style="color:#f1fa8c">7d: 69%</span></div>

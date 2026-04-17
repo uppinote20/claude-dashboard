@@ -107,7 +107,7 @@ Use AskUserQuestion to ask the user. Batch independent questions into a single A
      ```
 2. Language: auto (recommended), en, ko
 3. Plan: max (recommended), pro
-4. Theme: default (recommended), minimal, catppuccin, "dracula / gruvbox / nord / tokyoNight / solarized"
+4. Theme: default (recommended), minimal, catppuccin, catppuccinLatte, "dracula / gruvbox / nord / tokyoNight / solarized"
    - If multi-option selected: ask in next turn which one
 
 **Turn 2** — If display mode = "custom", ask for each line's widgets:

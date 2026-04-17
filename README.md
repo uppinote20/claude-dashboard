@@ -157,7 +157,7 @@ Or use preset shorthand for quick configuration:
 }
 ```
 
-**Themes:** `default` (pastel) / `minimal` (monochrome) / `catppuccin` / `dracula` / `gruvbox` / `nord` / `tokyoNight` / `solarized`
+**Themes:** `default` (pastel) / `minimal` (monochrome) / `catppuccin` / `catppuccinLatte` (light-mode) / `dracula` / `gruvbox` / `nord` / `tokyoNight` / `solarized`
 
 **Separators:** `pipe` (│, default) / `space` / `dot` (·) / `arrow` (›)
 

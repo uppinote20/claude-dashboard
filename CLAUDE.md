@@ -221,6 +221,7 @@ Color themes via `getTheme()` semantic roles. Set `"theme"` in config.
 | `default` | Pastel colors (cyan, yellow, pink, green) |
 | `minimal` | Monochrome (white + gray) |
 | `catppuccin` | Catppuccin Mocha palette |
+| `catppuccinLatte` | Catppuccin Latte palette (light-mode terminals) |
 | `dracula` | Dracula palette |
 | `gruvbox` | Gruvbox palette |
 | `nord` | Nord polar night/frost palette |

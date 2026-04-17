@@ -1,11 +1,11 @@
 ---
 title: 테마
-description: 8가지 색상 테마 설정
+description: 9가지 색상 테마 설정
 sidebar:
   order: 3
 ---
 
-claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getTheme()` 함수의 시맨틱 역할을 통해 위젯 색상을 결정합니다.
+claude-dashboard는 9가지 색상 테마를 제공합니다. 테마는 `getTheme()` 함수의 시맨틱 역할을 통해 위젯 색상을 결정합니다.
 
 ## 사용 가능한 테마
 
@@ -14,6 +14,7 @@ claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getThem
 | `default` | 파스텔 색상 (cyan, yellow, pink, green) |
 | `minimal` | 모노크롬 (white + gray) |
 | `catppuccin` | Catppuccin Mocha 팔레트 |
+| `catppuccinLatte` | Catppuccin Latte 팔레트 (라이트 모드 터미널용) |
 | `dracula` | Dracula 팔레트 |
 | `gruvbox` | Gruvbox 팔레트 |
 | `nord` | Nord polar night/frost 팔레트 |
@@ -32,6 +33,9 @@ claude-dashboard는 8가지 색상 테마를 제공합니다. 테마는 `getThem
 
 **catppuccin** — Catppuccin Mocha
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#89b4fa">◆ Opus(H)</span> <span style="color:#6c7086">│</span> <span style="color:#a6e3a1">██░░ 45%</span> <span style="color:#6c7086">│</span> <span style="color:#f9e2af">$1.25</span> <span style="color:#6c7086">│</span> <span style="color:#a6e3a1">5h: 42%</span> <span style="color:#6c7086">│</span> <span style="color:#fab387">7d: 69%</span></div>
+
+**catppuccinLatte** — Catppuccin Latte (라이트 모드 터미널용)
+<div style="background:#eff1f5; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#1e66f5">◆ Opus(H)</span> <span style="color:#8c8fa1">│</span> <span style="color:#40a02b">██░░ 45%</span> <span style="color:#8c8fa1">│</span> <span style="color:#fe640b">$1.25</span> <span style="color:#8c8fa1">│</span> <span style="color:#40a02b">5h: 42%</span> <span style="color:#8c8fa1">│</span> <span style="color:#fe640b">7d: 69%</span></div>
 
 **dracula** — Dracula
 <div style="background:#1e1e2e; padding:8px 12px; border-radius:6px; font-family:monospace; font-size:14px; margin-bottom:8px"><span style="color:#bd93f9">◆ Opus(H)</span> <span style="color:#6272a4">│</span> <span style="color:#50fa7b">██░░ 45%</span> <span style="color:#6272a4">│</span> <span style="color:#ffb86c">$1.25</span> <span style="color:#6272a4">│</span> <span style="color:#50fa7b">5h: 42%</span> <span style="color:#6272a4">│</span> <span style="color:#f1fa8c">7d: 69%</span></div>
