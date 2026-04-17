@@ -86,16 +86,16 @@ Use AskUserQuestion to ask the user. Batch independent questions into a single A
 1. Display mode — MUST include `markdown` field on each option for visual preview:
    - compact (recommended), markdown:
      ```
-     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(X) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      ```
    - normal, markdown:
      ```
-     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(X) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ✓ 3/5
      ```
    - detailed, markdown:
      ```
-     ◆ Opus(H) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
+     ◆ Opus(X) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
      📁 project (main ↑3) │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⏳ 2h │ ✓ 3/5
      CLAUDE.md: 2 │ ⚙️ 12 done │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
      📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 🔷 codex │ 💎 gemini

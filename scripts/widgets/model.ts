@@ -17,7 +17,7 @@ import { RESET, getTheme } from '../utils/colors.js';
 import { shortenModelName } from '../utils/formatters.js';
 import { isZaiProvider } from '../utils/provider.js';
 
-const EFFORT_LEVELS = new Set<string>(['high', 'medium', 'low']);
+const EFFORT_LEVELS = new Set<string>(['xhigh', 'high', 'medium', 'low']);
 
 function isEffortLevel(value: unknown): value is EffortLevel {
   return typeof value === 'string' && EFFORT_LEVELS.has(value);
@@ -28,15 +28,14 @@ interface ModelSettings {
   fastMode: boolean;
 }
 
-function getDefaultEffort(modelId: string): EffortLevel {
-  if (modelId.includes('opus-4-6') || modelId.includes('sonnet-4-6')) return 'medium';
+function getDefaultEffort(): EffortLevel {
   return 'high';
 }
 
 let settingsCache: { rawEffort: unknown; fastMode: boolean; mtime: number } | null = null;
 
-async function getModelSettings(modelId: string): Promise<ModelSettings> {
-  const defaultEffort = getDefaultEffort(modelId);
+async function getModelSettings(): Promise<ModelSettings> {
+  const defaultEffort = getDefaultEffort();
   const settingsPath = join(homedir(), '.claude', 'settings.json');
 
   try {
@@ -74,8 +73,7 @@ export const modelWidget: Widget<ModelData> = {
 
   async getData(ctx: WidgetContext): Promise<ModelData | null> {
     const { model } = ctx.stdin;
-    const modelId = model?.id || '';
-    const { effortLevel, fastMode } = await getModelSettings(modelId);
+    const { effortLevel, fastMode } = await getModelSettings();
 
     return {
       id: model?.id || '',
@@ -89,7 +87,7 @@ export const modelWidget: Widget<ModelData> = {
     const shortName = shortenModelName(data.displayName);
     const icon = isZaiProvider() ? '🟠' : '◆';
 
-    // Show effort suffix for Opus and Sonnet: (H), (M), (L). Haiku excluded.
+    // Haiku excluded from effort badge
     const supportsEffort = shortName === 'Opus' || shortName === 'Sonnet';
     const effortSuffix = supportsEffort
       ? `(${data.effortLevel[0].toUpperCase()})`

@@ -15,13 +15,13 @@ This page provides detailed information about each widget, including its data so
 |----------|-------|
 | **Widget ID** | `model` |
 | **Data Source** | stdin (model info) + settings (effort/fast mode) |
-| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet (H/M/L) and fast mode indicator for Opus (↯). |
+| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet (X/H/M/L) and fast mode indicator for Opus (↯). |
 
 **Example output:**
 ```
-Opus(H)
+Opus(X)
 Sonnet(M)
-Opus(H↯)
+Opus(X↯)
 ```
 
 ### context

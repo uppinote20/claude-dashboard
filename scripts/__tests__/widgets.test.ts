@@ -111,7 +111,12 @@ describe('widgets', () => {
     it('should return default values when model data is missing', async () => {
       const ctx = createContext({ model: undefined as any });
       const data = await modelWidget.getData(ctx);
-      expect(data).toEqual({ id: '', displayName: '-', effortLevel: 'high', fastMode: expect.any(Boolean) });
+      expect(data).toEqual({
+        id: '',
+        displayName: '-',
+        effortLevel: expect.stringMatching(/^(xhigh|high|medium|low)$/),
+        fastMode: expect.any(Boolean),
+      });
     });
 
     it('should extract model data', async () => {
@@ -146,7 +151,7 @@ describe('widgets', () => {
       expect(result).toContain('(H)');
     });
 
-    it('should show medium effort for Opus 4.6 by default', () => {
+    it('should show medium effort for Opus 4.6 when set', () => {
       const ctx = createContext();
       const result = modelWidget.render(
         createModelData({ id: 'claude-opus-4-6', displayName: 'Claude Opus 4.6', effortLevel: 'medium' }),
@@ -177,6 +182,17 @@ describe('widgets', () => {
 
       expect(result).toContain('Sonnet');
       expect(result).toContain('(L)');
+    });
+
+    it('should show xhigh effort as (X) for Opus', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-opus-4-7', displayName: 'Claude Opus 4.7', effortLevel: 'xhigh' }),
+        ctx,
+      );
+
+      expect(result).toContain('Opus');
+      expect(result).toContain('(X)');
     });
 
     it('should not show effort level for Haiku', () => {

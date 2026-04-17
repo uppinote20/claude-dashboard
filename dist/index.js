@@ -1034,18 +1034,16 @@ function getZaiApiBaseUrl() {
 }
 
 // scripts/widgets/model.ts
-var EFFORT_LEVELS = /* @__PURE__ */ new Set(["high", "medium", "low"]);
+var EFFORT_LEVELS = /* @__PURE__ */ new Set(["xhigh", "high", "medium", "low"]);
 function isEffortLevel(value) {
   return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
-function getDefaultEffort(modelId) {
-  if (modelId.includes("opus-4-6") || modelId.includes("sonnet-4-6"))
-    return "medium";
+function getDefaultEffort() {
   return "high";
 }
 var settingsCache = null;
-async function getModelSettings(modelId) {
-  const defaultEffort = getDefaultEffort(modelId);
+async function getModelSettings() {
+  const defaultEffort = getDefaultEffort();
   const settingsPath = join2(homedir2(), ".claude", "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
@@ -1078,8 +1076,7 @@ var modelWidget = {
   name: "Model",
   async getData(ctx) {
     const { model } = ctx.stdin;
-    const modelId = model?.id || "";
-    const { effortLevel, fastMode } = await getModelSettings(modelId);
+    const { effortLevel, fastMode } = await getModelSettings();
     return {
       id: model?.id || "",
       displayName: model?.display_name || "-",

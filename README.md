@@ -55,7 +55,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 
 | Category | Widget | Description |
 |----------|--------|-------------|
-| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (H/M/L), fast mode for Opus (↯) |
+| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (X/H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `cost` | Session cost in USD |
 | | `projectInfo` | Directory + git branch (clickable OSC8 link) + ahead/behind (↑↓), subpath from project_dir, worktree indicator (🌳) |

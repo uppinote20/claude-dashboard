@@ -13,8 +13,8 @@ sidebar:
 
 - **ID**: `model`
 - **데이터 소스**: stdin (모델 정보) + settings
-- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet의 경우 노력 수준(H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
-- **출력 예시**: `◆ Opus(H)`, `◆ Opus(H) ↯`, `◆ Sonnet(M)`, `◆ Haiku`
+- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet의 경우 effort 수준(X=xhigh, H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
+- **출력 예시**: `◆ Opus(X)`, `◆ Opus(X) ↯`, `◆ Sonnet(M)`, `◆ Haiku`
 
 ### context
 
