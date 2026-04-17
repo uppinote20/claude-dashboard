@@ -28,7 +28,15 @@ interface ModelSettings {
   fastMode: boolean;
 }
 
-function getDefaultEffort(modelId: string): EffortLevel {
+/**
+ * Fallback effort when settings.json is absent or lacks `effortLevel`.
+ * Mirrors Claude Code's runtime defaults so the badge matches actual behavior
+ * for users who never ran `/effort`. Keep in sync with upstream:
+ *   Opus → xhigh, Sonnet → medium.
+ * Haiku has no effort tier (render() hides the badge); the `'high'` fallback
+ * is a safety net for unknown model IDs.
+ */
+export function getDefaultEffort(modelId: string): EffortLevel {
   if (modelId.includes('opus')) return 'xhigh';
   if (modelId.includes('sonnet')) return 'medium';
   return 'high';

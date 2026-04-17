@@ -32,7 +32,7 @@
  * @covers scripts/widgets/tag-status.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { modelWidget } from '../widgets/model.js';
+import { modelWidget, getDefaultEffort } from '../widgets/model.js';
 import { contextWidget } from '../widgets/context.js';
 import { costWidget } from '../widgets/cost.js';
 import { todoProgressWidget } from '../widgets/todo-progress.js';
@@ -250,6 +250,23 @@ describe('widgets', () => {
       expect(result).toContain('Opus');
       expect(result).toContain('(H)');
       expect(result).not.toContain('↯');
+    });
+  });
+
+  describe('getDefaultEffort', () => {
+    it('should return xhigh for opus models', () => {
+      expect(getDefaultEffort('claude-opus-4-7')).toBe('xhigh');
+      expect(getDefaultEffort('claude-opus-4-6')).toBe('xhigh');
+    });
+
+    it('should return medium for sonnet models', () => {
+      expect(getDefaultEffort('claude-sonnet-4-6')).toBe('medium');
+      expect(getDefaultEffort('claude-sonnet-3.5')).toBe('medium');
+    });
+
+    it('should return high as safety net for unknown models', () => {
+      expect(getDefaultEffort('unknown-model')).toBe('high');
+      expect(getDefaultEffort('')).toBe('high');
     });
   });
 
