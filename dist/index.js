@@ -26,6 +26,9 @@ var DISPLAY_PRESETS = {
 var PRESET_CHAR_MAP = {
   M: "model",
   C: "context",
+  b: "contextBar",
+  "%": "contextPercentage",
+  "#": "contextUsage",
   $: "cost",
   R: "rateLimit5h",
   "7": "rateLimit7d",
@@ -1155,45 +1158,66 @@ function renderProgressBar(percent, config = DEFAULT_PROGRESS_BAR_CONFIG) {
 }
 
 // scripts/widgets/context.ts
+async function getContextData(ctx) {
+  const { context_window } = ctx.stdin;
+  const usage = context_window?.current_usage;
+  const contextSize = context_window?.context_window_size || 2e5;
+  const officialPercent = context_window?.used_percentage;
+  if (!usage) {
+    return {
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      contextSize,
+      percentage: typeof officialPercent === "number" ? Math.round(officialPercent) : 0
+    };
+  }
+  const inputTokens = usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens;
+  const outputTokens = usage.output_tokens;
+  const totalTokens = inputTokens + outputTokens;
+  const percentage = typeof officialPercent === "number" ? Math.round(officialPercent) : calculatePercent(inputTokens, contextSize);
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+    contextSize,
+    percentage
+  };
+}
+function renderBar(data) {
+  return renderProgressBar(data.percentage);
+}
+function renderPercentage(data) {
+  return colorize(`${data.percentage}%`, getColorForPercent(data.percentage));
+}
+function renderUsage(data) {
+  return `${formatTokens(data.inputTokens)}/${formatTokens(data.contextSize)}`;
+}
 var contextWidget = {
   id: "context",
   name: "Context",
-  async getData(ctx) {
-    const { context_window } = ctx.stdin;
-    const usage = context_window?.current_usage;
-    const contextSize = context_window?.context_window_size || 2e5;
-    const officialPercent = context_window?.used_percentage;
-    if (!usage) {
-      return {
-        inputTokens: 0,
-        outputTokens: 0,
-        totalTokens: 0,
-        contextSize,
-        percentage: typeof officialPercent === "number" ? Math.round(officialPercent) : 0
-      };
-    }
-    const inputTokens = usage.input_tokens + usage.cache_creation_input_tokens + usage.cache_read_input_tokens;
-    const outputTokens = usage.output_tokens;
-    const totalTokens = inputTokens + outputTokens;
-    const percentage = typeof officialPercent === "number" ? Math.round(officialPercent) : calculatePercent(inputTokens, contextSize);
-    return {
-      inputTokens,
-      outputTokens,
-      totalTokens,
-      contextSize,
-      percentage
-    };
-  },
-  render(data, _ctx) {
-    const parts = [];
-    parts.push(renderProgressBar(data.percentage));
-    const percentColor = getColorForPercent(data.percentage);
-    parts.push(colorize(`${data.percentage}%`, percentColor));
-    parts.push(
-      `${formatTokens(data.inputTokens)}/${formatTokens(data.contextSize)}`
-    );
-    return parts.join(getSeparator());
+  getData: getContextData,
+  render(data) {
+    return [renderBar(data), renderPercentage(data), renderUsage(data)].join(getSeparator());
   }
+};
+var contextBarWidget = {
+  id: "contextBar",
+  name: "Context (Bar)",
+  getData: getContextData,
+  render: renderBar
+};
+var contextPercentageWidget = {
+  id: "contextPercentage",
+  name: "Context (Percentage)",
+  getData: getContextData,
+  render: renderPercentage
+};
+var contextUsageWidget = {
+  id: "contextUsage",
+  name: "Context (Usage)",
+  getData: getContextData,
+  render: renderUsage
 };
 
 // scripts/widgets/cost.ts
@@ -3743,6 +3767,9 @@ var tagStatusWidget = {
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
   ["context", contextWidget],
+  ["contextBar", contextBarWidget],
+  ["contextPercentage", contextPercentageWidget],
+  ["contextUsage", contextUsageWidget],
   ["cost", costWidget],
   ["rateLimit5h", rateLimit5hWidget],
   ["rateLimit7d", rateLimit7dWidget],
