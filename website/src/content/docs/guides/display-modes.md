@@ -48,7 +48,7 @@ Shows all available widgets across six lines, including analytics, tool activity
 **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
 **Line 4:** tokenBreakdown, forecast, budget, todayCost<br/>
 **Line 5:** codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours<br/>
-**Line 6:** lastPrompt
+**Line 6:** lastPrompt, vimMode, apiDuration, tagStatus
 
 ```
 ◆ Opus(X) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
@@ -56,7 +56,7 @@ Shows all available widgets across six lines, including analytics, tool activity
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
 📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 Today: $4.83
 🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80 │ Off-Peak (23h9m)
-💬 14:32 Fix the authentication bug in middleware
+💬 14:32 Fix the authentication bug in middleware │ NORMAL │ API 42% │ 🏷 v1.2.3 +5
 ```
 
 ```

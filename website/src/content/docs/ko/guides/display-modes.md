@@ -54,7 +54,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 **3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
 **4줄:** tokenBreakdown, forecast, budget, todayCost<br/>
 **5줄:** codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours<br/>
-**6줄:** lastPrompt
+**6줄:** lastPrompt, vimMode, apiDuration, tagStatus
 
 ```
 ◆ Opus(X) │ ██░░ 80% │ $1.25 │ 5h: 42% │ 7d: 69%
@@ -62,7 +62,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
 📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 오늘: $4.83
 🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80 │ 비피크 (23h9m)
-💬 14:32 미들웨어 인증 버그 수정해줘
+💬 14:32 미들웨어 인증 버그 수정해줘 │ NORMAL │ API 42% │ 🏷 v1.2.3 +5
 ```
 
 ## Custom (사용자 정의)

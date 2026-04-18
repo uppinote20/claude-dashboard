@@ -57,7 +57,8 @@ sidebar:
 📁 project (main ↑3) │ » feature-auth │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⚡ 67 tok/s │ ⏳ 2h │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
 📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 오늘: $4.83
-🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80
+🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80 │ 비피크 (23h9m)
+💬 14:32 미들웨어 인증 버그 수정해줘 │ NORMAL │ API 42% │ 🏷 v1.2.3 +5
 ```
 
 ## 언어 및 플랜 설정
