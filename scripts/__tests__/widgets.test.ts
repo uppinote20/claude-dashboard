@@ -1,5 +1,6 @@
 /**
  * @handbook 8.1-test-structure
+ * @handbook 8.4-test-cache-reset
  * @covers scripts/widgets/model.ts
  * @covers scripts/widgets/context.ts
  * @covers scripts/widgets/cost.ts
@@ -43,7 +44,7 @@ import { costWidget } from '../widgets/cost.js';
 import { todoProgressWidget } from '../widgets/todo-progress.js';
 import { agentStatusWidget } from '../widgets/agent-status.js';
 import { toolActivityWidget } from '../widgets/tool-activity.js';
-import { projectInfoWidget } from '../widgets/project-info.js';
+import { projectInfoWidget, clearGitCacheForTest } from '../widgets/project-info.js';
 import { burnRateWidget } from '../widgets/burn-rate.js';
 import { cacheHitWidget } from '../widgets/cache-hit.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
@@ -52,7 +53,7 @@ import { geminiUsageWidget } from '../widgets/gemini-usage.js';
 import { configCountsWidget } from '../widgets/config-counts.js';
 import { sessionDurationWidget } from '../widgets/session-duration.js';
 import { versionWidget } from '../widgets/version.js';
-import { linesChangedWidget } from '../widgets/lines-changed.js';
+import { linesChangedWidget, clearDiffCacheForTest } from '../widgets/lines-changed.js';
 import { outputStyleWidget } from '../widgets/output-style.js';
 import { tokenSpeedWidget } from '../widgets/token-speed.js';
 import { sessionNameWidget } from '../widgets/session-name.js';
@@ -66,7 +67,7 @@ import { lastPromptWidget } from '../widgets/last-prompt.js';
 import { vimModeWidget } from '../widgets/vim-mode.js';
 import { apiDurationWidget } from '../widgets/api-duration.js';
 import { peakHoursWidget, isPeakTime, getMinutesToTransition } from '../widgets/peak-hours.js';
-import { tagStatusWidget } from '../widgets/tag-status.js';
+import { tagStatusWidget, clearTagCacheForTest } from '../widgets/tag-status.js';
 import * as codexClient from '../utils/codex-client.js';
 import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
@@ -107,6 +108,13 @@ function createModelData(overrides: Partial<ModelData> = {}): ModelData {
 }
 
 describe('widgets', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    clearGitCacheForTest();
+    clearDiffCacheForTest();
+    clearTagCacheForTest();
+  });
+
   describe('modelWidget', () => {
     it('should have correct id and name', () => {
       expect(modelWidget.id).toBe('model');
@@ -587,6 +595,26 @@ describe('widgets', () => {
       expect(result).toContain('🌳');
       expect(result).toContain('wt:my-feature');
     });
+
+    it('should re-fetch after clearGitCacheForTest()', async () => {
+      const spy = vi.spyOn(gitUtils, 'execGit').mockImplementation(async (args: string[]) => {
+        if (args[0] === 'rev-parse') return 'main\n';
+        if (args[0] === 'status') return '';
+        if (args[0] === 'rev-list') return '0\t0\n';
+        if (args[0] === 'remote') return '';
+        return '';
+      });
+      const ctx = createContext();
+
+      await projectInfoWidget.getData(ctx);
+      const callsAfterFirst = spy.mock.calls.length;
+      await projectInfoWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBe(callsAfterFirst); // cached
+
+      clearGitCacheForTest();
+      await projectInfoWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBeGreaterThan(callsAfterFirst); // re-fetched
+    });
   });
 
   describe('todoProgressWidget', () => {
@@ -948,10 +976,6 @@ describe('widgets', () => {
   });
 
   describe('codexUsageWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(codexUsageWidget.id).toBe('codexUsage');
       expect(codexUsageWidget.name).toBe('Codex Usage');
@@ -1090,10 +1114,6 @@ describe('widgets', () => {
   });
 
   describe('geminiUsageWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(geminiUsageWidget.id).toBe('geminiUsage');
       expect(geminiUsageWidget.name).toBe('Gemini Usage');
@@ -1305,10 +1325,6 @@ describe('widgets', () => {
   });
 
   describe('sessionDurationWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(sessionDurationWidget.id).toBe('sessionDuration');
       expect(sessionDurationWidget.name).toBe('Session Duration');
@@ -1433,27 +1449,16 @@ describe('widgets', () => {
   });
 
   describe('linesChangedWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(linesChangedWidget.id).toBe('linesChanged');
       expect(linesChangedWidget.name).toBe('Lines Changed');
     });
 
-    // Each test uses a unique cwd to bypass the 10s TTL cache
-    let testCwd = 0;
-    function uniqueCtx() {
-      testCwd++;
-      return createContext({ workspace: { current_dir: `/test/lines-changed-${testCwd}` } });
-    }
-
     it('should return data from git diff when changes exist', async () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 3 files changed, 156 insertions(+), 23 deletions(-)\n');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(156);
@@ -1465,7 +1470,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 10 insertions(+)\n');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(50);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(60);
@@ -1477,7 +1482,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue('');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(30);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(30);
@@ -1489,7 +1494,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue('');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
       expect(data).toBeNull();
     });
 
@@ -1497,7 +1502,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockRejectedValue(new Error('not a git repo'));
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
       expect(data).toBeNull();
     });
 
@@ -1505,7 +1510,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 42 insertions(+)\n');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(42);
@@ -1516,7 +1521,7 @@ describe('widgets', () => {
       vi.spyOn(gitUtils, 'execGit').mockResolvedValue(' 1 file changed, 15 deletions(-)\n');
       vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
 
-      const data = await linesChangedWidget.getData(uniqueCtx());
+      const data = await linesChangedWidget.getData(createContext());
 
       expect(data).not.toBeNull();
       expect(data?.added).toBe(0);
@@ -1549,19 +1554,29 @@ describe('widgets', () => {
       expect(result).toContain('+156');
       expect(result).toContain('-23');
     });
+
+    it('should re-fetch after clearDiffCacheForTest()', async () => {
+      const spy = vi
+        .spyOn(gitUtils, 'execGit')
+        .mockResolvedValue(' 1 file changed, 7 insertions(+)\n');
+      vi.spyOn(gitUtils, 'countUntrackedLines').mockResolvedValue(0);
+      const ctx = createContext();
+
+      await linesChangedWidget.getData(ctx);
+      const callsAfterFirst = spy.mock.calls.length;
+      await linesChangedWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBe(callsAfterFirst); // cached
+
+      clearDiffCacheForTest();
+      await linesChangedWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBeGreaterThan(callsAfterFirst); // re-fetched
+    });
   });
 
   describe('tagStatusWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    // Each test's ctx gets a unique cwd to isolate from other tests' cache state
-    let testCwd = 0;
     function tagCtx(config: Partial<WidgetContext['config']> = {}): WidgetContext {
-      testCwd++;
       return {
-        ...createContext({ workspace: { current_dir: `/test/tag-status-${testCwd}` } }),
+        ...createContext(),
         config: { ...MOCK_CONFIG, ...config },
       };
     }
@@ -1704,6 +1719,24 @@ describe('widgets', () => {
       expect(first).toEqual(second);
       expect(spy.mock.calls.length).toBe(callsAfterFirst);
     });
+
+    it('should re-fetch after clearTagCacheForTest()', async () => {
+      const spy = vi.spyOn(gitUtils, 'execGit').mockImplementation(async (args: string[]) => {
+        if (args[0] === 'describe') return 'v1.25.1\n';
+        if (args[0] === 'rev-list') return '0\n';
+        return '';
+      });
+      const ctx = tagCtx();
+
+      await tagStatusWidget.getData(ctx);
+      const callsAfterFirst = spy.mock.calls.length;
+      await tagStatusWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBe(callsAfterFirst); // cached
+
+      clearTagCacheForTest();
+      await tagStatusWidget.getData(ctx);
+      expect(spy.mock.calls.length).toBeGreaterThan(callsAfterFirst); // re-fetched
+    });
   });
 
   describe('outputStyleWidget', () => {
@@ -1813,10 +1846,6 @@ describe('widgets', () => {
   });
 
   describe('sessionNameWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(sessionNameWidget.id).toBe('sessionName');
       expect(sessionNameWidget.name).toBe('Session Name');
@@ -1896,10 +1925,6 @@ describe('widgets', () => {
   });
 
   describe('todayCostWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(todayCostWidget.id).toBe('todayCost');
       expect(todayCostWidget.name).toBe('Today Cost');
@@ -1973,10 +1998,6 @@ describe('widgets', () => {
   });
 
   describe('budgetWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(budgetWidget.id).toBe('budget');
       expect(budgetWidget.name).toBe('Budget');
@@ -2034,10 +2055,6 @@ describe('widgets', () => {
   });
 
   describe('forecastWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(forecastWidget.id).toBe('forecast');
       expect(forecastWidget.name).toBe('Cost Forecast');
@@ -2071,10 +2088,6 @@ describe('widgets', () => {
   });
 
   describe('performanceWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(performanceWidget.id).toBe('performance');
       expect(performanceWidget.name).toBe('Performance');
@@ -2182,10 +2195,6 @@ describe('widgets', () => {
   });
 
   describe('zaiUsageWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(zaiUsageWidget.id).toBe('zaiUsage');
       expect(zaiUsageWidget.name).toBe('Z.ai Usage');
@@ -2253,10 +2262,6 @@ describe('widgets', () => {
   });
 
   describe('lastPromptWidget', () => {
-    beforeEach(() => {
-      vi.restoreAllMocks();
-    });
-
     it('should have correct id and name', () => {
       expect(lastPromptWidget.id).toBe('lastPrompt');
       expect(lastPromptWidget.name).toBe('Last Prompt');
