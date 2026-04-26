@@ -1,6 +1,8 @@
 /**
  * Project info widget - displays directory name, git branch, and ahead/behind status
  * @handbook 3.3-widget-data-sources
+ * @handbook 3.7-widget-module-cache
+ * @handbook 8.4-test-cache-reset
  * @tested scripts/__tests__/widgets.test.ts
  */
 
@@ -205,3 +207,7 @@ export const projectInfoWidget: Widget<ProjectInfoData> = {
     return parts.join(' ');
   },
 };
+
+export function clearGitCacheForTest(): void {
+  gitCache = null;
+}

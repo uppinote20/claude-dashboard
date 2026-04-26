@@ -2,6 +2,8 @@
  * Lines Changed widget - displays uncommitted lines added/removed via git diff
  * Includes untracked (new) files in the added count
  * @handbook 3.3-widget-data-sources
+ * @handbook 3.7-widget-module-cache
+ * @handbook 8.4-test-cache-reset
  * @tested scripts/__tests__/widgets.test.ts
  */
 
@@ -68,3 +70,7 @@ export const linesChangedWidget: Widget<LinesChangedData> = {
     return parts.join(' ');
   },
 };
+
+export function clearDiffCacheForTest(): void {
+  diffCache = null;
+}

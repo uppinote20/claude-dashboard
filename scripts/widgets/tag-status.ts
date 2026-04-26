@@ -1,6 +1,8 @@
 /**
  * Tag status widget - commits ahead of each matched git tag.
  * @handbook 3.3-widget-data-sources
+ * @handbook 3.7-widget-module-cache
+ * @handbook 8.4-test-cache-reset
  * @tested scripts/__tests__/widgets.test.ts
  */
 
@@ -81,3 +83,7 @@ export const tagStatusWidget: Widget<TagStatusData> = {
     return `${icon} ${parts.join(' ')}`;
   },
 };
+
+export function clearTagCacheForTest(): void {
+  tagCache = null;
+}
