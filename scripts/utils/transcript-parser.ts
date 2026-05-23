@@ -126,8 +126,10 @@ function processEntries(
       }
     }
 
-    // Track slash command from user text blocks. tool_result-only user entries
-    // are ignored so the command stays active across Claude's tool loop.
+    // User entries are visited in two separate blocks (text vs tool_result) instead
+    // of one merged loop: text drives slash-command tracking, tool_result drives
+    // tool/task lifecycle. Splitting keeps each concern flat and avoids interleaving
+    // two state machines.
     if (entry.type === 'user' && entry.message?.content) {
       let matchedName: string | null = null;
       let hasText = false;
@@ -136,7 +138,7 @@ function processEntries(
         hasText = true;
         const m = block.text.match(SLASH_COMMAND_TAG_RE);
         if (m) {
-          matchedName = m[1];
+          matchedName = m[1].trim();
           break;
         }
       }
@@ -449,5 +451,5 @@ export function extractAgentStatus(
 export function getActiveSlashCommand(
   transcript: ParsedTranscript
 ): SlashCommandData | null {
-  return transcript.activeSlashCommand ?? null;
+  return transcript.activeSlashCommand;
 }

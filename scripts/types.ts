@@ -751,7 +751,10 @@ export interface AgentModeData {
 export interface SlashCommandData {
   /** Full command name including leading slash, e.g. '/superpowers:brainstorming' */
   name: string;
-  /** Unix ms timestamp of when the command was issued */
+  /**
+   * Unix ms timestamp of when the command was issued. Captured for future
+   * elapsed-time rendering (e.g. "🎯 /skill (42s)"); not consumed by the current renderer.
+   */
   startTime: number;
 }
 
@@ -858,7 +861,7 @@ export interface ParsedTranscript {
   /** Pending TaskUpdate tool_use IDs */
   pendingTaskUpdates: Map<string, { taskId: string; status?: string; subject?: string }>;
   /** Slash command name + start time, cleared when a plain user message arrives */
-  activeSlashCommand?: SlashCommandData | null;
+  activeSlashCommand: SlashCommandData | null;
 }
 
 /**

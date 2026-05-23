@@ -1872,6 +1872,7 @@ describe('widgets', () => {
         nextTaskId: 1,
         pendingTaskCreates: new Map(),
         pendingTaskUpdates: new Map(),
+        activeSlashCommand: null,
       });
 
       const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
@@ -1898,6 +1899,7 @@ describe('widgets', () => {
         nextTaskId: 1,
         pendingTaskCreates: new Map(),
         pendingTaskUpdates: new Map(),
+        activeSlashCommand: null,
         sessionName: 'my-feature-work',
       });
 
