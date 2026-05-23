@@ -64,6 +64,8 @@ import { performanceWidget } from '../widgets/performance.js';
 import { tokenBreakdownWidget } from '../widgets/token-breakdown.js';
 import { zaiUsageWidget } from '../widgets/zai-usage.js';
 import { lastPromptWidget } from '../widgets/last-prompt.js';
+import { slashCommandWidget } from '../widgets/slash-command.js';
+import { agentModeWidget } from '../widgets/agent-mode.js';
 import { vimModeWidget } from '../widgets/vim-mode.js';
 import { apiDurationWidget } from '../widgets/api-duration.js';
 import { peakHoursWidget, isPeakTime, getMinutesToTransition } from '../widgets/peak-hours.js';
@@ -2299,6 +2301,103 @@ describe('widgets', () => {
       const data = { text: longText, timestamp: '2024-01-01T12:30:00Z' };
       const result = lastPromptWidget.render(data, ctx);
       expect(result).toContain('…');
+    });
+  });
+
+  describe('slashCommandWidget', () => {
+    it('should have correct id and name', () => {
+      expect(slashCommandWidget.id).toBe('slashCommand');
+      expect(slashCommandWidget.name).toBe('Slash Command');
+    });
+
+    it('should return null when transcript has no active slash command', async () => {
+      vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
+        toolUses: new Map(),
+        completedToolCount: 0,
+        runningToolIds: new Set(),
+        lastTodoWriteInput: null,
+        activeAgentIds: new Set(),
+        completedAgentCount: 0,
+        tasks: new Map(),
+        nextTaskId: 1,
+        pendingTaskCreates: new Map(),
+        pendingTaskUpdates: new Map(),
+        activeSlashCommand: null,
+      });
+
+      const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
+      const data = await slashCommandWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return active slash command from transcript', async () => {
+      vi.spyOn(transcriptParser, 'getTranscript').mockResolvedValue({
+        toolUses: new Map(),
+        completedToolCount: 0,
+        runningToolIds: new Set(),
+        lastTodoWriteInput: null,
+        activeAgentIds: new Set(),
+        completedAgentCount: 0,
+        tasks: new Map(),
+        nextTaskId: 1,
+        pendingTaskCreates: new Map(),
+        pendingTaskUpdates: new Map(),
+        activeSlashCommand: { name: '/superpowers:brainstorming', startTime: 1234567890 },
+      });
+
+      const ctx = createContext({ transcript_path: '/tmp/transcript.jsonl' });
+      const data = await slashCommandWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.name).toBe('/superpowers:brainstorming');
+    });
+
+    it('should render command name with target icon', () => {
+      const ctx = createContext();
+      const data = { name: '/foo:bar', startTime: 0 };
+      const result = slashCommandWidget.render(data, ctx);
+      expect(result).toContain('🎯');
+      expect(result).toContain('/foo:bar');
+    });
+  });
+
+  describe('agentModeWidget', () => {
+    it('should have correct id and name', () => {
+      expect(agentModeWidget.id).toBe('agentMode');
+      expect(agentModeWidget.name).toBe('Agent Mode');
+    });
+
+    it('should return null when neither agent fields are present', async () => {
+      const ctx = createContext();
+      const data = await agentModeWidget.getData(ctx);
+      expect(data).toBeNull();
+    });
+
+    it('should return data when stdin.agent.name is present', async () => {
+      const ctx = createContext({ agent: { name: 'my-coder' } });
+      const data = await agentModeWidget.getData(ctx);
+      expect(data).toEqual({ agentName: 'my-coder', agentType: undefined });
+    });
+
+    it('should return data when stdin.agent_type is present', async () => {
+      const ctx = createContext({ agent_type: 'code-explorer' });
+      const data = await agentModeWidget.getData(ctx);
+      expect(data).toEqual({ agentName: undefined, agentType: 'code-explorer' });
+    });
+
+    it('should render both name and type joined with separator', () => {
+      const ctx = createContext();
+      const data = { agentName: 'my-coder', agentType: 'code-explorer' };
+      const result = agentModeWidget.render(data, ctx);
+      expect(result).toContain('👤 my-coder');
+      expect(result).toContain('🤖 code-explorer');
+      expect(result).toContain('·');
+    });
+
+    it('should render only name when type is absent', () => {
+      const ctx = createContext();
+      const result = agentModeWidget.render({ agentName: 'solo' }, ctx);
+      expect(result).toBe('👤 solo');
     });
   });
 

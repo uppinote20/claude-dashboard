@@ -53,6 +53,8 @@ import { vimModeWidget } from './vim-mode.js';
 import { apiDurationWidget } from './api-duration.js';
 import { peakHoursWidget } from './peak-hours.js';
 import { tagStatusWidget } from './tag-status.js';
+import { slashCommandWidget } from './slash-command.js';
+import { agentModeWidget } from './agent-mode.js';
 
 /**
  * Widget registry - maps widget IDs to widget implementations
@@ -97,6 +99,8 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['apiDuration', apiDurationWidget],
   ['peakHours', peakHoursWidget],
   ['tagStatus', tagStatusWidget],
+  ['slashCommand', slashCommandWidget],
+  ['agentMode', agentModeWidget],
 ] as [WidgetId, Widget][]);
 
 /**

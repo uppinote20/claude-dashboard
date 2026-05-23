@@ -38,8 +38,16 @@ function createParsedTranscript(): ParsedTranscript {
     nextTaskId: 1,
     pendingTaskCreates: new Map(),
     pendingTaskUpdates: new Map(),
+    activeSlashCommand: null,
   };
 }
+
+/**
+ * Matches `<command-name>/xxx</command-name>` tags injected by Claude Code
+ * when a user types a slash command. Captures the full name including the
+ * leading slash (e.g. '/superpowers:brainstorming').
+ */
+const SLASH_COMMAND_TAG_RE = /<command-name>([^<]+)<\/command-name>/;
 
 /**
  * Parse JSONL content into transcript entries, skipping malformed lines
@@ -114,6 +122,29 @@ function processEntries(
               });
             }
           }
+        }
+      }
+    }
+
+    // Track slash command from user text blocks. tool_result-only user entries
+    // are ignored so the command stays active across Claude's tool loop.
+    if (entry.type === 'user' && Array.isArray(entry.message?.content)) {
+      const textBlocks = entry.message.content.filter(
+        (b) => b.type === 'text' && typeof b.text === 'string'
+      );
+      if (textBlocks.length > 0) {
+        let matched: RegExpMatchArray | null = null;
+        for (const block of textBlocks) {
+          const m = block.text!.match(SLASH_COMMAND_TAG_RE);
+          if (m) { matched = m; break; }
+        }
+        if (matched) {
+          existing.activeSlashCommand = {
+            name: matched[1],
+            startTime: entry.timestamp ? new Date(entry.timestamp).getTime() : Date.now(),
+          };
+        } else {
+          existing.activeSlashCommand = null;
         }
       }
     }
@@ -408,4 +439,14 @@ export function extractAgentStatus(
   }
 
   return { active, completed: transcript.completedAgentCount };
+}
+
+/**
+ * Return the slash command active for the current turn, or null if the
+ * user's last input was plain text. O(1) — value tracked in processEntries.
+ */
+export function getActiveSlashCommand(
+  transcript: ParsedTranscript
+): { name: string; startTime: number } | null {
+  return transcript.activeSlashCommand ?? null;
 }

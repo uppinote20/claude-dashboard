@@ -819,4 +819,80 @@ describe('transcript-parser', () => {
       expect(running[0].target).toBeUndefined();
     });
   });
+
+  describe('getActiveSlashCommand', () => {
+    it('should return null when no user messages exist', async () => {
+      await writeTranscript([
+        { type: 'assistant', timestamp: '2024-01-01T00:00:00Z', message: { content: [] } },
+      ]);
+
+      const { parseTranscript, getActiveSlashCommand } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+
+      expect(getActiveSlashCommand(transcript!)).toBeNull();
+    });
+
+    it('should capture slash command from <command-name> tag', async () => {
+      await writeTranscript([
+        {
+          type: 'user',
+          timestamp: '2024-01-01T00:00:00Z',
+          message: {
+            content: [
+              { type: 'text', text: '<command-name>/superpowers:brainstorming</command-name>\nhelp me think' },
+            ],
+          },
+        },
+      ]);
+
+      const { parseTranscript, getActiveSlashCommand } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const active = getActiveSlashCommand(transcript!);
+
+      expect(active).not.toBeNull();
+      expect(active?.name).toBe('/superpowers:brainstorming');
+      expect(active?.startTime).toBe(new Date('2024-01-01T00:00:00Z').getTime());
+    });
+
+    it('should clear active command when a plain user message arrives', async () => {
+      await writeTranscript([
+        {
+          type: 'user',
+          timestamp: '2024-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: '<command-name>/foo</command-name>' }] },
+        },
+        {
+          type: 'user',
+          timestamp: '2024-01-01T00:00:05Z',
+          message: { content: [{ type: 'text', text: 'just a regular message' }] },
+        },
+      ]);
+
+      const { parseTranscript, getActiveSlashCommand } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+
+      expect(getActiveSlashCommand(transcript!)).toBeNull();
+    });
+
+    it('should not clear active command on intervening tool_result-only entries', async () => {
+      await writeTranscript([
+        {
+          type: 'user',
+          timestamp: '2024-01-01T00:00:00Z',
+          message: { content: [{ type: 'text', text: '<command-name>/bar</command-name>' }] },
+        },
+        {
+          type: 'user',
+          timestamp: '2024-01-01T00:00:01Z',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'tool-x' }] },
+        },
+      ]);
+
+      const { parseTranscript, getActiveSlashCommand } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const active = getActiveSlashCommand(transcript!);
+
+      expect(active?.name).toBe('/bar');
+    });
+  });
 });
