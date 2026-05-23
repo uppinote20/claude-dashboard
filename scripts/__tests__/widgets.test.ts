@@ -2410,6 +2410,12 @@ describe('widgets', () => {
       expect(result).toBe('👤 solo');
     });
 
+    it('should render only type when name is absent', () => {
+      const ctx = createContext();
+      const result = agentModeWidget.render({ agentType: 'code-explorer' }, ctx);
+      expect(result).toBe('🤖 code-explorer');
+    });
+
     it('should return null when agent.name trims to empty string', async () => {
       const ctx = createContext({ agent: { name: '   ' } });
       const data = await agentModeWidget.getData(ctx);
