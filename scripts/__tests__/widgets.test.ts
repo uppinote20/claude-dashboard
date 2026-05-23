@@ -31,6 +31,8 @@
  * @covers scripts/widgets/api-duration.ts
  * @covers scripts/widgets/peak-hours.ts
  * @covers scripts/widgets/tag-status.ts
+ * @covers scripts/widgets/slash-command.ts
+ * @covers scripts/widgets/agent-mode.ts
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget, getDefaultEffort } from '../widgets/model.js';

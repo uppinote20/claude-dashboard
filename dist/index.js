@@ -1784,27 +1784,24 @@ function processEntries(entries, existing) {
         }
       }
     }
-    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
-      const textBlocks = entry.message.content.filter(
-        (b) => b.type === "text" && typeof b.text === "string"
-      );
-      if (textBlocks.length > 0) {
-        let matched = null;
-        for (const block of textBlocks) {
-          const m = block.text.match(SLASH_COMMAND_TAG_RE);
-          if (m) {
-            matched = m;
-            break;
-          }
+    if (entry.type === "user" && entry.message?.content) {
+      let matchedName = null;
+      let hasText = false;
+      for (const block of entry.message.content) {
+        if (block.type !== "text" || typeof block.text !== "string")
+          continue;
+        hasText = true;
+        const m = block.text.match(SLASH_COMMAND_TAG_RE);
+        if (m) {
+          matchedName = m[1];
+          break;
         }
-        if (matched) {
-          existing.activeSlashCommand = {
-            name: matched[1],
-            startTime: entry.timestamp ? new Date(entry.timestamp).getTime() : Date.now()
-          };
-        } else {
-          existing.activeSlashCommand = null;
-        }
+      }
+      if (hasText) {
+        existing.activeSlashCommand = matchedName ? {
+          name: matchedName,
+          startTime: entry.timestamp ? new Date(entry.timestamp).getTime() : Date.now()
+        } : null;
       }
     }
     if (entry.type === "user" && entry.message?.content) {
