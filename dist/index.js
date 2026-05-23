@@ -60,7 +60,9 @@ var PRESET_CHAR_MAP = {
   m: "vimMode",
   a: "apiDuration",
   p: "peakHours",
-  t: "tagStatus"
+  t: "tagStatus",
+  "/": "slashCommand",
+  g: "agentMode"
 };
 function parsePreset(preset) {
   return preset.split("|").map(
@@ -1721,9 +1723,11 @@ function createParsedTranscript() {
     tasks: /* @__PURE__ */ new Map(),
     nextTaskId: 1,
     pendingTaskCreates: /* @__PURE__ */ new Map(),
-    pendingTaskUpdates: /* @__PURE__ */ new Map()
+    pendingTaskUpdates: /* @__PURE__ */ new Map(),
+    activeSlashCommand: null
   };
 }
+var SLASH_COMMAND_TAG_RE = /<command-name>([^<]+)<\/command-name>/;
 function parseJsonlContent(content) {
   const entries = [];
   for (const line of content.split("\n")) {
@@ -1777,6 +1781,29 @@ function processEntries(entries, existing) {
               });
             }
           }
+        }
+      }
+    }
+    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
+      const textBlocks = entry.message.content.filter(
+        (b) => b.type === "text" && typeof b.text === "string"
+      );
+      if (textBlocks.length > 0) {
+        let matched = null;
+        for (const block of textBlocks) {
+          const m = block.text.match(SLASH_COMMAND_TAG_RE);
+          if (m) {
+            matched = m;
+            break;
+          }
+        }
+        if (matched) {
+          existing.activeSlashCommand = {
+            name: matched[1],
+            startTime: entry.timestamp ? new Date(entry.timestamp).getTime() : Date.now()
+          };
+        } else {
+          existing.activeSlashCommand = null;
         }
       }
     }
@@ -1962,6 +1989,9 @@ function extractAgentStatus(transcript) {
   }
   return { active, completed: transcript.completedAgentCount };
 }
+function getActiveSlashCommand(transcript) {
+  return transcript.activeSlashCommand ?? null;
+}
 
 // scripts/widgets/tool-activity.ts
 var toolActivityWidget = {
@@ -2029,14 +2059,13 @@ var todoProgressWidget = {
     if (!transcript)
       return null;
     const progress = extractTodoOrTaskProgress(transcript);
-    return progress || { total: 0, completed: 0 };
+    if (!progress || progress.total === 0)
+      return null;
+    return progress;
   },
   render(data, ctx) {
     const { translations: t } = ctx;
     const theme = getTheme();
-    if (data.total === 0) {
-      return colorize(`${t.widgets.todos}: -`, theme.dim);
-    }
     const percent = calculatePercent(data.completed, data.total);
     const color = getColorForPercent(100 - percent);
     if (data.current) {
@@ -3763,6 +3792,45 @@ var tagStatusWidget = {
   }
 };
 
+// scripts/widgets/slash-command.ts
+var slashCommandWidget = {
+  id: "slashCommand",
+  name: "Slash Command",
+  async getData(ctx) {
+    const transcript = await getTranscript(ctx);
+    if (!transcript)
+      return null;
+    return getActiveSlashCommand(transcript);
+  },
+  render(data, _ctx) {
+    return `${colorize("\u{1F3AF}", getTheme().warning)} ${data.name}`;
+  }
+};
+
+// scripts/widgets/agent-mode.ts
+var agentModeWidget = {
+  id: "agentMode",
+  name: "Agent Mode",
+  async getData(ctx) {
+    const agentName = ctx.stdin.agent?.name?.trim();
+    const agentType = ctx.stdin.agent_type?.trim();
+    if (!agentName && !agentType)
+      return null;
+    return {
+      agentName: agentName || void 0,
+      agentType: agentType || void 0
+    };
+  },
+  render(data) {
+    const parts = [];
+    if (data.agentName)
+      parts.push(`\u{1F464} ${data.agentName}`);
+    if (data.agentType)
+      parts.push(`\u{1F916} ${data.agentType}`);
+    return parts.join(" \xB7 ");
+  }
+};
+
 // scripts/widgets/index.ts
 var widgetRegistry = /* @__PURE__ */ new Map([
   ["model", modelWidget],
@@ -3803,7 +3871,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["vimMode", vimModeWidget],
   ["apiDuration", apiDurationWidget],
   ["peakHours", peakHoursWidget],
-  ["tagStatus", tagStatusWidget]
+  ["tagStatus", tagStatusWidget],
+  ["slashCommand", slashCommandWidget],
+  ["agentMode", agentModeWidget]
 ]);
 function getWidget(id) {
   return widgetRegistry.get(id);

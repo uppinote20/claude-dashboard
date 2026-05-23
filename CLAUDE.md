@@ -164,6 +164,8 @@ interface Widget<T extends WidgetData> {
 | `apiDuration` | stdin | API time as % of session time |
 | `peakHours` | system clock | Peak hours indicator with countdown (weekdays 5-11 AM PT) |
 | `tagStatus` | git | Distance (commits ahead) from matched git tags. Supports multiple glob patterns via `tagPatterns` config (default `["v*"]`). Hidden when no pattern matches. |
+| `slashCommand` | transcript | Active slash command for the current turn (e.g. `🎯 /superpowers:brainstorming`). Cleared by next plain-text user message. |
+| `agentMode` | stdin | Session agent identity: `👤` for custom agent (`stdin.agent.name`), `🤖` for subagent type (`stdin.agent_type`). Distinct from `agentStatus` which tracks spawned subagents. |
 
 ### Display Modes
 
@@ -218,7 +220,8 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `m` | vimMode | `a` | apiDuration |
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
-| `#` | contextUsage | | |
+| `#` | contextUsage | `/` | slashCommand |
+| `g` | agentMode | | |
 
 ### Theme System
 
