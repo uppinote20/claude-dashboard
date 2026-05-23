@@ -1748,7 +1748,7 @@ function processEntries(entries, existing) {
     if (entry.customTitle) {
       existing.sessionName = entry.customTitle;
     }
-    if (entry.type === "assistant" && entry.message?.content) {
+    if (entry.type === "assistant" && Array.isArray(entry.message?.content)) {
       for (const block of entry.message.content) {
         if (block.type === "tool_use" && block.id && block.name) {
           existing.toolUses.set(block.id, {
@@ -1784,17 +1784,25 @@ function processEntries(entries, existing) {
         }
       }
     }
-    if (entry.type === "user" && entry.message?.content) {
+    if (entry.type === "user") {
+      const content = entry.message?.content;
       let matchedName = null;
       let hasText = false;
-      for (const block of entry.message.content) {
-        if (block.type !== "text" || typeof block.text !== "string")
-          continue;
+      if (typeof content === "string") {
         hasText = true;
-        const m = block.text.match(SLASH_COMMAND_TAG_RE);
-        if (m) {
+        const m = content.match(SLASH_COMMAND_TAG_RE);
+        if (m)
           matchedName = m[1].trim();
-          break;
+      } else if (Array.isArray(content)) {
+        for (const block of content) {
+          if (block.type !== "text" || typeof block.text !== "string")
+            continue;
+          hasText = true;
+          const m = block.text.match(SLASH_COMMAND_TAG_RE);
+          if (m) {
+            matchedName = m[1].trim();
+            break;
+          }
         }
       }
       if (hasText) {
@@ -1804,7 +1812,7 @@ function processEntries(entries, existing) {
         } : null;
       }
     }
-    if (entry.type === "user" && entry.message?.content) {
+    if (entry.type === "user" && Array.isArray(entry.message?.content)) {
       for (const block of entry.message.content) {
         if (block.type === "tool_result" && block.tool_use_id) {
           existing.completedToolCount++;
