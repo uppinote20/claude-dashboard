@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile9, stat as stat10 } from "fs/promises";
+import { readFile as readFile9, stat as stat11 } from "fs/promises";
 import { join as join6 } from "path";
 import { homedir as homedir6 } from "os";
 
@@ -456,7 +456,7 @@ function getSeparator() {
 }
 
 // scripts/utils/api-client.ts
-import { readFile as readFile2, writeFile, mkdir, readdir, stat as stat2, unlink } from "fs/promises";
+import { readFile as readFile2, writeFile as writeFile2, mkdir, readdir, stat as stat3, unlink as unlink2 } from "fs/promises";
 import { execFile as execFile2 } from "child_process";
 import os from "os";
 import path from "path";
@@ -556,6 +556,53 @@ function debugLog(context, message, error) {
   }
 }
 
+// scripts/utils/file-lock.ts
+import { writeFile, stat as stat2, unlink } from "fs/promises";
+var LOCK_STALE_SECONDS = 10;
+var LOCK_WAIT_INTERVAL_MS = 100;
+var LOCK_WAIT_MAX_MS = 2e3;
+async function cleanStaleFileLock(lockPath, staleSeconds) {
+  try {
+    const lockStat = await stat2(lockPath);
+    const ageSeconds = (Date.now() - lockStat.mtimeMs) / 1e3;
+    if (ageSeconds >= staleSeconds) {
+      await unlink(lockPath).catch(() => {
+      });
+    }
+  } catch {
+  }
+}
+async function acquireFileLock(lockPath, staleSeconds = LOCK_STALE_SECONDS) {
+  try {
+    await cleanStaleFileLock(lockPath, staleSeconds);
+    await writeFile(lockPath, String(process.pid), { flag: "wx", mode: 384 });
+    return true;
+  } catch (err) {
+    const code = err?.code;
+    if (code !== "EEXIST") {
+      debugLog("lock", "acquire failed", err);
+    }
+    return false;
+  }
+}
+async function releaseFileLock(lockPath) {
+  try {
+    await unlink(lockPath);
+  } catch {
+  }
+}
+async function waitForLock(lockPath, maxWaitMs = LOCK_WAIT_MAX_MS, intervalMs = LOCK_WAIT_INTERVAL_MS) {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    try {
+      await stat2(lockPath);
+    } catch {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
 // scripts/utils/api-client.ts
 var API_URL = "https://api.anthropic.com/api/oauth/usage";
 var API_TIMEOUT_MS = 5e3;
@@ -580,6 +627,9 @@ async function ensureCacheDir() {
 }
 function getCacheFilePath(tokenHash) {
   return path.join(CACHE_DIR, `cache-${tokenHash}.json`);
+}
+function getLockFilePath(tokenHash) {
+  return path.join(CACHE_DIR, `api-${tokenHash}.lock`);
 }
 function isCacheValid(tokenHash, ttlSeconds) {
   const cache = usageCacheMap.get(tokenHash);
@@ -623,6 +673,18 @@ async function fetchUsageLimits(ttlSeconds = 300) {
   if (pending) {
     return pending;
   }
+  await ensureCacheDir();
+  const lockPath = getLockFilePath(tokenHash);
+  const lockAcquired = await acquireFileLock(lockPath);
+  if (!lockAcquired) {
+    debugLog("api", "lock contention, waiting for peer fetch");
+    await waitForLock(lockPath);
+    const refreshed = await loadFileCache(tokenHash, ttlSeconds);
+    if (refreshed) {
+      usageCacheMap.set(tokenHash, { data: refreshed, timestamp: Date.now() });
+      return refreshed;
+    }
+  }
   const requestPromise = fetchFromApi(token, tokenHash);
   pendingRequests.set(tokenHash, requestPromise);
   try {
@@ -644,6 +706,8 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     return null;
   } finally {
     pendingRequests.delete(tokenHash);
+    if (lockAcquired)
+      await releaseFileLock(lockPath);
   }
 }
 async function makeRequest(token) {
@@ -786,7 +850,7 @@ async function saveFileCache(tokenHash, data) {
   try {
     await ensureCacheDir();
     const cacheFile = getCacheFilePath(tokenHash);
-    await writeFile(
+    await writeFile2(
       cacheFile,
       JSON.stringify({
         data,
@@ -808,15 +872,17 @@ async function cleanupExpiredCache() {
   try {
     const files = await readdir(CACHE_DIR);
     for (const file of files) {
-      if (!file.startsWith("cache-") || !file.endsWith(".json")) {
+      const isCache = file.startsWith("cache-") && file.endsWith(".json");
+      const isLock = file.startsWith("api-") && file.endsWith(".lock");
+      if (!isCache && !isLock) {
         continue;
       }
       const filePath = path.join(CACHE_DIR, file);
       try {
-        const fileStat = await stat2(filePath);
+        const fileStat = await stat3(filePath);
         const ageSeconds = (now - fileStat.mtimeMs) / 1e3;
         if (ageSeconds > CACHE_CLEANUP_AGE_SECONDS) {
-          await unlink(filePath);
+          await unlink2(filePath);
         }
       } catch {
       }
@@ -966,7 +1032,7 @@ function getTranslations(config) {
 }
 
 // scripts/widgets/model.ts
-import { readFile as readFile3, stat as stat3 } from "fs/promises";
+import { readFile as readFile3, stat as stat4 } from "fs/promises";
 import { join as join2 } from "path";
 import { homedir as homedir2 } from "os";
 
@@ -1092,7 +1158,7 @@ async function getModelSettings(modelId) {
   const defaultEffort = getDefaultEffort(modelId);
   const settingsPath = join2(homedir2(), ".claude", "settings.json");
   try {
-    const fileStat = await stat3(settingsPath);
+    const fileStat = await stat4(settingsPath);
     if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
       return {
         effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
@@ -1456,7 +1522,7 @@ var projectInfoWidget = {
 };
 
 // scripts/widgets/config-counts.ts
-import { readdir as readdir2, readFile as readFile4, stat as stat4 } from "fs/promises";
+import { readdir as readdir2, readFile as readFile4, stat as stat5 } from "fs/promises";
 import { join as join3 } from "path";
 var CONFIG_CACHE_TTL_MS = 3e4;
 var EMPTY_FS_COUNTS = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
@@ -1474,7 +1540,7 @@ async function countFiles(dir, pattern) {
 }
 async function fileExists(path4) {
   try {
-    await stat4(path4);
+    await stat5(path4);
     return true;
   } catch {
     return false;
@@ -1569,7 +1635,7 @@ var configCountsWidget = {
 };
 
 // scripts/utils/session.ts
-import { readFile as readFile5, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat5 } from "fs/promises";
+import { readFile as readFile5, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink3, stat as stat6 } from "fs/promises";
 import { join as join4 } from "path";
 import { homedir as homedir3 } from "os";
 var SESSION_DIR = join4(homedir3(), ".cache", "claude-dashboard", "sessions");
@@ -1676,9 +1742,9 @@ async function cleanupExpiredSessions() {
         continue;
       try {
         const filePath = join4(SESSION_DIR, file);
-        const fileStat = await stat5(filePath);
+        const fileStat = await stat6(filePath);
         if (fileStat.mtimeMs < cutoffTime) {
-          await unlink2(filePath);
+          await unlink3(filePath);
           debugLog("session", `Cleaned up expired session: ${file}`);
         }
       } catch {
@@ -1709,7 +1775,7 @@ var sessionDurationWidget = {
 };
 
 // scripts/utils/transcript-parser.ts
-import { open as open2, stat as stat6 } from "fs/promises";
+import { open as open2, stat as stat7 } from "fs/promises";
 import { basename as basename2 } from "path";
 var cachedTranscript = null;
 function createParsedTranscript() {
@@ -1875,7 +1941,7 @@ async function readFromOffset(filePath, offset, fileSize) {
 }
 async function parseTranscript(transcriptPath) {
   try {
-    const fileStat = await stat6(transcriptPath);
+    const fileStat = await stat7(transcriptPath);
     const fileSize = fileStat.size;
     if (cachedTranscript?.path === transcriptPath && cachedTranscript.size <= fileSize) {
       if (cachedTranscript.size === fileSize) {
@@ -2187,7 +2253,7 @@ var cacheHitWidget = {
 };
 
 // scripts/utils/codex-client.ts
-import { readFile as readFile6, stat as stat7, writeFile as writeFile2, mkdir as mkdir3 } from "fs/promises";
+import { readFile as readFile6, stat as stat8, writeFile as writeFile3, mkdir as mkdir3 } from "fs/promises";
 import { execFile as execFile4 } from "child_process";
 import os2 from "os";
 import path2 from "path";
@@ -2204,7 +2270,7 @@ function isValidCodexApiResponse(data) {
 }
 async function isCodexInstalled() {
   try {
-    await stat7(CODEX_AUTH_PATH);
+    await stat8(CODEX_AUTH_PATH);
     return true;
   } catch {
     return false;
@@ -2212,7 +2278,7 @@ async function isCodexInstalled() {
 }
 async function getCodexAuth() {
   try {
-    const fileStat = await stat7(CODEX_AUTH_PATH);
+    const fileStat = await stat8(CODEX_AUTH_PATH);
     if (cachedAuth && cachedAuth.mtime === fileStat.mtimeMs) {
       return cachedAuth.data;
     }
@@ -2241,7 +2307,7 @@ async function getModelFromConfig() {
 }
 async function getConfigMtime() {
   try {
-    const fileStat = await stat7(CODEX_CONFIG_PATH);
+    const fileStat = await stat8(CODEX_CONFIG_PATH);
     return fileStat.mtimeMs;
   } catch {
     return 0;
@@ -2265,7 +2331,7 @@ async function saveModelCache(model, configMtime) {
   try {
     await mkdir3(CACHE_DIR2, { recursive: true });
     const cache = { model, configMtime };
-    await writeFile2(MODEL_CACHE_PATH, JSON.stringify(cache), "utf-8");
+    await writeFile3(MODEL_CACHE_PATH, JSON.stringify(cache), "utf-8");
     debugLog("codex", "saveModelCache: saved", model);
   } catch (err) {
     debugLog("codex", "saveModelCache: error", err);
@@ -2482,7 +2548,7 @@ var codexUsageWidget = {
 };
 
 // scripts/utils/gemini-client.ts
-import { readFile as readFile7, writeFile as writeFile3, stat as stat8 } from "fs/promises";
+import { readFile as readFile7, writeFile as writeFile4, stat as stat9 } from "fs/promises";
 import { execFile as execFile5 } from "child_process";
 import os3 from "os";
 import path3 from "path";
@@ -2515,7 +2581,7 @@ async function isGeminiInstalled() {
       return true;
     }
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    await stat8(oauthPath);
+    await stat9(oauthPath);
     return true;
   } catch {
     return false;
@@ -2566,7 +2632,7 @@ async function getTokenFromKeychain() {
 async function getCredentialsFromFile2() {
   try {
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    const fileStat = await stat8(oauthPath);
+    const fileStat = await stat9(oauthPath);
     if (cachedCredentials && cachedCredentials.mtime === fileStat.mtimeMs) {
       return cachedCredentials.data;
     }
@@ -2673,7 +2739,7 @@ async function saveCredentialsToFile(credentials, rawResponse) {
       token_type: rawResponse.token_type || "Bearer",
       scope: rawResponse.scope || existingData.scope
     };
-    await writeFile3(oauthPath, JSON.stringify(newData, null, 2), { mode: 384 });
+    await writeFile4(oauthPath, JSON.stringify(newData, null, 2), { mode: 384 });
     debugLog("gemini", "saveCredentialsToFile: saved");
   } catch (err) {
     debugLog("gemini", "saveCredentialsToFile: error", err);
@@ -2700,7 +2766,7 @@ var PROJECT_ID_CACHE_TTL_MS = 5 * 60 * 1e3;
 async function getGeminiSettings() {
   try {
     const settingsPath = path3.join(getGeminiDir(), SETTINGS_FILE);
-    const fileStat = await stat8(settingsPath);
+    const fileStat = await stat9(settingsPath);
     if (cachedSettings && cachedSettings.mtime === fileStat.mtimeMs) {
       return cachedSettings.data;
     }
@@ -3336,7 +3402,7 @@ var forecastWidget = {
 };
 
 // scripts/utils/budget.ts
-import { readFile as readFile8, mkdir as mkdir4, writeFile as writeFile4 } from "fs/promises";
+import { readFile as readFile8, mkdir as mkdir4, writeFile as writeFile5 } from "fs/promises";
 import { join as join5 } from "path";
 import { homedir as homedir4 } from "os";
 var BUDGET_DIR = join5(homedir4(), ".cache", "claude-dashboard");
@@ -3371,7 +3437,7 @@ async function saveBudgetState(state) {
       await mkdir4(BUDGET_DIR, { recursive: true });
       dirEnsured2 = true;
     }
-    await writeFile4(BUDGET_FILE, JSON.stringify(state), "utf-8");
+    await writeFile5(BUDGET_FILE, JSON.stringify(state), "utf-8");
     budgetCache = state;
   } catch (error) {
     debugLog("budget", "Failed to save budget state", error);
@@ -3568,7 +3634,7 @@ var todayCostWidget = {
 };
 
 // scripts/utils/history-parser.ts
-import { open as open3, stat as stat9 } from "fs/promises";
+import { open as open3, stat as stat10 } from "fs/promises";
 import { homedir as homedir5 } from "os";
 var HISTORY_PATH = `${homedir5()}/.claude/history.jsonl`;
 var CHUNK = 16 * 1024;
@@ -3583,7 +3649,7 @@ function resolvePastedText(display, pastedContents) {
 var historyCache = null;
 async function getLastUserPrompt(sessionId) {
   try {
-    const fileStat = await stat9(HISTORY_PATH);
+    const fileStat = await stat10(HISTORY_PATH);
     if (historyCache && historyCache.fileSize === fileStat.size) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== void 0)
@@ -3955,7 +4021,7 @@ async function readStdin() {
 }
 async function loadConfig() {
   try {
-    const fileStat = await stat10(CONFIG_PATH);
+    const fileStat = await stat11(CONFIG_PATH);
     const mtime = fileStat.mtimeMs;
     if (configCache?.mtime === mtime) {
       return configCache.config;

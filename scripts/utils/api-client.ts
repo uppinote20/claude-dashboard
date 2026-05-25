@@ -15,6 +15,7 @@ import { getCredentials } from './credentials.js';
 import { hashToken } from './hash.js';
 import { VERSION } from '../version.js';
 import { debugLog } from './debug.js';
+import { acquireFileLock, releaseFileLock, waitForLock } from './file-lock.js';
 
 const API_URL = 'https://api.anthropic.com/api/oauth/usage';
 const API_TIMEOUT_MS = 5000;
@@ -66,6 +67,13 @@ async function ensureCacheDir(): Promise<void> {
  */
 function getCacheFilePath(tokenHash: string): string {
   return path.join(CACHE_DIR, `cache-${tokenHash}.json`);
+}
+
+/**
+ * Get cross-process lock file path for a specific token hash
+ */
+function getLockFilePath(tokenHash: string): string {
+  return path.join(CACHE_DIR, `api-${tokenHash}.lock`);
 }
 
 /**
@@ -125,10 +133,26 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     return fileCacheRaw.data;
   }
 
-  // Check if there's already a pending request for this token
+  // Check if there's already a pending request for this token (in-process)
   const pending = pendingRequests.get(tokenHash);
   if (pending) {
     return pending;
+  }
+
+  // Cross-process stampede guard: try to acquire file lock so concurrent
+  // Claude Code sessions don't all hit the API simultaneously for the same token.
+  await ensureCacheDir();
+  const lockPath = getLockFilePath(tokenHash);
+  const lockAcquired = await acquireFileLock(lockPath);
+  if (!lockAcquired) {
+    debugLog('api', 'lock contention, waiting for peer fetch');
+    await waitForLock(lockPath);
+    const refreshed = await loadFileCache(tokenHash, ttlSeconds);
+    if (refreshed) {
+      usageCacheMap.set(tokenHash, { data: refreshed, timestamp: Date.now() });
+      return refreshed;
+    }
+    // Peer fetch produced no usable cache — fall through and try ourselves
   }
 
   // Create new API request
@@ -159,6 +183,7 @@ export async function fetchUsageLimits(ttlSeconds: number = 300): Promise<UsageL
     return null;
   } finally {
     pendingRequests.delete(tokenHash);
+    if (lockAcquired) await releaseFileLock(lockPath);
   }
 }
 
@@ -391,7 +416,9 @@ async function cleanupExpiredCache(): Promise<void> {
     const files = await readdir(CACHE_DIR);
 
     for (const file of files) {
-      if (!file.startsWith('cache-') || !file.endsWith('.json')) {
+      const isCache = file.startsWith('cache-') && file.endsWith('.json');
+      const isLock = file.startsWith('api-') && file.endsWith('.lock');
+      if (!isCache && !isLock) {
         continue;
       }
 
