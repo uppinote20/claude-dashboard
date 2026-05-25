@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/github/license/uppinote20/claude-dashboard)
 ![Stars](https://img.shields.io/github/stars/uppinote20/claude-dashboard)
 
-Comprehensive status line plugin for Claude Code with context usage, API rate limits, cost tracking, and modular widget system.
+Comprehensive status line plugin for Claude Code — unified usage monitoring across Claude, Codex, Gemini, and z.ai CLIs, with context, rate limits, cost tracking, and a modular widget system.
 
 ## Demo
 

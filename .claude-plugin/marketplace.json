@@ -5,14 +5,14 @@
     "email": ""
   },
   "metadata": {
-    "description": "Comprehensive status line with context usage, API rate limits, and cost tracking",
+    "description": "Unified status line for Claude Code with multi-CLI (Claude, Codex, Gemini, z.ai) usage monitoring, context, rate limits, and cost tracking",
     "version": "1.27.0"
   },
   "plugins": [
     {
       "name": "claude-dashboard",
       "source": "./",
-      "description": "Real-time status line showing model, context usage with color-coded progress bar, token count, cost, and API rate limits (5h/7d). Supports Max and Pro plans with i18n (English/Korean).",
+      "description": "Real-time status line showing model, context, color-coded progress bar, cost, API rate limits (5h/7d), and unified usage tracking for Claude, Codex, Gemini, and z.ai CLIs. Supports Max/Pro plans with i18n (English/Korean).",
       "category": "monitoring",
       "tags": [
         "statusline",
@@ -20,7 +20,10 @@
         "context",
         "rate-limits",
         "cost",
-        "i18n"
+        "i18n",
+        "multi-cli",
+        "codex",
+        "gemini"
       ]
     }
   ],
