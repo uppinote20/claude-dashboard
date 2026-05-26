@@ -39,6 +39,45 @@ echo '{"model":{"display_name":"Opus"},"context_window":{"context_window_size":2
 claude --plugin-dir /path/to/claude-dashboard
 ```
 
+## Contributing a Widget
+
+All status-line widgets implement the same small interface, so new widgets can be added without touching the orchestrator.
+
+### Interface
+
+```ts
+// scripts/widgets/base.ts
+export interface Widget<T extends WidgetData = WidgetData> {
+  readonly id: WidgetId;
+  readonly name: string;
+  getData(ctx: WidgetContext): Promise<T | null>;
+  render(data: T, ctx: WidgetContext): string;
+}
+```
+
+`getData` returns `null` to opt out of rendering — use this whenever required data is missing (no token, no transcript, feature disabled, etc.) so the widget gracefully disappears instead of erroring.
+
+### Steps
+
+1. **Pick a data source.** stdin (always available), transcript JSONL, an API client, git, or a config file.
+2. **Create `scripts/widgets/<your-widget>.ts`** and implement `Widget`.
+3. **Register the ID** in the `WidgetId` union in `scripts/types.ts`.
+4. **Register the widget instance** in `scripts/widgets/index.ts` (import + map entry + preset character if you want a shorthand).
+5. **Add translations** for any user-facing strings to every locale under `locales/*.json`.
+6. **Write tests** in `scripts/__tests__/widgets.test.ts` (or a dedicated file). Cover both the populated state and the `null`/hidden state.
+7. **Update presets** in `DISPLAY_PRESETS` in `scripts/types.ts` only if you want the widget to ship in the `normal`/`detailed` defaults — most third-party widgets should stay opt-in.
+
+### Reference widgets
+
+| Pattern | Example |
+|---|---|
+| Pure stdin | [`scripts/widgets/cost.ts`](scripts/widgets/cost.ts) |
+| Cached API call | [`scripts/widgets/rate-limit.ts`](scripts/widgets/rate-limit.ts) |
+| Transcript parsing | [`scripts/widgets/tool-activity.ts`](scripts/widgets/tool-activity.ts) |
+| Git + module cache | [`scripts/widgets/tag-status.ts`](scripts/widgets/tag-status.ts) |
+
+For deeper guidance on caching, theming, and error handling, see [`docs/ENGINEERING_HANDBOOK.md`](docs/ENGINEERING_HANDBOOK.md) sections 3–7.
+
 ## Pull Request Process
 
 1. Ensure your code builds without errors
