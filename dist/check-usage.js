@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // scripts/utils/api-client.ts
-import { readFile as readFile2, writeFile as writeFile2, mkdir, readdir, stat as stat3, unlink as unlink2 } from "fs/promises";
+import { readFile as readFile2, writeFile, mkdir, readdir, stat as stat2, unlink } from "fs/promises";
 import { execFile as execFile2 } from "child_process";
 import os from "os";
 import path from "path";
@@ -104,53 +104,6 @@ function debugLog(context, message, error) {
   }
 }
 
-// scripts/utils/file-lock.ts
-import { writeFile, stat as stat2, unlink } from "fs/promises";
-var LOCK_STALE_SECONDS = 10;
-var LOCK_WAIT_INTERVAL_MS = 100;
-var LOCK_WAIT_MAX_MS = 2e3;
-async function cleanStaleFileLock(lockPath, staleSeconds) {
-  try {
-    const lockStat = await stat2(lockPath);
-    const ageSeconds = (Date.now() - lockStat.mtimeMs) / 1e3;
-    if (ageSeconds >= staleSeconds) {
-      await unlink(lockPath).catch(() => {
-      });
-    }
-  } catch {
-  }
-}
-async function acquireFileLock(lockPath, staleSeconds = LOCK_STALE_SECONDS) {
-  try {
-    await cleanStaleFileLock(lockPath, staleSeconds);
-    await writeFile(lockPath, String(process.pid), { flag: "wx", mode: 384 });
-    return true;
-  } catch (err) {
-    const code = err?.code;
-    if (code !== "EEXIST") {
-      debugLog("lock", "acquire failed", err);
-    }
-    return false;
-  }
-}
-async function releaseFileLock(lockPath) {
-  try {
-    await unlink(lockPath);
-  } catch {
-  }
-}
-async function waitForLock(lockPath, maxWaitMs = LOCK_WAIT_MAX_MS, intervalMs = LOCK_WAIT_INTERVAL_MS) {
-  const deadline = Date.now() + maxWaitMs;
-  while (Date.now() < deadline) {
-    try {
-      await stat2(lockPath);
-    } catch {
-      return;
-    }
-    await new Promise((r) => setTimeout(r, intervalMs));
-  }
-}
-
 // scripts/utils/api-client.ts
 var API_URL = "https://api.anthropic.com/api/oauth/usage";
 var API_TIMEOUT_MS = 5e3;
@@ -175,9 +128,6 @@ async function ensureCacheDir() {
 }
 function getCacheFilePath(tokenHash) {
   return path.join(CACHE_DIR, `cache-${tokenHash}.json`);
-}
-function getLockFilePath(tokenHash) {
-  return path.join(CACHE_DIR, `api-${tokenHash}.lock`);
 }
 function isCacheValid(tokenHash, ttlSeconds) {
   const cache = usageCacheMap.get(tokenHash);
@@ -221,18 +171,6 @@ async function fetchUsageLimits(ttlSeconds = 300) {
   if (pending) {
     return pending;
   }
-  await ensureCacheDir();
-  const lockPath = getLockFilePath(tokenHash);
-  const lockAcquired = await acquireFileLock(lockPath);
-  if (!lockAcquired) {
-    debugLog("api", "lock contention, waiting for peer fetch");
-    await waitForLock(lockPath);
-    const refreshed = await loadFileCache(tokenHash, ttlSeconds);
-    if (refreshed) {
-      usageCacheMap.set(tokenHash, { data: refreshed, timestamp: Date.now() });
-      return refreshed;
-    }
-  }
   const requestPromise = fetchFromApi(token, tokenHash);
   pendingRequests.set(tokenHash, requestPromise);
   try {
@@ -254,8 +192,6 @@ async function fetchUsageLimits(ttlSeconds = 300) {
     return null;
   } finally {
     pendingRequests.delete(tokenHash);
-    if (lockAcquired)
-      await releaseFileLock(lockPath);
   }
 }
 async function makeRequest(token) {
@@ -398,7 +334,7 @@ async function saveFileCache(tokenHash, data) {
   try {
     await ensureCacheDir();
     const cacheFile = getCacheFilePath(tokenHash);
-    await writeFile2(
+    await writeFile(
       cacheFile,
       JSON.stringify({
         data,
@@ -420,17 +356,15 @@ async function cleanupExpiredCache() {
   try {
     const files = await readdir(CACHE_DIR);
     for (const file of files) {
-      const isCache = file.startsWith("cache-") && file.endsWith(".json");
-      const isLock = file.startsWith("api-") && file.endsWith(".lock");
-      if (!isCache && !isLock) {
+      if (!file.startsWith("cache-") || !file.endsWith(".json")) {
         continue;
       }
       const filePath = path.join(CACHE_DIR, file);
       try {
-        const fileStat = await stat3(filePath);
+        const fileStat = await stat2(filePath);
         const ageSeconds = (now - fileStat.mtimeMs) / 1e3;
         if (ageSeconds > CACHE_CLEANUP_AGE_SECONDS) {
-          await unlink2(filePath);
+          await unlink(filePath);
         }
       } catch {
       }
@@ -440,7 +374,7 @@ async function cleanupExpiredCache() {
 }
 
 // scripts/utils/codex-client.ts
-import { readFile as readFile3, stat as stat4, writeFile as writeFile3, mkdir as mkdir2 } from "fs/promises";
+import { readFile as readFile3, stat as stat3, writeFile as writeFile2, mkdir as mkdir2 } from "fs/promises";
 import { execFile as execFile3 } from "child_process";
 import os2 from "os";
 import path2 from "path";
@@ -457,7 +391,7 @@ function isValidCodexApiResponse(data) {
 }
 async function isCodexInstalled() {
   try {
-    await stat4(CODEX_AUTH_PATH);
+    await stat3(CODEX_AUTH_PATH);
     return true;
   } catch {
     return false;
@@ -465,7 +399,7 @@ async function isCodexInstalled() {
 }
 async function getCodexAuth() {
   try {
-    const fileStat = await stat4(CODEX_AUTH_PATH);
+    const fileStat = await stat3(CODEX_AUTH_PATH);
     if (cachedAuth && cachedAuth.mtime === fileStat.mtimeMs) {
       return cachedAuth.data;
     }
@@ -494,7 +428,7 @@ async function getModelFromConfig() {
 }
 async function getConfigMtime() {
   try {
-    const fileStat = await stat4(CODEX_CONFIG_PATH);
+    const fileStat = await stat3(CODEX_CONFIG_PATH);
     return fileStat.mtimeMs;
   } catch {
     return 0;
@@ -518,7 +452,7 @@ async function saveModelCache(model, configMtime) {
   try {
     await mkdir2(CACHE_DIR2, { recursive: true });
     const cache = { model, configMtime };
-    await writeFile3(MODEL_CACHE_PATH, JSON.stringify(cache), "utf-8");
+    await writeFile2(MODEL_CACHE_PATH, JSON.stringify(cache), "utf-8");
     debugLog("codex", "saveModelCache: saved", model);
   } catch (err) {
     debugLog("codex", "saveModelCache: error", err);
@@ -673,7 +607,7 @@ async function fetchFromCodexApi(auth, tokenHash) {
 }
 
 // scripts/utils/gemini-client.ts
-import { readFile as readFile4, writeFile as writeFile4, stat as stat5 } from "fs/promises";
+import { readFile as readFile4, writeFile as writeFile3, stat as stat4 } from "fs/promises";
 import { execFile as execFile4 } from "child_process";
 import os3 from "os";
 import path3 from "path";
@@ -706,7 +640,7 @@ async function isGeminiInstalled() {
       return true;
     }
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    await stat5(oauthPath);
+    await stat4(oauthPath);
     return true;
   } catch {
     return false;
@@ -757,7 +691,7 @@ async function getTokenFromKeychain() {
 async function getCredentialsFromFile2() {
   try {
     const oauthPath = path3.join(getGeminiDir(), OAUTH_CREDS_FILE);
-    const fileStat = await stat5(oauthPath);
+    const fileStat = await stat4(oauthPath);
     if (cachedCredentials && cachedCredentials.mtime === fileStat.mtimeMs) {
       return cachedCredentials.data;
     }
@@ -864,7 +798,7 @@ async function saveCredentialsToFile(credentials, rawResponse) {
       token_type: rawResponse.token_type || "Bearer",
       scope: rawResponse.scope || existingData.scope
     };
-    await writeFile4(oauthPath, JSON.stringify(newData, null, 2), { mode: 384 });
+    await writeFile3(oauthPath, JSON.stringify(newData, null, 2), { mode: 384 });
     debugLog("gemini", "saveCredentialsToFile: saved");
   } catch (err) {
     debugLog("gemini", "saveCredentialsToFile: error", err);
@@ -891,7 +825,7 @@ var PROJECT_ID_CACHE_TTL_MS = 5 * 60 * 1e3;
 async function getGeminiSettings() {
   try {
     const settingsPath = path3.join(getGeminiDir(), SETTINGS_FILE);
-    const fileStat = await stat5(settingsPath);
+    const fileStat = await stat4(settingsPath);
     if (cachedSettings && cachedSettings.mtime === fileStat.mtimeMs) {
       return cachedSettings.data;
     }
