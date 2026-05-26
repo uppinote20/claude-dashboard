@@ -356,9 +356,13 @@ async function cleanupExpiredCache(): Promise<void> {
     const files = await readdir(FILE_CACHE_DIR);
 
     for (const file of files) {
-      if (!file.startsWith('cache-') || !file.endsWith('.json')) {
-        continue;
-      }
+      if (!file.endsWith('.json')) continue;
+      const isCleanable =
+        file.startsWith('cache-') ||
+        file.startsWith('codex-usage-') ||
+        file.startsWith('gemini-usage-') ||
+        file.startsWith('zai-usage-');
+      if (!isCleanable) continue;
 
       const filePath = path.join(FILE_CACHE_DIR, file);
 

@@ -350,7 +350,7 @@ Before committing:
 
 - **Trigger**: Time-based (once per hour maximum)
 - **Target**: Files older than `CACHE_MAX_AGE_SECONDS` (1 hour)
-- **Pattern**: Only `cache-*.json` files in cache directory
+- **Pattern**: `cache-*.json` (Anthropic), `codex-usage-*.json`, `gemini-usage-*.json`, `zai-usage-*.json` in cache directory
 
 ### Request Deduplication
 
