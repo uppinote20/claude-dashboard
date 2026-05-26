@@ -463,7 +463,12 @@ describe('api-client', () => {
       });
 
       const { fetchUsageLimits, clearCache } = await import('../utils/api-client.js');
+      const { resetCleanupThrottle } = await import('../utils/file-cache.js');
       clearCache();
+      // Explicit throttle reset so cleanup runs regardless of any earlier
+      // saveFileCache call in this process; relying on vi.resetModules() alone
+      // is implicit.
+      resetCleanupThrottle();
 
       // Single call triggers cleanup (first call after module load)
       await fetchUsageLimits();
