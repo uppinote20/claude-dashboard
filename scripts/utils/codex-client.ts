@@ -4,6 +4,7 @@
  * @handbook 7.1-common-api-pattern
  * @handbook 4.2-request-deduplication
  * @tested scripts/__tests__/widgets.test.ts
+ * @tested scripts/__tests__/codex-client.test.ts
  */
 
 import { readFile, stat, writeFile, mkdir } from 'fs/promises';

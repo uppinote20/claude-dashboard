@@ -2,7 +2,7 @@
  * @handbook 8.1-test-structure
  * @covers scripts/utils/zai-api-client.ts
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { clampPercent, calculateUsagePercent, parseUsagePercent } from '../utils/zai-api-client.js';
 
 describe('zai-api-client', () => {
@@ -85,6 +85,55 @@ describe('zai-api-client', () => {
         currentValue: 30,
         remaining: 70,
       })).toBe(80);
+    });
+  });
+
+  describe('fetchZaiUsage file cache integration', () => {
+    const originalToken = process.env.ANTHROPIC_AUTH_TOKEN;
+    const originalBase = process.env.ANTHROPIC_BASE_URL;
+
+    beforeEach(() => {
+      vi.resetModules();
+      process.env.ANTHROPIC_AUTH_TOKEN = 'zai-test-token';
+      process.env.ANTHROPIC_BASE_URL = 'https://api.z.ai/anthropic';
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.doUnmock('../utils/file-cache.js');
+      if (originalToken === undefined) delete process.env.ANTHROPIC_AUTH_TOKEN;
+      else process.env.ANTHROPIC_AUTH_TOKEN = originalToken;
+      if (originalBase === undefined) delete process.env.ANTHROPIC_BASE_URL;
+      else process.env.ANTHROPIC_BASE_URL = originalBase;
+    });
+
+    it('returns file cache hit and skips network fetch', async () => {
+      const sample = {
+        model: 'glm-4.6',
+        tokensPercent: 25,
+        tokensResetAt: Date.now() + 3_600_000,
+        mcpPercent: 10,
+        mcpResetAt: Date.now() + 30 * 86_400_000,
+      };
+
+      vi.doMock('../utils/file-cache.js', () => ({
+        loadFileCache: vi.fn().mockResolvedValue({ data: sample, timestamp: Date.now() }),
+        saveFileCache: vi.fn(),
+        fileCachePath: (name: string) => `/tmp/${name}`,
+        FILE_CACHE_DIR: '/tmp',
+      }));
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response('{}', { status: 200 })
+      );
+
+      const { fetchZaiUsage, clearZaiCache } = await import('../utils/zai-api-client.js');
+      clearZaiCache();
+
+      const result = await fetchZaiUsage();
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result).toEqual(sample);
     });
   });
 });
