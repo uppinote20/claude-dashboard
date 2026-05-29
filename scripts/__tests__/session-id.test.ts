@@ -5,6 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { sessionIdWidget, sessionIdFullWidget } from '../widgets/session-id.js';
 import type { WidgetContext, StdinInput } from '../types.js';
+import { ICON } from '../utils/emoji.js';
 import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 function createStdin(overrides: Partial<StdinInput> = {}): StdinInput {
@@ -46,7 +47,7 @@ describe('sessionIdWidget', () => {
     const data = { sessionId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', shortId: 'a1b2c3d4' };
     const result = sessionIdWidget.render(data, ctx);
 
-    expect(result).toContain('\u{1F511}');
+    expect(result).toContain(ICON.key);
     expect(result).toContain('a1b2c3d4');
     expect(result).not.toContain('e5f6');
   });
@@ -86,7 +87,7 @@ describe('sessionIdFullWidget', () => {
     const data = { sessionId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890', shortId: 'a1b2c3d4' };
     const result = sessionIdFullWidget.render(data, ctx);
 
-    expect(result).toContain('\u{1F511}');
+    expect(result).toContain(ICON.key);
     expect(result).toContain('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
   });
 });

@@ -9,6 +9,7 @@ import {
   rateLimit7dSonnetWidget,
 } from '../widgets/rate-limit.js';
 import type { WidgetContext, UsageLimits, Config } from '../types.js';
+import { ICON } from '../utils/emoji.js';
 import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 // Helper to create widget context
@@ -37,7 +38,7 @@ describe('rate-limit widgets', () => {
       const result = rateLimit5hWidget.render(errorData, ctx);
 
       // Should contain warning emoji (with or without ANSI codes)
-      expect(result).toContain('⚠️');
+      expect(result).toContain(ICON.warning);
     });
 
     it('should return error data when five_hour is not available', async () => {
