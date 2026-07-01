@@ -122,7 +122,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit7dSonnet` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 7-day Sonnet-specific rate limit utilization. Max plan only. |
+| **Description** | Shows the 7-day Sonnet-specific rate limit utilization. Max plan only. **Deprecated ~2026-06:** Anthropic merged the Sonnet weekly limit into the unified all-models weekly bucket at the Sonnet 5 launch, so the usage API returns `null` and this widget stays hidden until/unless the field returns. |
 
 **Example output:**
 ```
