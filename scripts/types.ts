@@ -110,6 +110,7 @@ export type WidgetId =
   | 'rateLimit5h'
   | 'rateLimit7d'
   | 'rateLimit7dSonnet'
+  | 'rateLimit7dFable'
   | 'projectInfo'
   | 'configCounts'
   | 'sessionDuration'
@@ -232,6 +233,7 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   R: 'rateLimit5h',
   '7': 'rateLimit7d',
   S: 'rateLimit7dSonnet',
+  f: 'rateLimit7dFable',
   P: 'projectInfo',
   I: 'sessionId',
   D: 'sessionDuration',
@@ -306,6 +308,7 @@ export interface Translations {
     '7d': string;
     '7d_all': string;
     '7d_sonnet': string;
+    '7d_fable': string;
     '1m': string;
   };
   time: {
@@ -367,6 +370,11 @@ export interface UsageLimits {
     resets_at: string | null;
   } | null;
   seven_day_sonnet: {
+    utilization: number;
+    resets_at: string | null;
+  } | null;
+  /** Optional: absent on stdin-only paths, only ever populated via the API's `limits[]` array */
+  seven_day_fable?: {
     utilization: number;
     resets_at: string | null;
   } | null;

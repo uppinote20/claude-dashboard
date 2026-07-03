@@ -7,6 +7,7 @@ import {
   rateLimit5hWidget,
   rateLimit7dWidget,
   rateLimit7dSonnetWidget,
+  rateLimit7dFableWidget,
 } from '../widgets/rate-limit.js';
 import type { WidgetContext, UsageLimits, Config } from '../types.js';
 import { ICON } from '../utils/emoji.js';
@@ -146,6 +147,48 @@ describe('rate-limit widgets', () => {
 
       expect(result).toContain('7d-S');
       expect(result).toContain('60%');
+    });
+  });
+
+  describe('rateLimit7dFableWidget', () => {
+    it('should return null for non-max plan', async () => {
+      const ctx = createContext(
+        { five_hour: null, seven_day: null, seven_day_sonnet: null, seven_day_fable: { utilization: 52, resets_at: null } },
+        { plan: 'pro' }
+      );
+      const data = await rateLimit7dFableWidget.getData(ctx);
+
+      expect(data).toBeNull();
+    });
+
+    it('should return data for max plan when seven_day_fable is available', async () => {
+      const ctx = createContext(
+        { five_hour: null, seven_day: null, seven_day_sonnet: null, seven_day_fable: { utilization: 52, resets_at: null } },
+        { plan: 'max' }
+      );
+      const data = await rateLimit7dFableWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.utilization).toBe(52);
+    });
+
+    it('should return null when seven_day_fable is absent (non-Fable account)', async () => {
+      const ctx = createContext(
+        { five_hour: null, seven_day: null, seven_day_sonnet: null },
+        { plan: 'max' }
+      );
+      const data = await rateLimit7dFableWidget.getData(ctx);
+
+      expect(data).toBeNull();
+    });
+
+    it('should render 7d-F label', () => {
+      const ctx = createContext(null, { plan: 'max' });
+      const data = { utilization: 45, resetsAt: null };
+      const result = rateLimit7dFableWidget.render(data, ctx);
+
+      expect(result).toContain('7d-F');
+      expect(result).toContain('45%');
     });
   });
 });

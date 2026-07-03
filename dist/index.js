@@ -33,6 +33,7 @@ var PRESET_CHAR_MAP = {
   R: "rateLimit5h",
   "7": "rateLimit7d",
   S: "rateLimit7dSonnet",
+  f: "rateLimit7dFable",
   P: "projectInfo",
   I: "sessionId",
   D: "sessionDuration",
@@ -840,12 +841,33 @@ function validateLimitWindow(raw) {
     resets_at: typeof w.resets_at === "string" ? w.resets_at : null
   };
 }
+function findWeeklyScopedLimit(limits, modelDisplayName) {
+  if (!Array.isArray(limits))
+    return null;
+  const entry = limits.find((raw) => {
+    if (!raw || typeof raw !== "object")
+      return false;
+    const l = raw;
+    if (l.kind !== "weekly_scoped")
+      return false;
+    const scope = l.scope;
+    const model = scope?.model;
+    return model?.display_name === modelDisplayName;
+  });
+  if (!entry || typeof entry.percent !== "number")
+    return null;
+  return {
+    utilization: entry.percent,
+    resets_at: typeof entry.resets_at === "string" ? entry.resets_at : null
+  };
+}
 async function parseAndCacheLimits(data, tokenHash) {
   const d = data && typeof data === "object" ? data : {};
   const limits = {
     five_hour: validateLimitWindow(d.five_hour),
     seven_day: validateLimitWindow(d.seven_day),
-    seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet)
+    seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet),
+    seven_day_fable: findWeeklyScopedLimit(d.limits, "Fable")
   };
   usageCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
   await saveFileCache2(tokenHash, limits);
@@ -874,6 +896,7 @@ var en_default = {
     "7d": "7d",
     "7d_all": "7d",
     "7d_sonnet": "7d-S",
+    "7d_fable": "7d-F",
     codex: "Codex",
     "1m": "1m"
   },
@@ -933,6 +956,7 @@ var ko_default = {
     "7d": "7\uC77C",
     "7d_all": "7\uC77C",
     "7d_sonnet": "7\uC77C-S",
+    "7d_fable": "7\uC77C-F",
     codex: "Codex",
     "1m": "1\uAC1C\uC6D4"
   },
@@ -1335,6 +1359,20 @@ var rateLimit7dSonnetWidget = {
   },
   render(data, ctx) {
     return renderRateLimit(data, ctx, "7d_sonnet");
+  }
+};
+var rateLimit7dFableWidget = {
+  id: "rateLimit7dFable",
+  name: "7d Fable Rate Limit",
+  async getData(ctx) {
+    if (shouldHideAnthropicLimits())
+      return null;
+    if (ctx.config.plan !== "max")
+      return null;
+    return getLimitData(ctx.rateLimits, "seven_day_fable");
+  },
+  render(data, ctx) {
+    return renderRateLimit(data, ctx, "7d_fable");
   }
 };
 
@@ -3935,6 +3973,7 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["rateLimit5h", rateLimit5hWidget],
   ["rateLimit7d", rateLimit7dWidget],
   ["rateLimit7dSonnet", rateLimit7dSonnetWidget],
+  ["rateLimit7dFable", rateLimit7dFableWidget],
   ["projectInfo", projectInfoWidget],
   ["configCounts", configCountsWidget],
   ["sessionDuration", sessionDurationWidget],
@@ -4069,7 +4108,9 @@ function parseStdinRateLimits(stdin) {
   return {
     five_hour: rl.five_hour ? convertStdinLimit(rl.five_hour) : null,
     seven_day: rl.seven_day ? convertStdinLimit(rl.seven_day) : null,
-    seven_day_sonnet: null
+    seven_day_sonnet: null,
+    // Not available in stdin
+    seven_day_fable: null
     // Not available in stdin
   };
 }
@@ -4089,7 +4130,11 @@ async function main() {
     rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
   } else if (config.plan === "max") {
     const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
-    rateLimits = { ...stdinLimits, seven_day_sonnet: apiLimits?.seven_day_sonnet ?? null };
+    rateLimits = {
+      ...stdinLimits,
+      seven_day_sonnet: apiLimits?.seven_day_sonnet ?? null,
+      seven_day_fable: apiLimits?.seven_day_fable ?? null
+    };
   } else {
     rateLimits = stdinLimits;
   }

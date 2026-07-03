@@ -279,6 +279,36 @@ function validateLimitWindow(
 }
 
 /**
+ * Find a model-scoped weekly limit in the API's `limits[]` array.
+ *
+ * Newer models (e.g. Fable) don't get a dedicated flat field like
+ * `seven_day_sonnet` — their weekly cap only appears as an entry in the
+ * generic `limits[]` array, self-described via `scope.model.display_name`:
+ * `{ kind: 'weekly_scoped', percent, resets_at, scope: { model: { display_name } } }`.
+ */
+function findWeeklyScopedLimit(
+  limits: unknown,
+  modelDisplayName: string
+): { utilization: number; resets_at: string | null } | null {
+  if (!Array.isArray(limits)) return null;
+
+  const entry = limits.find((raw) => {
+    if (!raw || typeof raw !== 'object') return false;
+    const l = raw as Record<string, unknown>;
+    if (l.kind !== 'weekly_scoped') return false;
+    const scope = l.scope as Record<string, unknown> | null | undefined;
+    const model = scope?.model as Record<string, unknown> | null | undefined;
+    return model?.display_name === modelDisplayName;
+  }) as Record<string, unknown> | undefined;
+
+  if (!entry || typeof entry.percent !== 'number') return null;
+  return {
+    utilization: entry.percent,
+    resets_at: typeof entry.resets_at === 'string' ? entry.resets_at : null,
+  };
+}
+
+/**
  * Parse API response and update caches
  */
 async function parseAndCacheLimits(data: unknown, tokenHash: string): Promise<UsageLimits> {
@@ -287,6 +317,7 @@ async function parseAndCacheLimits(data: unknown, tokenHash: string): Promise<Us
     five_hour: validateLimitWindow(d.five_hour),
     seven_day: validateLimitWindow(d.seven_day),
     seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet),
+    seven_day_fable: findWeeklyScopedLimit(d.limits, 'Fable'),
   };
 
   usageCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
