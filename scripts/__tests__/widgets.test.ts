@@ -180,7 +180,7 @@ describe('widgets', () => {
       expect(result).toContain('(M)');
     });
 
-    it('should show medium effort for Sonnet 4.6 by default', () => {
+    it('should render (M) badge for Sonnet when effortLevel is medium', () => {
       const ctx = createContext();
       const result = modelWidget.render(
         createModelData({ id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', effortLevel: 'medium' }),
@@ -235,6 +235,17 @@ describe('widgets', () => {
 
       expect(result).toContain('Fable');
       expect(result).toContain('(H)');
+    });
+
+    it('should show max effort as (MAX) for Fable', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-fable-5', displayName: 'Claude Fable 5', effortLevel: 'max' }),
+        ctx,
+      );
+
+      expect(result).toContain('Fable');
+      expect(result).toContain('(MAX)');
     });
 
     it('should show max effort as (MAX) for Opus', () => {
