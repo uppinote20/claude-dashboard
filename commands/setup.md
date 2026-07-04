@@ -39,7 +39,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 
 | Widget | Description |
 |--------|-------------|
-| `model` | Model name with emoji, effort level (Opus/Sonnet), fast mode (Opus) |
+| `model` | Model name with emoji, effort level (Opus/Sonnet/Fable), fast mode (Opus) |
 | `context` | Progress bar, percentage, tokens |
 | `contextBar` | Progress bar only (sub-widget of `context`) |
 | `contextPercentage` | Percentage only (sub-widget of `context`) |
