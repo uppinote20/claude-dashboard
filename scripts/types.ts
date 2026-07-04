@@ -410,7 +410,7 @@ export interface WidgetContext {
 /**
  * Widget data types for each widget
  */
-export type EffortLevel = 'xhigh' | 'high' | 'medium' | 'low';
+export type EffortLevel = 'max' | 'xhigh' | 'high' | 'medium' | 'low';
 
 export interface ModelData {
   id: string;

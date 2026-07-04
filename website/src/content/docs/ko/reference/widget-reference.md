@@ -13,7 +13,7 @@ sidebar:
 
 - **ID**: `model`
 - **데이터 소스**: stdin (모델 정보) + settings
-- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet의 경우 effort 수준(X=xhigh, H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
+- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet/Fable의 경우 effort 수준(MAX=max, X=xhigh, H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
 - **출력 예시**: `◆ Opus(X)`, `◆ Opus(X) ↯`, `◆ Sonnet(M)`, `◆ Haiku`
 
 ### context
@@ -78,7 +78,7 @@ sidebar:
 
 - **ID**: `rateLimit7dSonnet`
 - **데이터 소스**: API (OAuth usage 엔드포인트)
-- **표시 내용**: 7일 Sonnet 모델 사용량. Max 플랜에서만 표시됩니다.
+- **표시 내용**: 7일 Sonnet 모델 사용량. Max 플랜 전용. **~2026-06 지원 중단:** Sonnet 5 출시 시점에 Anthropic이 Sonnet 주간 한도를 통합 주간 버킷에 병합하여, usage API가 null을 반환하는 동안 위젯이 숨겨집니다.
 - **출력 예시**: `7dS: 55%`
 
 ## Session

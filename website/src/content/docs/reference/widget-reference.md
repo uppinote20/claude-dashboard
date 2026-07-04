@@ -15,7 +15,7 @@ This page provides detailed information about each widget, including its data so
 |----------|-------|
 | **Widget ID** | `model` |
 | **Data Source** | stdin (model info) + settings (effort/fast mode) |
-| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet (X/H/M/L) and fast mode indicator for Opus (↯). |
+| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet/Fable (MAX/X/H/M/L) and fast mode indicator for Opus (↯). |
 
 **Example output:**
 ```
@@ -122,7 +122,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit7dSonnet` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 7-day Sonnet-specific rate limit utilization. Max plan only. |
+| **Description** | Shows the 7-day Sonnet-specific rate limit utilization. Max plan only. **Deprecated ~2026-06:** Anthropic merged the Sonnet weekly limit into the unified all-models weekly bucket at the Sonnet 5 launch, so the usage API returns `null` and this widget stays hidden until/unless the field returns. |
 
 **Example output:**
 ```

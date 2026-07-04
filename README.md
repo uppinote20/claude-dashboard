@@ -34,7 +34,7 @@ git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/c
 
 ![Compact](images/compact.png)
 
-> Model, context progress bar, cost, rate limits (5h/7d/7d-Sonnet) or z.ai usage (mutually exclusive by provider)
+> Model, context progress bar, cost, rate limits (5h/7d) or z.ai usage (mutually exclusive by provider)
 
 **Normal (2 lines):**
 
@@ -55,7 +55,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 
 | Category | Widget | Description |
 |----------|--------|-------------|
-| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet (X/H/M/L), fast mode for Opus (↯) |
+| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯) |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `contextBar` | Progress bar only (sub-widget of `context`) |
 | | `contextPercentage` | Percentage only (sub-widget of `context`) |
@@ -64,7 +64,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `projectInfo` | Directory + git branch (clickable OSC8 link) + ahead/behind (↑↓), subpath from project_dir, worktree indicator (🌳) |
 | **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
 | | `rateLimit7d` | 7-day rate limit (Pro and Max) |
-| | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) |
+| | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) — deprecated ~2026-06: Anthropic merged it into the unified weekly bucket at the Sonnet 5 launch, so the API returns `null` and the widget stays hidden until/unless the field returns |
 | | `rateLimit7dFable` | 7-day Fable limit (Max only) |
 | **Session** | `sessionId` | Session ID (short 8-char) |
 | | `sessionIdFull` | Session ID (full UUID) |

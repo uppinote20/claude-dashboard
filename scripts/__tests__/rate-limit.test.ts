@@ -140,6 +140,16 @@ describe('rate-limit widgets', () => {
       expect(data?.utilization).toBe(25);
     });
 
+    it('should return null on max plan when seven_day_sonnet is null (deprecated: merged into unified weekly bucket)', async () => {
+      const ctx = createContext(
+        { five_hour: null, seven_day: null, seven_day_sonnet: null },
+        { plan: 'max' }
+      );
+      const data = await rateLimit7dSonnetWidget.getData(ctx);
+
+      expect(data).toBeNull();
+    });
+
     it('should render 7d-S label', () => {
       const ctx = createContext(null, { plan: 'max' });
       const data = { utilization: 60, resetsAt: null };

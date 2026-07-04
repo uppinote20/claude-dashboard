@@ -88,6 +88,12 @@ describe('formatters', () => {
       expect(shortenModelName('claude-haiku')).toBe('Haiku');
     });
 
+    it('should extract Fable from model name', () => {
+      expect(shortenModelName('Claude Fable 5')).toBe('Fable');
+      expect(shortenModelName('claude-fable-5')).toBe('Fable');
+      expect(shortenModelName('Fable 5')).toBe('Fable');
+    });
+
     it('should fallback to second word after Claude', () => {
       expect(shortenModelName('Claude Unknown')).toBe('Unknown');
     });

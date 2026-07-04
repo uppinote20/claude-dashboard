@@ -132,7 +132,7 @@ describe('widgets', () => {
       expect(data).toEqual({
         id: '',
         displayName: '-',
-        effortLevel: expect.stringMatching(/^(xhigh|high|medium|low)$/),
+        effortLevel: expect.stringMatching(/^(max|xhigh|high|medium|low)$/),
         fastMode: expect.any(Boolean),
       });
     });
@@ -180,7 +180,7 @@ describe('widgets', () => {
       expect(result).toContain('(M)');
     });
 
-    it('should show medium effort for Sonnet 4.6 by default', () => {
+    it('should render (M) badge for Sonnet when effortLevel is medium', () => {
       const ctx = createContext();
       const result = modelWidget.render(
         createModelData({ id: 'claude-sonnet-4-6', displayName: 'Claude Sonnet 4.6', effortLevel: 'medium' }),
@@ -224,6 +224,39 @@ describe('widgets', () => {
       expect(result).not.toContain('(H)');
       expect(result).not.toContain('(M)');
       expect(result).not.toContain('(L)');
+    });
+
+    it('should show effort level for Fable', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-fable-5', displayName: 'Claude Fable 5', effortLevel: 'high' }),
+        ctx,
+      );
+
+      expect(result).toContain('Fable');
+      expect(result).toContain('(H)');
+    });
+
+    it('should show max effort as (MAX) for Fable', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-fable-5', displayName: 'Claude Fable 5', effortLevel: 'max' }),
+        ctx,
+      );
+
+      expect(result).toContain('Fable');
+      expect(result).toContain('(MAX)');
+    });
+
+    it('should show max effort as (MAX) for Opus', () => {
+      const ctx = createContext();
+      const result = modelWidget.render(
+        createModelData({ id: 'claude-opus-4-8', displayName: 'Claude Opus 4.8', effortLevel: 'max' }),
+        ctx,
+      );
+
+      expect(result).toContain('Opus');
+      expect(result).toContain('(MAX)');
     });
 
     it('should show fast mode indicator for Opus', () => {
@@ -272,14 +305,10 @@ describe('widgets', () => {
   });
 
   describe('getDefaultEffort', () => {
-    it('should return xhigh for opus models', () => {
-      expect(getDefaultEffort('claude-opus-4-7')).toBe('xhigh');
-      expect(getDefaultEffort('claude-opus-4-6')).toBe('xhigh');
-    });
-
-    it('should return medium for sonnet models', () => {
-      expect(getDefaultEffort('claude-sonnet-4-6')).toBe('medium');
-      expect(getDefaultEffort('claude-sonnet-3.5')).toBe('medium');
+    it('should return high for current-gen models (Opus 4.8, Sonnet 5, Fable 5)', () => {
+      expect(getDefaultEffort('claude-opus-4-8')).toBe('high');
+      expect(getDefaultEffort('claude-sonnet-5')).toBe('high');
+      expect(getDefaultEffort('claude-fable-5')).toBe('high');
     });
 
     it('should return high as safety net for unknown models', () => {

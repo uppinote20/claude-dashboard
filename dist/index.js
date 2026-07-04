@@ -1073,6 +1073,8 @@ function shortenModelName(displayName) {
     return "Sonnet";
   if (lower.includes("haiku"))
     return "Haiku";
+  if (lower.includes("fable"))
+    return "Fable";
   const parts = displayName.split(/\s+/);
   if (parts.length > 1 && parts[0].toLowerCase() === "claude") {
     return parts[1];
@@ -1137,15 +1139,18 @@ function getZaiApiBaseUrl() {
 }
 
 // scripts/widgets/model.ts
-var EFFORT_LEVELS = /* @__PURE__ */ new Set(["xhigh", "high", "medium", "low"]);
+var EFFORT_BADGE = {
+  max: "MAX",
+  xhigh: "X",
+  high: "H",
+  medium: "M",
+  low: "L"
+};
+var EFFORT_LEVELS = new Set(Object.keys(EFFORT_BADGE));
 function isEffortLevel(value) {
   return typeof value === "string" && EFFORT_LEVELS.has(value);
 }
-function getDefaultEffort(modelId) {
-  if (modelId.includes("opus"))
-    return "xhigh";
-  if (modelId.includes("sonnet"))
-    return "medium";
+function getDefaultEffort(_modelId) {
   return "high";
 }
 var settingsCache = null;
@@ -1186,7 +1191,7 @@ var modelWidget = {
     const modelId = model?.id || "";
     const { effortLevel, fastMode } = await getModelSettings(modelId);
     return {
-      id: model?.id || "",
+      id: modelId,
       displayName: model?.display_name || "-",
       effortLevel,
       fastMode
@@ -1195,8 +1200,8 @@ var modelWidget = {
   render(data) {
     const shortName = shortenModelName(data.displayName);
     const icon = isZaiProvider() ? ICON.orangeCircle : "\u25C6";
-    const supportsEffort = shortName === "Opus" || shortName === "Sonnet";
-    const effortSuffix = supportsEffort ? `(${data.effortLevel[0].toUpperCase()})` : "";
+    const supportsEffort = shortName === "Opus" || shortName === "Sonnet" || shortName === "Fable";
+    const effortSuffix = supportsEffort ? `(${EFFORT_BADGE[data.effortLevel]})` : "";
     const fastIndicator = shortName === "Opus" && data.fastMode ? " \u21AF" : "";
     return `${getTheme().model}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
   }
