@@ -1,6 +1,6 @@
 {
   "name": "claude-dashboard",
-  "version": "1.29.0",
+  "version": "1.30.0",
   "description": "Unified status line for Claude Code with multi-CLI (Claude, Codex, Gemini, z.ai) usage monitoring, context, rate limits, and cost tracking",
   "author": {
     "name": "uppinote"
