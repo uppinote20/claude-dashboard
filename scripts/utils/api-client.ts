@@ -294,18 +294,13 @@ function findWeeklyScopedLimit(
 
   const entry = limits.find((raw) => {
     if (!raw || typeof raw !== 'object') return false;
-    const l = raw as Record<string, unknown>;
-    if (l.kind !== 'weekly_scoped') return false;
-    const scope = l.scope as Record<string, unknown> | null | undefined;
-    const model = scope?.model as Record<string, unknown> | null | undefined;
-    return model?.display_name === modelDisplayName;
-  }) as Record<string, unknown> | undefined;
+    const l = raw as { kind?: unknown; scope?: { model?: { display_name?: unknown } } };
+    return l.kind === 'weekly_scoped' && l.scope?.model?.display_name === modelDisplayName;
+  }) as { percent?: unknown; resets_at?: unknown } | undefined;
 
-  if (!entry || typeof entry.percent !== 'number') return null;
-  return {
-    utilization: entry.percent,
-    resets_at: typeof entry.resets_at === 'string' ? entry.resets_at : null,
-  };
+  if (!entry) return null;
+  // Reuse validateLimitWindow for shape/normalization; the array's source key is `percent`.
+  return validateLimitWindow({ utilization: entry.percent, resets_at: entry.resets_at });
 }
 
 /**
@@ -317,6 +312,7 @@ async function parseAndCacheLimits(data: unknown, tokenHash: string): Promise<Us
     five_hour: validateLimitWindow(d.five_hour),
     seven_day: validateLimitWindow(d.seven_day),
     seven_day_sonnet: validateLimitWindow(d.seven_day_sonnet),
+    // New models expose their weekly cap only via limits[] (findWeeklyScopedLimit), not a flat field.
     seven_day_fable: findWeeklyScopedLimit(d.limits, 'Fable'),
   };
 

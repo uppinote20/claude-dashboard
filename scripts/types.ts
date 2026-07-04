@@ -373,7 +373,7 @@ export interface UsageLimits {
     utilization: number;
     resets_at: string | null;
   } | null;
-  /** Optional: absent on stdin-only paths, only ever populated via the API's `limits[]` array */
+  /** Optional so pre-Fable UsageLimits literals stay valid; null on the stdin path, populated from the API's `limits[]` array. */
   seven_day_fable?: {
     utilization: number;
     resets_at: string | null;
