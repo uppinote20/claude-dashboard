@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-claude-dashboard provides 39 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
+claude-dashboard provides 40 widgets organized by category. Each widget can be individually enabled, disabled, or rearranged in your layout.
 
 ## Core
 

@@ -126,7 +126,7 @@ $0.03
 
 **Example output:**
 ```
-7dS: 23%
+7d-S: 23%
 ```
 
 ### rateLimit7dFable
@@ -139,7 +139,7 @@ $0.03
 
 **Example output:**
 ```
-7dF: 18%
+7d-F: 18%
 ```
 
 ## Session Widgets
