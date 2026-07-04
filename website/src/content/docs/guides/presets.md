@@ -44,7 +44,7 @@ This creates a 2-line layout:
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
-| `g` | agentMode | | |
+| `g` | agentMode | `f` | rateLimit7dFable |
 
 ## Examples
 

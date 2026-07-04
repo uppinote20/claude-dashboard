@@ -129,6 +129,19 @@ $0.03
 7dS: 23%
 ```
 
+### rateLimit7dFable
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `rateLimit7dFable` |
+| **Data Source** | API (oauth/usage) |
+| **Description** | Shows the 7-day Fable-specific weekly usage cap. Max plan only. Sourced from the API's generic `limits[]` array (a `weekly_scoped` entry) rather than a flat field, so the widget stays hidden unless the account has a Fable cap. |
+
+**Example output:**
+```
+7dF: 18%
+```
+
 ## Session Widgets
 
 ### sessionId

@@ -81,6 +81,13 @@ sidebar:
 - **표시 내용**: 7일 Sonnet 모델 사용량. Max 플랜 전용. **~2026-06 지원 중단:** Sonnet 5 출시 시점에 Anthropic이 Sonnet 주간 한도를 통합 주간 버킷에 병합하여, usage API가 null을 반환하는 동안 위젯이 숨겨집니다.
 - **출력 예시**: `7dS: 55%`
 
+### rateLimit7dFable
+
+- **ID**: `rateLimit7dFable`
+- **데이터 소스**: API (OAuth usage 엔드포인트)
+- **표시 내용**: 7일 Fable 주간 사용량 한도. Max 플랜 전용. 평면 필드가 아니라 API의 범용 `limits[]` 배열(`weekly_scoped` 항목)에서만 제공되므로, 계정에 Fable 한도가 없으면 위젯이 숨겨집니다.
+- **출력 예시**: `7dF: 18%`
+
 ## Session
 
 ### sessionId

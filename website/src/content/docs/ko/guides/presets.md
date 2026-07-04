@@ -44,7 +44,7 @@ sidebar:
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
-| `g` | agentMode | | |
+| `g` | agentMode | `f` | rateLimit7dFable |
 
 ## 예시
 
