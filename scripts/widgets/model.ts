@@ -46,12 +46,17 @@ interface ModelSettings {
 
 /**
  * Fallback effort when settings.json is absent or lacks `effortLevel`.
- * Mirrors Claude Code's runtime defaults so the badge matches actual behavior
- * for users who never ran `/effort`. Current-generation models — Opus 4.8,
- * Sonnet 5, Fable 5 — all default to 'high' (Haiku has no effort tier; render()
- * hides its badge). The `_modelId` param is kept as the seam for reintroducing
- * per-model defaults if a future model diverges.
- * (History: pre-5 Opus defaulted to xhigh, pre-5 Sonnet to medium.)
+ * Mirrors Claude Code's runtime defaults for users who never ran `/effort`.
+ *
+ * Every model selectable in Claude Code's `/model` picker defaults to 'high' —
+ * Opus 4.8, Sonnet 5, Fable 5 (Haiku has no effort tier; render() hides its
+ * badge) — so this returns 'high' unconditionally. Old-gen models (pre-5 Opus
+ * defaulted to xhigh, pre-5 Sonnet to medium) are no longer menu-selectable and
+ * only reachable via an explicit `--model <old-id>` override, where a slightly
+ * stale badge is a minor cosmetic concern (such users typically set `/effort`).
+ *
+ * `_modelId` is intentionally unused today, kept as the seam for reintroducing
+ * per-model defaults if a future selectable model diverges from 'high'.
  */
 export function getDefaultEffort(_modelId: string): EffortLevel {
   return 'high';
