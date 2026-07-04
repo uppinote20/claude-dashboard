@@ -39,7 +39,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 
 | Widget | Description |
 |--------|-------------|
-| `model` | Model name with emoji, effort level (Opus/Sonnet), fast mode (Opus) |
+| `model` | Model name with emoji, effort level (Opus/Sonnet/Fable), fast mode (Opus) |
 | `context` | Progress bar, percentage, tokens |
 | `contextBar` | Progress bar only (sub-widget of `context`) |
 | `contextPercentage` | Percentage only (sub-widget of `context`) |
@@ -47,7 +47,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `cost` | Session cost in USD |
 | `rateLimit5h` | 5-hour rate limit |
 | `rateLimit7d` | 7-day rate limit (Pro/Max) |
-| `rateLimit7dSonnet` | 7-day Sonnet limit (Max) |
+| `rateLimit7dSonnet` | 7-day Sonnet limit (Max) — deprecated ~2026-06, merged into the unified weekly bucket at Sonnet 5 launch; stays hidden while the API returns null |
 | `projectInfo` | Directory name + git branch + ahead/behind (↑↓), subpath from project_dir, worktree indicator |
 | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs counts |
 | `sessionId` | Session ID (short 8 chars) |

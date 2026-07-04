@@ -85,7 +85,13 @@ export const rateLimit7dWidget: Widget<RateLimitData> = {
 };
 
 /**
- * 7-day Sonnet-only rate limit widget (Max plan only)
+ * 7-day Sonnet-only rate limit widget (Max plan only).
+ *
+ * DEPRECATED (~2026-06): with the Sonnet 5 launch Anthropic merged the separate
+ * Sonnet weekly limit into the unified all-models weekly bucket, so the usage API
+ * now returns `seven_day_sonnet: null`. getData() therefore returns null and the
+ * widget stays hidden. Kept in the registry so existing configs/presets don't break
+ * and it auto-restores if Anthropic ever repopulates the field.
  */
 export const rateLimit7dSonnetWidget: Widget<RateLimitData> = {
   id: 'rateLimit7dSonnet',

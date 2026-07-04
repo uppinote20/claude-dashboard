@@ -83,7 +83,7 @@ See the [Configuration](/guides/configuration/) guide for full details on custom
 
 Rate limit widgets and provider-specific widgets are mutually exclusive based on provider detection:
 
-- **Anthropic** (default): Shows `rateLimit5h`, `rateLimit7d`, `rateLimit7dSonnet`
+- **Anthropic** (default): Shows `rateLimit5h`, `rateLimit7d`
 - **z.ai / ZHIPU**: Shows `zaiUsage` instead of Anthropic rate limits
 
 Multi-CLI widgets (`codexUsage`, `geminiUsage`) auto-hide if their respective CLIs are not installed, so you can safely include them in any mode.

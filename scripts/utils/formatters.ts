@@ -56,7 +56,8 @@ export function formatTimeRemaining(resetAt: string | Date, t: Translations): st
 
 /**
  * Shorten model name
- * Examples: "Claude 3.5 Sonnet" -> "Sonnet", "Claude Opus 4.5" -> "Opus"
+ * Examples: "Claude 3.5 Sonnet" -> "Sonnet", "Claude Opus 4.5" -> "Opus",
+ *           "Claude Fable 5" -> "Fable"
  */
 export function shortenModelName(displayName: string): string {
   const lower = displayName.toLowerCase();
@@ -64,6 +65,7 @@ export function shortenModelName(displayName: string): string {
   if (lower.includes('opus')) return 'Opus';
   if (lower.includes('sonnet')) return 'Sonnet';
   if (lower.includes('haiku')) return 'Haiku';
+  if (lower.includes('fable')) return 'Fable';
 
   // Fallback: return first word after "Claude" or the original
   const parts = displayName.split(/\s+/);

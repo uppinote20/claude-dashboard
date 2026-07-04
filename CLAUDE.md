@@ -130,7 +130,7 @@ interface Widget<T extends WidgetData> {
 
 | Widget ID | Data Source | Description |
 |-----------|-------------|-------------|
-| `model` | stdin + settings | Model name with emoji, effort level for Opus/Sonnet (X/H/M/L), fast mode for Opus (↯) |
+| `model` | stdin + settings | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯) |
 | `context` | stdin | Progress bar, %, tokens |
 | `contextBar` | stdin | Progress bar only (sub-widget of `context`) |
 | `contextPercentage` | stdin | Percentage only (sub-widget of `context`) |
@@ -138,7 +138,7 @@ interface Widget<T extends WidgetData> {
 | `cost` | stdin | Session cost |
 | `rateLimit5h` | API | 5-hour rate limit |
 | `rateLimit7d` | API | 7-day rate limit (Pro/Max) |
-| `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max) |
+| `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max). Deprecated ~2026-06: merged into the unified weekly bucket at Sonnet 5 launch; API returns null so the widget stays hidden until the field returns |
 | `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
 | `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | `sessionDuration` | file | Session duration |
