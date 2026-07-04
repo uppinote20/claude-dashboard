@@ -24,7 +24,7 @@ import {
   contextUsageWidget,
 } from './context.js';
 import { costWidget } from './cost.js';
-import { rateLimit5hWidget, rateLimit7dWidget, rateLimit7dSonnetWidget } from './rate-limit.js';
+import { rateLimit5hWidget, rateLimit7dWidget, rateLimit7dSonnetWidget, rateLimit7dFableWidget } from './rate-limit.js';
 import { projectInfoWidget } from './project-info.js';
 import { configCountsWidget } from './config-counts.js';
 import { sessionDurationWidget } from './session-duration.js';
@@ -69,6 +69,7 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['rateLimit5h', rateLimit5hWidget],
   ['rateLimit7d', rateLimit7dWidget],
   ['rateLimit7dSonnet', rateLimit7dSonnetWidget],
+  ['rateLimit7dFable', rateLimit7dFableWidget],
   ['projectInfo', projectInfoWidget],
   ['configCounts', configCountsWidget],
   ['sessionDuration', sessionDurationWidget],

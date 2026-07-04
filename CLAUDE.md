@@ -139,6 +139,7 @@ interface Widget<T extends WidgetData> {
 | `rateLimit5h` | API | 5-hour rate limit |
 | `rateLimit7d` | API | 7-day rate limit (Pro/Max) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max). Deprecated ~2026-06: merged into the unified weekly bucket at Sonnet 5 launch; API returns null so the widget stays hidden until the field returns |
+| `rateLimit7dFable` | API | 7-day Fable limit (Max) |
 | `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
 | `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | `sessionDuration` | file | Session duration |
@@ -224,7 +225,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
-| `g` | agentMode | | |
+| `g` | agentMode | `f` | rateLimit7dFable |
 
 ### Theme System
 

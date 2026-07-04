@@ -65,6 +65,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
 | | `rateLimit7d` | 7-day rate limit (Pro and Max) |
 | | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) — deprecated ~2026-06: Anthropic merged it into the unified weekly bucket at the Sonnet 5 launch, so the API returns `null` and the widget stays hidden until/unless the field returns |
+| | `rateLimit7dFable` | 7-day Fable limit (Max only) |
 | **Session** | `sessionId` | Session ID (short 8-char) |
 | | `sessionIdFull` | Session ID (full UUID) |
 | | `sessionName` | Session name from /rename command |

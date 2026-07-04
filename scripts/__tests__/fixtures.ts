@@ -8,7 +8,7 @@ import type { Translations, Config, StdinInput } from '../types.js';
 
 export const MOCK_TRANSLATIONS: Translations = {
   model: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' },
-  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S', '1m': '1m' },
+  labels: { '5h': '5h', '7d': '7d', '7d_all': '7d', '7d_sonnet': '7d-S', '7d_fable': '7d-F', '1m': '1m' },
   time: { days: 'd', hours: 'h', minutes: 'm', seconds: 's' },
   errors: { no_context: 'No context yet' },
   widgets: {

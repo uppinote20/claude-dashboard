@@ -147,6 +147,96 @@ describe('api-client', () => {
     });
   });
 
+  describe('weekly-scoped model limits (limits[] array)', () => {
+    it('should parse a Fable weekly_scoped entry into seven_day_fable', async () => {
+      const testToken = 'fable-scoped-test-token';
+
+      const { getCredentials } = await import('../utils/credentials.js');
+      vi.mocked(getCredentials).mockResolvedValue(testToken);
+      await deleteFileCacheForToken(testToken);
+
+      // Shape observed from the live oauth/usage endpoint: model-specific weekly
+      // caps for newer models arrive only in `limits[]`, not as flat fields.
+      const apiResponse = {
+        five_hour: { utilization: 50, resets_at: '2026-07-04T02:29:59Z' },
+        seven_day: { utilization: 39, resets_at: '2026-07-05T02:59:59Z' },
+        seven_day_sonnet: null,
+        limits: [
+          { kind: 'session', group: 'session', percent: 50, resets_at: '2026-07-04T02:29:59Z', scope: null },
+          { kind: 'weekly_all', group: 'weekly', percent: 39, resets_at: '2026-07-05T02:59:59Z', scope: null },
+          {
+            kind: 'weekly_scoped',
+            group: 'weekly',
+            percent: 52,
+            resets_at: '2026-07-05T02:59:59Z',
+            scope: { model: { id: null, display_name: 'Fable' }, surface: null },
+            is_active: true,
+          },
+        ],
+      };
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(apiResponse),
+      });
+
+      const { fetchUsageLimits, clearCache } = await import('../utils/api-client.js');
+      clearCache();
+
+      const result = await fetchUsageLimits();
+
+      expect(result?.seven_day_fable).toEqual({ utilization: 52, resets_at: '2026-07-05T02:59:59Z' });
+      // Flat fields still parse independently of the array
+      expect(result?.seven_day?.utilization).toBe(39);
+    });
+
+    it('should leave seven_day_fable null when no weekly_scoped Fable entry exists', async () => {
+      const testToken = 'no-fable-scope-test-token';
+
+      const { getCredentials } = await import('../utils/credentials.js');
+      vi.mocked(getCredentials).mockResolvedValue(testToken);
+      await deleteFileCacheForToken(testToken);
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            five_hour: null,
+            seven_day: null,
+            seven_day_sonnet: null,
+            limits: [{ kind: 'session', group: 'session', percent: 10, resets_at: null, scope: null }],
+          }),
+      });
+
+      const { fetchUsageLimits, clearCache } = await import('../utils/api-client.js');
+      clearCache();
+
+      const result = await fetchUsageLimits();
+
+      expect(result?.seven_day_fable).toBeNull();
+    });
+
+    it('should leave seven_day_fable null when limits is missing entirely', async () => {
+      const testToken = 'no-limits-array-test-token';
+
+      const { getCredentials } = await import('../utils/credentials.js');
+      vi.mocked(getCredentials).mockResolvedValue(testToken);
+      await deleteFileCacheForToken(testToken);
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ five_hour: null, seven_day: null, seven_day_sonnet: null }),
+      });
+
+      const { fetchUsageLimits, clearCache } = await import('../utils/api-client.js');
+      clearCache();
+
+      const result = await fetchUsageLimits();
+
+      expect(result?.seven_day_fable).toBeNull();
+    });
+  });
+
   describe('429 retry', () => {
     it('should retry once when retry-after is within limit', async () => {
       const { getCredentials } = await import('../utils/credentials.js');

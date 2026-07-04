@@ -80,7 +80,7 @@ type SeparatorStyle = 'pipe' | 'space' | 'dot' | 'arrow';
 ```typescript
 type WidgetId =
   | 'model' | 'context' | 'contextBar' | 'contextPercentage' | 'contextUsage' | 'cost'
-  | 'rateLimit5h' | 'rateLimit7d' | 'rateLimit7dSonnet'
+  | 'rateLimit5h' | 'rateLimit7d' | 'rateLimit7dSonnet' | 'rateLimit7dFable'
   | 'projectInfo' | 'configCounts'
   | 'sessionDuration' | 'sessionId' | 'sessionIdFull' | 'sessionName'
   | 'toolActivity' | 'agentStatus' | 'todoProgress'

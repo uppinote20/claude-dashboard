@@ -31,7 +31,7 @@ Running `/claude-dashboard:setup` without arguments launches interactive mode, w
 | 5h rate limit + countdown | Yes | Yes |
 | 7d all models | Yes | Yes |
 
-The 7-day Sonnet rate limit widget (`rateLimit7dSonnet`) is deprecated as of ~2026-06: at the Sonnet 5 launch Anthropic merged the separate Sonnet weekly limit into the unified all-models weekly bucket, so the usage API no longer returns a Sonnet-specific value and the widget stays hidden on all plans. Use `rateLimit7d` (available on both Pro and Max) for your unified weekly usage.
+The 7-day Sonnet rate limit widget (`rateLimit7dSonnet`) is deprecated as of ~2026-06: at the Sonnet 5 launch Anthropic merged the separate Sonnet weekly limit into the unified all-models weekly bucket, so the usage API no longer returns a Sonnet-specific value and the widget stays hidden on all plans. Use `rateLimit7d` (available on both Pro and Max) for your unified weekly usage. The separate `rateLimit7dFable` widget remains active: it tracks a Fable-only weekly cap (Max plan) and appears only when your account has one, which the usage API exposes through its generic `limits[]` array.
 
 ## Configuration File
 

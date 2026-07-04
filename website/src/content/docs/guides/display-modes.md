@@ -11,7 +11,7 @@ claude-dashboard supports three built-in display presets plus a fully custom mod
 
 The compact mode displays essential metrics on a single line. This is the default when you first run setup.
 
-**Widgets:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage
+**Widgets:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, rateLimit7dFable, zaiUsage
 
 > `peakHours` is available in detailed mode (line 5). Add it to any mode via custom preset shortcuts (`p`).
 
@@ -27,7 +27,7 @@ The compact mode displays essential metrics on a single line. This is the defaul
 
 Adds project context, session tracking, and progress information on a second line.
 
-**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
+**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, rateLimit7dFable, zaiUsage<br/>
 **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 
 ```
@@ -43,7 +43,7 @@ Adds project context, session tracking, and progress information on a second lin
 
 Shows all available widgets across six lines, including analytics, tool activity, multi-CLI usage, insights, and last prompt.
 
-**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage<br/>
+**Line 1:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, rateLimit7dFable, zaiUsage<br/>
 **Line 2:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
 **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
 **Line 4:** tokenBreakdown, forecast, budget, todayCost<br/>
