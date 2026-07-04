@@ -2,8 +2,8 @@
  * Model widget - displays current Claude model name with effort level and fast mode
  * @handbook 2.1-naming-conventions
  *
- * Effort level: Shown for Opus and Sonnet (H/M/L), hidden for Haiku
- * Fast mode: Opus 4.6 exclusive feature, indicated by ↯ symbol
+ * Effort level: Shown for Opus, Sonnet, and Fable (MAX/X/H/M/L), hidden for Haiku
+ * Fast mode: Opus 4.7/4.8 exclusive feature, indicated by ↯ symbol
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
  */
@@ -18,7 +18,22 @@ import { ICON } from '../utils/emoji.js';
 import { shortenModelName } from '../utils/formatters.js';
 import { isZaiProvider } from '../utils/provider.js';
 
-const EFFORT_LEVELS = new Set<string>(['xhigh', 'high', 'medium', 'low']);
+/**
+ * Effort badge labels, ordered high→low. An explicit map (not `effortLevel[0]`)
+ * because 'max' and 'medium' both start with 'M'. Typing it as
+ * Record<EffortLevel, string> makes the compiler require a label for every tier,
+ * so a newly added EffortLevel can't silently render a wrong/blank badge.
+ */
+const EFFORT_BADGE: Record<EffortLevel, string> = {
+  max: 'MAX',
+  xhigh: 'X',
+  high: 'H',
+  medium: 'M',
+  low: 'L',
+};
+
+/** Valid effort tiers, derived from the badge map so the two never drift. */
+const EFFORT_LEVELS = new Set<string>(Object.keys(EFFORT_BADGE));
 
 function isEffortLevel(value: unknown): value is EffortLevel {
   return typeof value === 'string' && EFFORT_LEVELS.has(value);
@@ -32,14 +47,13 @@ interface ModelSettings {
 /**
  * Fallback effort when settings.json is absent or lacks `effortLevel`.
  * Mirrors Claude Code's runtime defaults so the badge matches actual behavior
- * for users who never ran `/effort`. Keep in sync with upstream:
- *   Opus → xhigh, Sonnet → medium.
- * Haiku has no effort tier (render() hides the badge); the `'high'` fallback
- * is a safety net for unknown model IDs.
+ * for users who never ran `/effort`. Current-generation models — Opus 4.8,
+ * Sonnet 5, Fable 5 — all default to 'high' (Haiku has no effort tier; render()
+ * hides its badge). The `_modelId` param is kept as the seam for reintroducing
+ * per-model defaults if a future model diverges.
+ * (History: pre-5 Opus defaulted to xhigh, pre-5 Sonnet to medium.)
  */
-export function getDefaultEffort(modelId: string): EffortLevel {
-  if (modelId.includes('opus')) return 'xhigh';
-  if (modelId.includes('sonnet')) return 'medium';
+export function getDefaultEffort(_modelId: string): EffortLevel {
   return 'high';
 }
 
@@ -88,7 +102,7 @@ export const modelWidget: Widget<ModelData> = {
     const { effortLevel, fastMode } = await getModelSettings(modelId);
 
     return {
-      id: model?.id || '',
+      id: modelId,
       displayName: model?.display_name || '-',
       effortLevel,
       fastMode,
@@ -99,13 +113,12 @@ export const modelWidget: Widget<ModelData> = {
     const shortName = shortenModelName(data.displayName);
     const icon = isZaiProvider() ? ICON.orangeCircle : '◆';
 
-    // Haiku excluded from effort badge
-    const supportsEffort = shortName === 'Opus' || shortName === 'Sonnet';
-    const effortSuffix = supportsEffort
-      ? `(${data.effortLevel[0].toUpperCase()})`
-      : '';
+    // Effort badge shown for Opus/Sonnet/Fable; Haiku has no effort tier
+    const supportsEffort =
+      shortName === 'Opus' || shortName === 'Sonnet' || shortName === 'Fable';
+    const effortSuffix = supportsEffort ? `(${EFFORT_BADGE[data.effortLevel]})` : '';
 
-    // Fast mode indicator (Opus 4.6 exclusive)
+    // Fast mode indicator (Opus 4.7/4.8 exclusive)
     const fastIndicator = shortName === 'Opus' && data.fastMode ? ' ↯' : '';
 
     return `${getTheme().model}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;
