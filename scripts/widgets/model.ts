@@ -10,7 +10,7 @@
 
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
-import { homedir } from 'os';
+import { getClaudeConfigDir } from '../utils/config-dir.js';
 import type { Widget } from './base.js';
 import type { WidgetContext, ModelData, EffortLevel } from '../types.js';
 import { RESET, getTheme } from '../utils/colors.js';
@@ -66,7 +66,7 @@ let settingsCache: { rawEffort: unknown; fastMode: boolean; mtime: number } | nu
 
 async function getModelSettings(modelId: string): Promise<ModelSettings> {
   const defaultEffort = getDefaultEffort(modelId);
-  const settingsPath = join(homedir(), '.claude', 'settings.json');
+  const settingsPath = join(getClaudeConfigDir(), 'settings.json');
 
   try {
     const fileStat = await stat(settingsPath);

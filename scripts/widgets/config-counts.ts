@@ -9,6 +9,7 @@ import { join } from 'path';
 import type { Widget } from './base.js';
 import type { WidgetContext, ConfigCountsData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
+import { getClaudeJsonPath } from '../utils/config-dir.js';
 
 /**
  * Cache TTL for config counts (30 seconds)
@@ -85,7 +86,8 @@ async function countMcps(projectDir: string): Promise<number> {
 
   const mcpPaths = [
     { path: join(projectDir, '.claude', 'mcp.json'), key: 'mcpServers' },
-    { path: join(homeDir, '.claude.json'), key: 'mcpServers' },
+    // Global MCP config follows CLAUDE_CONFIG_DIR; the XDG path below does not.
+    { path: getClaudeJsonPath(), key: 'mcpServers' },
     { path: join(homeDir, '.config', 'claude-code', 'mcp.json'), key: 'mcpServers' },
   ];
 

@@ -1,5 +1,5 @@
 /**
- * History parser - reads ~/.claude/history.jsonl for user prompt data
+ * History parser - reads the config dir's history.jsonl for user prompt data
  * Unlike transcript.jsonl, history.jsonl only contains actual user input
  * via the `display` field, excluding skill/command expansions.
  *
@@ -9,10 +9,10 @@
  */
 
 import { open, stat } from 'fs/promises';
-import { homedir } from 'os';
+import { join } from 'path';
+import { getClaudeConfigDir } from './config-dir.js';
 import type { LastPromptData } from '../types.js';
 
-const HISTORY_PATH = `${homedir()}/.claude/history.jsonl`;
 const CHUNK = 16 * 1024;
 
 /**
@@ -37,7 +37,7 @@ let historyCache: {
 } | null = null;
 
 /**
- * Get the last user prompt from ~/.claude/history.jsonl.
+ * Get the last user prompt from the config dir's history.jsonl.
  * Tail-reads the last 16KB and reverse-scans for the current session's
  * most recent entry. Results are cached until file size changes.
  */
@@ -45,7 +45,8 @@ export async function getLastUserPrompt(
   sessionId: string
 ): Promise<LastPromptData | null> {
   try {
-    const fileStat = await stat(HISTORY_PATH);
+    const historyPath = join(getClaudeConfigDir(), 'history.jsonl');
+    const fileStat = await stat(historyPath);
 
     // Return cached result if file hasn't grown
     if (historyCache && historyCache.fileSize === fileStat.size) {
@@ -59,7 +60,7 @@ export async function getLastUserPrompt(
     }
 
     const size = Math.min(CHUNK, fileStat.size);
-    const fd = await open(HISTORY_PATH, 'r');
+    const fd = await open(historyPath, 'r');
     try {
       const buffer = Buffer.alloc(size);
       await fd.read(buffer, 0, size, fileStat.size - size);

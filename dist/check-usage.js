@@ -9,8 +9,16 @@ var NEGATIVE_CACHE_SECONDS = 30;
 // scripts/utils/credentials.ts
 import { execFile } from "child_process";
 import { readFile, stat } from "fs/promises";
+import { join as join2 } from "path";
+
+// scripts/utils/config-dir.ts
 import { join } from "path";
 import { homedir } from "os";
+function getClaudeConfigDir() {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+
+// scripts/utils/credentials.ts
 var KEYCHAIN_CACHE_TTL_MS = 1e4;
 var KEYCHAIN_BACKOFF_MS = 6e4;
 var credentialsCache = null;
@@ -61,7 +69,7 @@ async function getCredentialsFromKeychain() {
 }
 async function getCredentialsFromFile() {
   try {
-    const credPath = join(homedir(), ".claude", ".credentials.json");
+    const credPath = join2(getClaudeConfigDir(), ".credentials.json");
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
     if (credentialsCache?.mtime === mtime) {

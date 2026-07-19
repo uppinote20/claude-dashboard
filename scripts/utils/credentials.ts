@@ -6,7 +6,7 @@
 import { execFile } from 'child_process';
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
-import { homedir } from 'os';
+import { getClaudeConfigDir } from './config-dir.js';
 
 /**
  * Cache TTL for keychain credentials (10 seconds)
@@ -42,7 +42,7 @@ let keychainBackoffAt: number | null = null;
  * Get OAuth access token from Claude Code credentials
  *
  * On macOS: Reads from Keychain (TTL-based cache)
- * On Linux/Windows: Reads from ~/.claude/.credentials.json (mtime-based cache)
+ * On Linux/Windows: Reads from the config dir's .credentials.json (mtime-based cache)
  *
  * @returns Access token or null if not found
  */
@@ -112,11 +112,11 @@ async function getCredentialsFromKeychain(): Promise<string | null> {
 }
 
 /**
- * Get credentials from file (~/.claude/.credentials.json) with mtime-based cache
+ * Get credentials from the config dir's .credentials.json with mtime-based cache
  */
 async function getCredentialsFromFile(): Promise<string | null> {
   try {
-    const credPath = join(homedir(), '.claude', '.credentials.json');
+    const credPath = join(getClaudeConfigDir(), '.credentials.json');
 
     // Check mtime for cache invalidation
     const fileStat = await stat(credPath);

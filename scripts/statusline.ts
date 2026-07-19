@@ -20,6 +20,10 @@ import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput } from './widgets/index.js';
 
+// The plugin's own config, not one of Claude Code's files, so it deliberately
+// stays on homedir() rather than following CLAUDE_CONFIG_DIR: setup writes it to
+// ~/.claude unconditionally, and relocating the read would silently reset an
+// existing multi-account user's dashboard to DEFAULT_CONFIG.
 const CONFIG_PATH = join(homedir(), '.claude', 'claude-dashboard.local.json');
 
 /**

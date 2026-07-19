@@ -2,8 +2,8 @@
 
 // scripts/statusline.ts
 import { readFile as readFile9, stat as stat10 } from "fs/promises";
-import { join as join6 } from "path";
-import { homedir as homedir6 } from "os";
+import { join as join8 } from "path";
+import { homedir as homedir4 } from "os";
 
 // scripts/types.ts
 var DISPLAY_PRESETS = {
@@ -492,8 +492,20 @@ import { execFile as execFile2 } from "child_process";
 // scripts/utils/credentials.ts
 import { execFile } from "child_process";
 import { readFile, stat } from "fs/promises";
+import { join as join2 } from "path";
+
+// scripts/utils/config-dir.ts
 import { join } from "path";
 import { homedir } from "os";
+function getClaudeConfigDir() {
+  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+}
+function getClaudeJsonPath() {
+  const configDir = process.env.CLAUDE_CONFIG_DIR;
+  return configDir ? join(configDir, ".claude.json") : join(homedir(), ".claude.json");
+}
+
+// scripts/utils/credentials.ts
 var KEYCHAIN_CACHE_TTL_MS = 1e4;
 var KEYCHAIN_BACKOFF_MS = 6e4;
 var credentialsCache = null;
@@ -544,7 +556,7 @@ async function getCredentialsFromKeychain() {
 }
 async function getCredentialsFromFile() {
   try {
-    const credPath = join(homedir(), ".claude", ".credentials.json");
+    const credPath = join2(getClaudeConfigDir(), ".credentials.json");
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
     if (credentialsCache?.mtime === mtime) {
@@ -1022,8 +1034,7 @@ function getTranslations(config) {
 
 // scripts/widgets/model.ts
 import { readFile as readFile3, stat as stat3 } from "fs/promises";
-import { join as join2 } from "path";
-import { homedir as homedir2 } from "os";
+import { join as join3 } from "path";
 
 // scripts/utils/formatters.ts
 function formatTokens(tokens) {
@@ -1150,7 +1161,7 @@ function getDefaultEffort(_modelId) {
 var settingsCache = null;
 async function getModelSettings(modelId) {
   const defaultEffort = getDefaultEffort(modelId);
-  const settingsPath = join2(homedir2(), ".claude", "settings.json");
+  const settingsPath = join3(getClaudeConfigDir(), "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
     if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
@@ -1531,7 +1542,7 @@ var projectInfoWidget = {
 
 // scripts/widgets/config-counts.ts
 import { readdir as readdir2, readFile as readFile4, stat as stat4 } from "fs/promises";
-import { join as join3 } from "path";
+import { join as join4 } from "path";
 var CONFIG_CACHE_TTL_MS = 3e4;
 var EMPTY_FS_COUNTS = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
 var configCountsCache = null;
@@ -1556,24 +1567,25 @@ async function fileExists(path4) {
 }
 async function countClaudeMd(projectDir) {
   const [root, nested] = await Promise.all([
-    fileExists(join3(projectDir, "CLAUDE.md")),
-    fileExists(join3(projectDir, ".claude", "CLAUDE.md"))
+    fileExists(join4(projectDir, "CLAUDE.md")),
+    fileExists(join4(projectDir, ".claude", "CLAUDE.md"))
   ]);
   return (root ? 1 : 0) + (nested ? 1 : 0);
 }
 async function countAgentsMd(projectDir) {
   const [root, agentFiles] = await Promise.all([
-    fileExists(join3(projectDir, "AGENTS.md")),
-    countFiles(join3(projectDir, ".claude", "agents"), /\.md$/)
+    fileExists(join4(projectDir, "AGENTS.md")),
+    countFiles(join4(projectDir, ".claude", "agents"), /\.md$/)
   ]);
   return (root ? 1 : 0) + agentFiles;
 }
 async function countMcps(projectDir) {
   const homeDir = process.env.HOME || "";
   const mcpPaths = [
-    { path: join3(projectDir, ".claude", "mcp.json"), key: "mcpServers" },
-    { path: join3(homeDir, ".claude.json"), key: "mcpServers" },
-    { path: join3(homeDir, ".config", "claude-code", "mcp.json"), key: "mcpServers" }
+    { path: join4(projectDir, ".claude", "mcp.json"), key: "mcpServers" },
+    // Global MCP config follows CLAUDE_CONFIG_DIR; the XDG path below does not.
+    { path: getClaudeJsonPath(), key: "mcpServers" },
+    { path: join4(homeDir, ".config", "claude-code", "mcp.json"), key: "mcpServers" }
   ];
   const counts = await Promise.all(
     mcpPaths.map(async ({ path: path4, key }) => {
@@ -1603,13 +1615,13 @@ var configCountsWidget = {
       const fsData2 = configCountsCache.data ?? EMPTY_FS_COUNTS;
       return { ...fsData2, addedDirs };
     }
-    const claudeDir = join3(currentDir, ".claude");
+    const claudeDir = join4(currentDir, ".claude");
     const [claudeMd, agentsMd, rules, mcps, hooks] = await Promise.all([
       countClaudeMd(currentDir),
       countAgentsMd(currentDir),
-      countFiles(join3(claudeDir, "rules")),
+      countFiles(join4(claudeDir, "rules")),
       countMcps(currentDir),
-      countFiles(join3(claudeDir, "hooks"))
+      countFiles(join4(claudeDir, "hooks"))
     ]);
     const fsData = claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 ? null : { claudeMd, agentsMd, rules, mcps, hooks };
     configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
@@ -1644,9 +1656,9 @@ var configCountsWidget = {
 
 // scripts/utils/session.ts
 import { readFile as readFile5, mkdir as mkdir2, open, readdir as readdir3, unlink as unlink2, stat as stat5 } from "fs/promises";
-import { join as join4 } from "path";
-import { homedir as homedir3 } from "os";
-var SESSION_DIR = join4(homedir3(), ".cache", "claude-dashboard", "sessions");
+import { join as join5 } from "path";
+import { homedir as homedir2 } from "os";
+var SESSION_DIR = join5(homedir2(), ".cache", "claude-dashboard", "sessions");
 var SESSION_MAX_AGE_SECONDS = 604800;
 var CLEANUP_INTERVAL_MS2 = 36e5;
 function isErrnoException(error, code) {
@@ -1676,7 +1688,7 @@ async function getSessionStartTime(sessionId) {
   }
 }
 async function getOrCreateSessionStartTimeImpl(safeSessionId) {
-  const sessionFile = join4(SESSION_DIR, `${safeSessionId}.json`);
+  const sessionFile = join5(SESSION_DIR, `${safeSessionId}.json`);
   try {
     const content = await readFile5(sessionFile, "utf-8");
     const data = JSON.parse(content);
@@ -1749,7 +1761,7 @@ async function cleanupExpiredSessions() {
       if (!file.endsWith(".json"))
         continue;
       try {
-        const filePath = join4(SESSION_DIR, file);
+        const filePath = join5(SESSION_DIR, file);
         const fileStat = await stat5(filePath);
         if (fileStat.mtimeMs < cutoffTime) {
           await unlink2(filePath);
@@ -3451,10 +3463,10 @@ var forecastWidget = {
 
 // scripts/utils/budget.ts
 import { readFile as readFile8, mkdir as mkdir4, writeFile as writeFile4 } from "fs/promises";
-import { join as join5 } from "path";
-import { homedir as homedir4 } from "os";
-var BUDGET_DIR = join5(homedir4(), ".cache", "claude-dashboard");
-var BUDGET_FILE = join5(BUDGET_DIR, "budget.json");
+import { join as join6 } from "path";
+import { homedir as homedir3 } from "os";
+var BUDGET_DIR = join6(homedir3(), ".cache", "claude-dashboard");
+var BUDGET_FILE = join6(BUDGET_DIR, "budget.json");
 var budgetCache = null;
 var dirEnsured = false;
 var pendingRecordDaily = null;
@@ -3683,8 +3695,7 @@ var todayCostWidget = {
 
 // scripts/utils/history-parser.ts
 import { open as open3, stat as stat9 } from "fs/promises";
-import { homedir as homedir5 } from "os";
-var HISTORY_PATH = `${homedir5()}/.claude/history.jsonl`;
+import { join as join7 } from "path";
 var CHUNK = 16 * 1024;
 function resolvePastedText(display, pastedContents) {
   if (!pastedContents)
@@ -3697,7 +3708,8 @@ function resolvePastedText(display, pastedContents) {
 var historyCache = null;
 async function getLastUserPrompt(sessionId) {
   try {
-    const fileStat = await stat9(HISTORY_PATH);
+    const historyPath = join7(getClaudeConfigDir(), "history.jsonl");
+    const fileStat = await stat9(historyPath);
     if (historyCache && historyCache.fileSize === fileStat.size) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== void 0)
@@ -3707,7 +3719,7 @@ async function getLastUserPrompt(sessionId) {
       historyCache = { fileSize: fileStat.size, results: /* @__PURE__ */ new Map() };
     }
     const size = Math.min(CHUNK, fileStat.size);
-    const fd = await open3(HISTORY_PATH, "r");
+    const fd = await open3(historyPath, "r");
     try {
       const buffer = Buffer.alloc(size);
       await fd.read(buffer, 0, size, fileStat.size - size);
@@ -4054,7 +4066,7 @@ async function formatOutput(ctx) {
 }
 
 // scripts/statusline.ts
-var CONFIG_PATH = join6(homedir6(), ".claude", "claude-dashboard.local.json");
+var CONFIG_PATH = join8(homedir4(), ".claude", "claude-dashboard.local.json");
 var configCache = null;
 async function readStdin() {
   try {
