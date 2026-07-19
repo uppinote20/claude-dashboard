@@ -241,6 +241,25 @@ Update the plugin and refresh the statusLine path in settings. Run after updatin
 </details>
 
 <details>
+<summary><strong>Multiple accounts (CLAUDE_CONFIG_DIR)</strong></summary>
+
+Claude Code relocates its whole config directory — credentials, settings, and history — when `CLAUDE_CONFIG_DIR` is set. That is how two accounts run side by side:
+
+```bash
+# Personal Max account, kept separate from the default ~/.claude
+CLAUDE_CONFIG_DIR=~/.claude-max claude
+```
+
+The status line follows the same variable, so each session reports the account that is actually rendering it. Leave it unset and the default `~/.claude` is used, as before.
+
+Notes:
+
+- The variable must be a single directory path, and must be exported to the session.
+- On macOS the OAuth token comes from the Keychain, which holds one entry for all accounts — there `CLAUDE_CONFIG_DIR` separates settings and history but not usage data.
+
+</details>
+
+<details>
 <summary><strong>Wrong language</strong></summary>
 
 Run setup with explicit language:
