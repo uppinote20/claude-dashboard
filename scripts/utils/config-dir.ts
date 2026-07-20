@@ -7,6 +7,14 @@ import { join } from 'path';
 import { homedir } from 'os';
 
 /**
+ * Defaults are module-level constants: the home directory cannot change
+ * mid-process, and these are on the per-render hot path. Only the
+ * CLAUDE_CONFIG_DIR env var must be read at call time.
+ */
+const DEFAULT_CONFIG_DIR = join(homedir(), '.claude');
+const DEFAULT_CLAUDE_JSON_PATH = join(homedir(), '.claude.json');
+
+/**
  * Resolve Claude Code's configuration directory.
  *
  * When CLAUDE_CONFIG_DIR is set, Claude Code reads `.credentials.json`,
@@ -18,7 +26,7 @@ import { homedir } from 'os';
  * CWD-relative path.
  */
 export function getClaudeConfigDir(): string {
-  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude');
+  return process.env.CLAUDE_CONFIG_DIR || DEFAULT_CONFIG_DIR;
 }
 
 /**
@@ -30,5 +38,5 @@ export function getClaudeConfigDir(): string {
  */
 export function getClaudeJsonPath(): string {
   const configDir = process.env.CLAUDE_CONFIG_DIR;
-  return configDir ? join(configDir, '.claude.json') : join(homedir(), '.claude.json');
+  return configDir ? join(configDir, '.claude.json') : DEFAULT_CLAUDE_JSON_PATH;
 }
