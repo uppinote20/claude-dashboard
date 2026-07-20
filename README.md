@@ -255,7 +255,8 @@ The status line follows the same variable, so each session reports the account t
 Notes:
 
 - The variable must be a single directory path, and must be exported to the session.
-- On macOS the OAuth token comes from the Keychain, which holds one entry for all accounts — there `CLAUDE_CONFIG_DIR` separates settings and history but not usage data.
+- On macOS the OAuth token comes from the Keychain, which holds one entry for all accounts — `CLAUDE_CONFIG_DIR` separates `settings.json` and `history.jsonl` reads, but rate-limit API calls use whichever OAuth token the Keychain holds.
+- `/claude-dashboard:setup` currently registers the status line into `~/.claude/settings.json` only — with `CLAUDE_CONFIG_DIR` set, copy the resulting `statusLine` block into the relocated `settings.json` yourself.
 
 </details>
 
