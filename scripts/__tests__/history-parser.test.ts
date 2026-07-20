@@ -17,12 +17,18 @@ vi.mock('os', async (importOriginal) => {
 });
 
 describe('history-parser', () => {
+  const originalConfigDir = process.env.CLAUDE_CONFIG_DIR;
+
   beforeEach(async () => {
     vi.resetModules();
+    // Keep a contributor's own CLAUDE_CONFIG_DIR from redirecting these tests
+    delete process.env.CLAUDE_CONFIG_DIR;
     await mkdir(CLAUDE_DIR, { recursive: true });
   });
 
   afterEach(async () => {
+    if (originalConfigDir === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+    else process.env.CLAUDE_CONFIG_DIR = originalConfigDir;
     try {
       await rm(TEST_DIR, { recursive: true, force: true });
     } catch { /* ignore */ }
@@ -136,6 +142,30 @@ describe('history-parser', () => {
       // Second call should hit cache (file unchanged)
       const second = await getLastUserPrompt('sess-1');
       expect(second?.text).toBe('Cached prompt');
+    });
+  });
+
+  // Issue #81 follow-up: the cache must be keyed by path, not just file size,
+  // so switching CLAUDE_CONFIG_DIR mid-process cannot serve stale prompts.
+  describe('CLAUDE_CONFIG_DIR (multi-account)', () => {
+    const ALT_CLAUDE_DIR = path.join(TEST_DIR, '.claude-max');
+    const ALT_HISTORY_FILE = path.join(ALT_CLAUDE_DIR, 'history.jsonl');
+
+    it('should not serve one account\'s cached prompt for the other when file sizes collide', async () => {
+      await mkdir(ALT_CLAUDE_DIR, { recursive: true });
+      // Same byte length so size alone cannot distinguish the two files
+      const defaultEntry = JSON.stringify({ sessionId: 'sess-1', display: 'From default dir', timestamp: '2024-01-01T10:00:00Z' });
+      const relocatedEntry = JSON.stringify({ sessionId: 'sess-1', display: 'From claude-max ', timestamp: '2024-01-01T10:00:00Z' });
+      expect(relocatedEntry.length).toBe(defaultEntry.length);
+      await writeFile(HISTORY_FILE, defaultEntry);
+      await writeFile(ALT_HISTORY_FILE, relocatedEntry);
+
+      const { getLastUserPrompt } = await import('../utils/history-parser.js');
+
+      expect((await getLastUserPrompt('sess-1'))?.text).toBe('From default dir');
+
+      process.env.CLAUDE_CONFIG_DIR = ALT_CLAUDE_DIR;
+      expect((await getLastUserPrompt('sess-1'))?.text).toBe('From claude-max');
     });
   });
 });

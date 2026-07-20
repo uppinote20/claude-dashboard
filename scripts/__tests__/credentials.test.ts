@@ -3,7 +3,7 @@
  * @covers scripts/utils/credentials.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mkdir, writeFile, rm } from 'fs/promises';
+import { mkdir, writeFile, rm, utimes } from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
@@ -121,6 +121,22 @@ describe('credentials', () => {
     it('should read the default account token when CLAUDE_CONFIG_DIR is unset', async () => {
       const { getCredentials } = await import('../utils/credentials.js');
 
+      expect(await getCredentials()).toBe('default-account-token');
+    });
+
+    it('should not serve one account\'s cached token for the other when mtimes collide', async () => {
+      // Force identical mtimes so mtime alone cannot distinguish the two files
+      const sharedMtime = new Date('2024-01-01T00:00:00Z');
+      await utimes(CRED_FILE, sharedMtime, sharedMtime);
+      await utimes(ALT_CRED_FILE, sharedMtime, sharedMtime);
+
+      process.env.CLAUDE_CONFIG_DIR = ALT_CONFIG_DIR;
+      const { getCredentials } = await import('../utils/credentials.js');
+      expect(await getCredentials()).toBe('relocated-account-token');
+
+      // Same process, back to the default account: the relocated token
+      // must not leak through the mtime-keyed cache
+      delete process.env.CLAUDE_CONFIG_DIR;
       expect(await getCredentials()).toBe('default-account-token');
     });
   });

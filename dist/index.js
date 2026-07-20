@@ -497,12 +497,14 @@ import { join as join2 } from "path";
 // scripts/utils/config-dir.ts
 import { join } from "path";
 import { homedir } from "os";
+var DEFAULT_CONFIG_DIR = join(homedir(), ".claude");
+var DEFAULT_CLAUDE_JSON_PATH = join(homedir(), ".claude.json");
 function getClaudeConfigDir() {
-  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+  return process.env.CLAUDE_CONFIG_DIR || DEFAULT_CONFIG_DIR;
 }
 function getClaudeJsonPath() {
   const configDir = process.env.CLAUDE_CONFIG_DIR;
-  return configDir ? join(configDir, ".claude.json") : join(homedir(), ".claude.json");
+  return configDir ? join(configDir, ".claude.json") : DEFAULT_CLAUDE_JSON_PATH;
 }
 
 // scripts/utils/credentials.ts
@@ -559,13 +561,13 @@ async function getCredentialsFromFile() {
     const credPath = join2(getClaudeConfigDir(), ".credentials.json");
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
-    if (credentialsCache?.mtime === mtime) {
+    if (credentialsCache?.path === credPath && credentialsCache.mtime === mtime) {
       return credentialsCache.token;
     }
     const content = await readFile(credPath, "utf-8");
     const creds = JSON.parse(content);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
-    credentialsCache = { token, mtime };
+    credentialsCache = { token, path: credPath, mtime };
     return token;
   } catch {
     return null;
@@ -1164,7 +1166,7 @@ async function getModelSettings(modelId) {
   const settingsPath = join3(getClaudeConfigDir(), "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
-    if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
+    if (settingsCache && settingsCache.path === settingsPath && settingsCache.mtime === fileStat.mtimeMs) {
       return {
         effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
         fastMode: settingsCache.fastMode
@@ -1174,7 +1176,7 @@ async function getModelSettings(modelId) {
     const settings = JSON.parse(content);
     const rawEffort = settings.effortLevel;
     const fastMode = settings.fastMode === true;
-    settingsCache = { mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    settingsCache = { path: settingsPath, mtime: fileStat.mtimeMs, rawEffort, fastMode };
     return {
       effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
       fastMode
@@ -3710,13 +3712,12 @@ async function getLastUserPrompt(sessionId) {
   try {
     const historyPath = join7(getClaudeConfigDir(), "history.jsonl");
     const fileStat = await stat9(historyPath);
-    if (historyCache && historyCache.fileSize === fileStat.size) {
+    if (historyCache && historyCache.path === historyPath && historyCache.fileSize === fileStat.size) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== void 0)
         return cached;
-    }
-    if (!historyCache || historyCache.fileSize !== fileStat.size) {
-      historyCache = { fileSize: fileStat.size, results: /* @__PURE__ */ new Map() };
+    } else {
+      historyCache = { path: historyPath, fileSize: fileStat.size, results: /* @__PURE__ */ new Map() };
     }
     const size = Math.min(CHUNK, fileStat.size);
     const fd = await open3(historyPath, "r");

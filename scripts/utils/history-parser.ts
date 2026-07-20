@@ -31,6 +31,9 @@ function resolvePastedText(
 }
 
 let historyCache: {
+  /** Resolved history.jsonl path — CLAUDE_CONFIG_DIR can switch mid-process
+   * and file size alone can collide across directories */
+  path: string;
   fileSize: number;
   /** Cached results keyed by sessionId */
   results: Map<string, LastPromptData | null>;
@@ -48,15 +51,17 @@ export async function getLastUserPrompt(
     const historyPath = join(getClaudeConfigDir(), 'history.jsonl');
     const fileStat = await stat(historyPath);
 
-    // Return cached result if file hasn't grown
-    if (historyCache && historyCache.fileSize === fileStat.size) {
+    // Return cached result if it is the same file at the same size
+    if (
+      historyCache &&
+      historyCache.path === historyPath &&
+      historyCache.fileSize === fileStat.size
+    ) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== undefined) return cached;
-    }
-
-    // File changed — invalidate all cached results
-    if (!historyCache || historyCache.fileSize !== fileStat.size) {
-      historyCache = { fileSize: fileStat.size, results: new Map() };
+    } else {
+      // File changed or config dir switched — invalidate all cached results
+      historyCache = { path: historyPath, fileSize: fileStat.size, results: new Map() };
     }
 
     const size = Math.min(CHUNK, fileStat.size);

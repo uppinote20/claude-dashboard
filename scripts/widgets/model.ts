@@ -6,6 +6,7 @@
  * Fast mode: Opus 4.7/4.8 exclusive feature, indicated by ↯ symbol
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
+ * @tested scripts/__tests__/model-settings.test.ts
  */
 
 import { readFile, stat } from 'fs/promises';
@@ -62,7 +63,16 @@ export function getDefaultEffort(_modelId: string): EffortLevel {
   return 'high';
 }
 
-let settingsCache: { rawEffort: unknown; fastMode: boolean; mtime: number } | null = null;
+/**
+ * Path is part of the cache key because CLAUDE_CONFIG_DIR can switch
+ * mid-process and mtime alone can collide across directories.
+ */
+let settingsCache: {
+  rawEffort: unknown;
+  fastMode: boolean;
+  path: string;
+  mtime: number;
+} | null = null;
 
 async function getModelSettings(modelId: string): Promise<ModelSettings> {
   const defaultEffort = getDefaultEffort(modelId);
@@ -70,7 +80,11 @@ async function getModelSettings(modelId: string): Promise<ModelSettings> {
 
   try {
     const fileStat = await stat(settingsPath);
-    if (settingsCache && settingsCache.mtime === fileStat.mtimeMs) {
+    if (
+      settingsCache &&
+      settingsCache.path === settingsPath &&
+      settingsCache.mtime === fileStat.mtimeMs
+    ) {
       return {
         effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
         fastMode: settingsCache.fastMode,
@@ -80,7 +94,7 @@ async function getModelSettings(modelId: string): Promise<ModelSettings> {
     const settings = JSON.parse(content);
     const rawEffort = settings.effortLevel;
     const fastMode = settings.fastMode === true;
-    settingsCache = { mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    settingsCache = { path: settingsPath, mtime: fileStat.mtimeMs, rawEffort, fastMode };
     return {
       effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
       fastMode,

@@ -21,11 +21,14 @@ const KEYCHAIN_CACHE_TTL_MS = 10_000;
 const KEYCHAIN_BACKOFF_MS = 60_000;
 
 /**
- * Cached credentials with mtime-based invalidation for file
- * or TTL-based invalidation for keychain
+ * Cached credentials with path+mtime-based invalidation for file
+ * or TTL-based invalidation for keychain.
+ * The path is part of the key because CLAUDE_CONFIG_DIR can switch
+ * mid-process and mtime alone can collide across directories.
  */
 let credentialsCache: {
   token: string | null;
+  path?: string; // For file-based cache
   mtime?: number; // For file-based cache
   timestamp?: number; // For keychain-based cache
 } | null = null;
@@ -122,8 +125,8 @@ async function getCredentialsFromFile(): Promise<string | null> {
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
 
-    // Return cached if mtime matches
-    if (credentialsCache?.mtime === mtime) {
+    // Return cached if both path and mtime match
+    if (credentialsCache?.path === credPath && credentialsCache.mtime === mtime) {
       return credentialsCache.token;
     }
 
@@ -132,7 +135,7 @@ async function getCredentialsFromFile(): Promise<string | null> {
     const token = creds?.claudeAiOauth?.accessToken ?? null;
 
     // Cache result
-    credentialsCache = { token, mtime };
+    credentialsCache = { token, path: credPath, mtime };
     return token;
   } catch {
     return null;
