@@ -1611,7 +1611,7 @@ var configCountsWidget = {
       return null;
     }
     const addedDirs = ctx.stdin.workspace?.added_dirs?.length ?? 0;
-    if (configCountsCache?.projectDir === currentDir && Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS) {
+    if (configCountsCache?.projectDir === currentDir && configCountsCache.claudeJsonPath === getClaudeJsonPath() && Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS) {
       if (!configCountsCache.data && addedDirs === 0)
         return null;
       const fsData2 = configCountsCache.data ?? EMPTY_FS_COUNTS;
@@ -1626,7 +1626,12 @@ var configCountsWidget = {
       countFiles(join4(claudeDir, "hooks"))
     ]);
     const fsData = claudeMd === 0 && agentsMd === 0 && rules === 0 && mcps === 0 && hooks === 0 ? null : { claudeMd, agentsMd, rules, mcps, hooks };
-    configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
+    configCountsCache = {
+      projectDir: currentDir,
+      claudeJsonPath: getClaudeJsonPath(),
+      data: fsData,
+      timestamp: Date.now()
+    };
     if (!fsData && addedDirs === 0)
       return null;
     return { ...fsData ?? EMPTY_FS_COUNTS, addedDirs };
