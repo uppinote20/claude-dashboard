@@ -16,10 +16,21 @@ import os from 'os';
 
 const REPO = path.resolve(__dirname, '..', '..');
 const read = (rel: string) => readFileSync(path.join(REPO, rel), 'utf-8');
+/**
+ * Extract a snippet by anchor regex. All matches in the file must be
+ * byte-identical: docs may legitimately repeat a snippet (setup-alias.md keeps
+ * a preview block plus a heredoc copy), but divergent matches mean the anchor
+ * grabbed the wrong line or the copies drifted — fail loudly instead of
+ * silently testing whichever came first.
+ */
 const line = (rel: string, re: RegExp) => {
-  const m = read(rel).match(re);
-  if (!m) throw new Error(`snippet not found in ${rel}: ${re}`);
-  return m[0];
+  const flags = re.flags.includes('g') ? re.flags : re.flags + 'g';
+  const matches = [...read(rel).matchAll(new RegExp(re.source, flags))].map((m) => m[0]);
+  if (matches.length === 0) throw new Error(`snippet not found in ${rel}: ${re}`);
+  if (new Set(matches).size > 1) {
+    throw new Error(`ambiguous snippet anchor in ${rel}: ${re} matched ${matches.length} divergent copies`);
+  }
+  return matches[0];
 };
 
 // bash one-liners can't run on Windows runners
