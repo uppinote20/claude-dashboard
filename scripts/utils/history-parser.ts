@@ -1,5 +1,5 @@
 /**
- * History parser - reads ~/.claude/history.jsonl for user prompt data
+ * History parser - reads the config dir's history.jsonl for user prompt data
  * Unlike transcript.jsonl, history.jsonl only contains actual user input
  * via the `display` field, excluding skill/command expansions.
  *
@@ -9,10 +9,10 @@
  */
 
 import { open, stat } from 'fs/promises';
-import { homedir } from 'os';
+import { join } from 'path';
+import { getClaudeConfigDir } from './config-dir.js';
 import type { LastPromptData } from '../types.js';
 
-const HISTORY_PATH = `${homedir()}/.claude/history.jsonl`;
 const CHUNK = 16 * 1024;
 
 /**
@@ -31,13 +31,16 @@ function resolvePastedText(
 }
 
 let historyCache: {
+  /** Resolved history.jsonl path — CLAUDE_CONFIG_DIR can switch mid-process
+   * and file size alone can collide across directories */
+  path: string;
   fileSize: number;
   /** Cached results keyed by sessionId */
   results: Map<string, LastPromptData | null>;
 } | null = null;
 
 /**
- * Get the last user prompt from ~/.claude/history.jsonl.
+ * Get the last user prompt from the config dir's history.jsonl.
  * Tail-reads the last 16KB and reverse-scans for the current session's
  * most recent entry. Results are cached until file size changes.
  */
@@ -45,21 +48,24 @@ export async function getLastUserPrompt(
   sessionId: string
 ): Promise<LastPromptData | null> {
   try {
-    const fileStat = await stat(HISTORY_PATH);
+    const historyPath = join(getClaudeConfigDir(), 'history.jsonl');
+    const fileStat = await stat(historyPath);
 
-    // Return cached result if file hasn't grown
-    if (historyCache && historyCache.fileSize === fileStat.size) {
+    // Return cached result if it is the same file at the same size
+    if (
+      historyCache &&
+      historyCache.path === historyPath &&
+      historyCache.fileSize === fileStat.size
+    ) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== undefined) return cached;
-    }
-
-    // File changed — invalidate all cached results
-    if (!historyCache || historyCache.fileSize !== fileStat.size) {
-      historyCache = { fileSize: fileStat.size, results: new Map() };
+    } else {
+      // File changed or config dir switched — invalidate all cached results
+      historyCache = { path: historyPath, fileSize: fileStat.size, results: new Map() };
     }
 
     const size = Math.min(CHUNK, fileStat.size);
-    const fd = await open(HISTORY_PATH, 'r');
+    const fd = await open(historyPath, 'r');
     try {
       const buffer = Buffer.alloc(size);
       await fd.read(buffer, 0, size, fileStat.size - size);

@@ -163,6 +163,8 @@ Use the provided arguments directly.
 
 Create `~/.claude/claude-dashboard.local.json`:
 
+> This file intentionally stays in `~/.claude` even when `CLAUDE_CONFIG_DIR` is set — it is the dashboard's own display config, shared by every account, and the statusline always reads it from there.
+
 **For preset modes (compact/normal/detailed):**
 ```json
 {
@@ -230,16 +232,16 @@ Preset characters: `M`=model, `C`=context, `b`=contextBar, `%`=contextPercentage
 
 ### 3. Update settings.json
 
-Add or update the statusLine configuration in `~/.claude/settings.json`:
+Add or update the statusLine configuration in the session's Claude config dir — `$CLAUDE_CONFIG_DIR` if set, `~/.claude` otherwise. Multi-account setups run this once per account:
 
 **Find the plugin path and update settings.json** (copy-paste one-liner):
 ```bash
-SLPATH="$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)" node -e 'const fs=require("fs"),os=require("os"),p=os.homedir()+"/.claude/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};s.statusLine={type:"command",command:"node "+process.env.SLPATH};fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SLPATH="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};s.statusLine={type:"command",command:"node "+process.env.SLPATH};fs.writeFileSync(p,JSON.stringify(s,null,2));'
 ```
 
 This command:
-1. Finds the latest plugin version dynamically
-2. Updates `statusLine` in settings.json with the correct path
+1. Finds the latest plugin version dynamically (in `$CLAUDE_CONFIG_DIR` when set, `~/.claude` otherwise)
+2. Updates `statusLine` in that config dir's settings.json with the correct path
 
 **IMPORTANT**: After updating the plugin via `/plugin update claude-dashboard`, run `/claude-dashboard:update` to update the statusLine path to the latest version.
 

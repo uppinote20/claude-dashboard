@@ -9,8 +9,18 @@ var NEGATIVE_CACHE_SECONDS = 30;
 // scripts/utils/credentials.ts
 import { execFile } from "child_process";
 import { readFile, stat } from "fs/promises";
+import { join as join2 } from "path";
+
+// scripts/utils/config-dir.ts
 import { join } from "path";
 import { homedir } from "os";
+var DEFAULT_CONFIG_DIR = join(homedir(), ".claude");
+var DEFAULT_CLAUDE_JSON_PATH = join(homedir(), ".claude.json");
+function getClaudeConfigDir() {
+  return process.env.CLAUDE_CONFIG_DIR || DEFAULT_CONFIG_DIR;
+}
+
+// scripts/utils/credentials.ts
 var KEYCHAIN_CACHE_TTL_MS = 1e4;
 var KEYCHAIN_BACKOFF_MS = 6e4;
 var credentialsCache = null;
@@ -61,16 +71,16 @@ async function getCredentialsFromKeychain() {
 }
 async function getCredentialsFromFile() {
   try {
-    const credPath = join(homedir(), ".claude", ".credentials.json");
+    const credPath = join2(getClaudeConfigDir(), ".credentials.json");
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
-    if (credentialsCache?.mtime === mtime) {
+    if (credentialsCache?.path === credPath && credentialsCache.mtime === mtime) {
       return credentialsCache.token;
     }
     const content = await readFile(credPath, "utf-8");
     const creds = JSON.parse(content);
     const token = creds?.claudeAiOauth?.accessToken ?? null;
-    credentialsCache = { token, mtime };
+    credentialsCache = { token, path: credPath, mtime };
     return token;
   } catch {
     return null;

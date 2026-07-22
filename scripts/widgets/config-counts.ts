@@ -2,6 +2,7 @@
  * Config counts widget - displays counts of CLAUDE.md, rules, MCPs, hooks
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
+ * @tested scripts/__tests__/config-counts.test.ts
  */
 
 import { readdir, readFile, stat } from 'fs/promises';
@@ -9,6 +10,7 @@ import { join } from 'path';
 import type { Widget } from './base.js';
 import type { WidgetContext, ConfigCountsData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
+import { getClaudeJsonPath } from '../utils/config-dir.js';
 
 /**
  * Cache TTL for config counts (30 seconds)
@@ -21,8 +23,14 @@ type FsCountsData = Omit<ConfigCountsData, 'addedDirs'>;
 
 const EMPTY_FS_COUNTS: FsCountsData = { claudeMd: 0, agentsMd: 0, rules: 0, mcps: 0, hooks: 0 };
 
+/**
+ * claudeJsonPath is part of the cache key because countMcps() reads the
+ * CLAUDE_CONFIG_DIR-dependent .claude.json — an env switch within the TTL
+ * must not serve the previous account's counts.
+ */
 let configCountsCache: {
   projectDir: string;
+  claudeJsonPath: string;
   data: FsCountsData | null;
   timestamp: number;
 } | null = null;
@@ -85,7 +93,8 @@ async function countMcps(projectDir: string): Promise<number> {
 
   const mcpPaths = [
     { path: join(projectDir, '.claude', 'mcp.json'), key: 'mcpServers' },
-    { path: join(homeDir, '.claude.json'), key: 'mcpServers' },
+    // Global MCP config follows CLAUDE_CONFIG_DIR; the XDG path below does not.
+    { path: getClaudeJsonPath(), key: 'mcpServers' },
     { path: join(homeDir, '.config', 'claude-code', 'mcp.json'), key: 'mcpServers' },
   ];
 
@@ -120,6 +129,7 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
     // Check TTL-based cache for filesystem counts
     if (
       configCountsCache?.projectDir === currentDir &&
+      configCountsCache.claudeJsonPath === getClaudeJsonPath() &&
       Date.now() - configCountsCache.timestamp < CONFIG_CACHE_TTL_MS
     ) {
       if (!configCountsCache.data && addedDirs === 0) return null;
@@ -144,7 +154,12 @@ export const configCountsWidget: Widget<ConfigCountsData> = {
         ? null
         : { claudeMd, agentsMd, rules, mcps, hooks };
 
-    configCountsCache = { projectDir: currentDir, data: fsData, timestamp: Date.now() };
+    configCountsCache = {
+      projectDir: currentDir,
+      claudeJsonPath: getClaudeJsonPath(),
+      data: fsData,
+      timestamp: Date.now(),
+    };
 
     if (!fsData && addedDirs === 0) return null;
     return { ...(fsData ?? EMPTY_FS_COUNTS), addedDirs };

@@ -24,7 +24,7 @@ Comprehensive status line plugin for Claude Code — unified usage monitoring ac
 ### Manual Installation
 
 ```bash
-git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/claude-dashboard
+git clone https://github.com/uppinote20/claude-dashboard.git "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/claude-dashboard"
 /claude-dashboard:setup
 ```
 
@@ -237,6 +237,26 @@ Update the plugin and refresh the statusLine path in settings. Run after updatin
 - API token may be expired - re-login to Claude Code
 - Network issue - check internet connection
 - API rate limited - wait 60 seconds for cache refresh
+
+</details>
+
+<details>
+<summary><strong>Multiple accounts (CLAUDE_CONFIG_DIR)</strong></summary>
+
+Claude Code relocates its whole config directory — credentials, settings, and history — when `CLAUDE_CONFIG_DIR` is set. That is how two accounts run side by side:
+
+```bash
+# Personal Max account, kept separate from the default ~/.claude
+CLAUDE_CONFIG_DIR=~/.claude-max claude
+```
+
+The status line follows the same variable, so each session reports the account that is actually rendering it. Leave it unset and the default `~/.claude` is used, as before.
+
+Notes:
+
+- The variable must be a single directory path, and must be exported to the session.
+- On macOS the OAuth token comes from the Keychain, which holds one entry for all accounts — `CLAUDE_CONFIG_DIR` separates `settings.json` and `history.jsonl` reads, but rate-limit API calls use whichever OAuth token the Keychain holds.
+- `/claude-dashboard:setup` and `/claude-dashboard:update` register the status line into the session's config dir (`$CLAUDE_CONFIG_DIR` if set, `~/.claude` otherwise) — run them once per account. The dashboard's own display config `~/.claude/claude-dashboard.local.json` is intentionally shared across accounts.
 
 </details>
 

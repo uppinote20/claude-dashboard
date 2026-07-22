@@ -6,7 +6,7 @@
 import { execFile } from 'child_process';
 import { readFile, stat } from 'fs/promises';
 import { join } from 'path';
-import { homedir } from 'os';
+import { getClaudeConfigDir } from './config-dir.js';
 
 /**
  * Cache TTL for keychain credentials (10 seconds)
@@ -21,11 +21,14 @@ const KEYCHAIN_CACHE_TTL_MS = 10_000;
 const KEYCHAIN_BACKOFF_MS = 60_000;
 
 /**
- * Cached credentials with mtime-based invalidation for file
- * or TTL-based invalidation for keychain
+ * Cached credentials with path+mtime-based invalidation for file
+ * or TTL-based invalidation for keychain.
+ * The path is part of the key because CLAUDE_CONFIG_DIR can switch
+ * mid-process and mtime alone can collide across directories.
  */
 let credentialsCache: {
   token: string | null;
+  path?: string; // For file-based cache
   mtime?: number; // For file-based cache
   timestamp?: number; // For keychain-based cache
 } | null = null;
@@ -42,7 +45,7 @@ let keychainBackoffAt: number | null = null;
  * Get OAuth access token from Claude Code credentials
  *
  * On macOS: Reads from Keychain (TTL-based cache)
- * On Linux/Windows: Reads from ~/.claude/.credentials.json (mtime-based cache)
+ * On Linux/Windows: Reads from the config dir's .credentials.json (mtime-based cache)
  *
  * @returns Access token or null if not found
  */
@@ -112,18 +115,18 @@ async function getCredentialsFromKeychain(): Promise<string | null> {
 }
 
 /**
- * Get credentials from file (~/.claude/.credentials.json) with mtime-based cache
+ * Get credentials from the config dir's .credentials.json with mtime-based cache
  */
 async function getCredentialsFromFile(): Promise<string | null> {
   try {
-    const credPath = join(homedir(), '.claude', '.credentials.json');
+    const credPath = join(getClaudeConfigDir(), '.credentials.json');
 
     // Check mtime for cache invalidation
     const fileStat = await stat(credPath);
     const mtime = fileStat.mtimeMs;
 
-    // Return cached if mtime matches
-    if (credentialsCache?.mtime === mtime) {
+    // Return cached if both path and mtime match
+    if (credentialsCache?.path === credPath && credentialsCache.mtime === mtime) {
       return credentialsCache.token;
     }
 
@@ -132,7 +135,7 @@ async function getCredentialsFromFile(): Promise<string | null> {
     const token = creds?.claudeAiOauth?.accessToken ?? null;
 
     // Cache result
-    credentialsCache = { token, mtime };
+    credentialsCache = { token, path: credPath, mtime };
     return token;
   } catch {
     return null;
