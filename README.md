@@ -24,7 +24,7 @@ Comprehensive status line plugin for Claude Code — unified usage monitoring ac
 ### Manual Installation
 
 ```bash
-git clone https://github.com/uppinote20/claude-dashboard.git ~/.claude/plugins/claude-dashboard
+git clone https://github.com/uppinote20/claude-dashboard.git "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/claude-dashboard"
 /claude-dashboard:setup
 ```
 
@@ -256,7 +256,7 @@ Notes:
 
 - The variable must be a single directory path, and must be exported to the session.
 - On macOS the OAuth token comes from the Keychain, which holds one entry for all accounts — `CLAUDE_CONFIG_DIR` separates `settings.json` and `history.jsonl` reads, but rate-limit API calls use whichever OAuth token the Keychain holds.
-- `/claude-dashboard:setup` currently registers the status line into `~/.claude/settings.json` only — with `CLAUDE_CONFIG_DIR` set, copy the resulting `statusLine` block into the relocated `settings.json` yourself.
+- `/claude-dashboard:setup` and `/claude-dashboard:update` register the status line into the session's config dir (`$CLAUDE_CONFIG_DIR` if set, `~/.claude` otherwise) — run them once per account. The dashboard's own display config `~/.claude/claude-dashboard.local.json` is intentionally shared across accounts.
 
 </details>
 

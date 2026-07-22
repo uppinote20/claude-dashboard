@@ -50,7 +50,7 @@ grep -q "^check-ai()" ~/.zshrc 2>/dev/null && echo "exists" || echo "not found"
 ```bash
 # Claude Dashboard - check-ai alias
 check-ai() {
-  node "$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
+  node "$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
 }
 ```
 
@@ -60,7 +60,7 @@ cat >> ~/.zshrc << 'EOF'
 
 # Claude Dashboard - check-ai alias
 check-ai() {
-  node "$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
+  node "$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
 }
 EOF
 ```
@@ -81,7 +81,8 @@ powershell -Command "if (Test-Path $PROFILE) { Select-String -Path $PROFILE -Pat
 ```powershell
 # Claude Dashboard - check-ai alias
 function check-ai {
-  $script = (Get-ChildItem "$env:USERPROFILE\.claude\plugins\cache\claude-dashboard\claude-dashboard\*\dist\check-usage.js" | Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1).FullName
+  $base = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { "$env:USERPROFILE\.claude" }
+  $script = (Get-ChildItem "$base\plugins\cache\claude-dashboard\claude-dashboard\*\dist\check-usage.js" | Sort-Object { [version]$_.Directory.Parent.Name } | Select-Object -Last 1).FullName
   node $script $args
 }
 ```
@@ -92,7 +93,8 @@ powershell -Command "Add-Content -Path $PROFILE -Value @'
 
 # Claude Dashboard - check-ai alias
 function check-ai {
-  `$script = (Get-ChildItem \"`$env:USERPROFILE\.claude\plugins\cache\claude-dashboard\claude-dashboard\*\dist\check-usage.js\" | Sort-Object { [version]`$_.Directory.Parent.Name } | Select-Object -Last 1).FullName
+  `$base = if (`$env:CLAUDE_CONFIG_DIR) { `$env:CLAUDE_CONFIG_DIR } else { \"`$env:USERPROFILE\.claude\" }
+  `$script = (Get-ChildItem \"`$base\plugins\cache\claude-dashboard\claude-dashboard\*\dist\check-usage.js\" | Sort-Object { [version]`$_.Directory.Parent.Name } | Select-Object -Last 1).FullName
   node `$script `$args
 }
 '@"

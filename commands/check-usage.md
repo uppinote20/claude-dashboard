@@ -36,7 +36,7 @@ At the bottom, recommends the CLI with the lowest current usage.
 ### 1. Find plugin path and run check-usage script
 
 ```bash
-node "$(ls -d ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" $ARGUMENTS
+node "$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" $ARGUMENTS
 ```
 
 This will:
