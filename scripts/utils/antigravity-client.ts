@@ -404,10 +404,11 @@ async function getAntigravitySettings(): Promise<AntigravitySettings | null> {
 }
 
 /**
- * Cached loadCodeAssist result (per token hash for multi-account support).
+ * Cached loadCodeAssist result (per account key for multi-account support).
  * Project id / plan type barely change, so the cross-process copy lives a day.
  * Its cache file is deliberately NOT in CLEANABLE_PREFIXES — the hourly sweep
- * would defeat the long TTL.
+ * would defeat the long TTL. One small file accumulates per account; users who
+ * cycle through many accounts can clear ~/.cache/claude-dashboard by hand.
  */
 interface ProjectMeta {
   projectId: string | null;

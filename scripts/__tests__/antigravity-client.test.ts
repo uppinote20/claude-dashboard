@@ -26,9 +26,16 @@ const MODELS_RESPONSE = {
       displayName: 'GPT-OSS',
       quotaInfo: { remainingFraction: 0.61, resetTime: '2026-08-10T21:00:00Z' },
     },
+    // Exclusion is delimiter-anchored, so a user-facing id merely starting
+    // with "rev" must survive
+    'revision-gemini-pro': {
+      displayName: 'Revision Gemini Pro',
+      quotaInfo: { remainingFraction: 0.9, resetTime: '2026-08-11T00:00:00Z' },
+    },
     // All of the following must be filtered out of quota display
     'chat_internal': { displayName: 'Chat', quotaInfo: { remainingFraction: 0.5 } },
     'tab_autocomplete': { quotaInfo: { remainingFraction: 0.5 } },
+    'rev_internal': { quotaInfo: { remainingFraction: 0.5 } },
     'gemini-image-gen': { displayName: 'Image', quotaInfo: { remainingFraction: 0.5 } },
     'some-lite-model': { quotaInfo: { remainingFraction: 0.5 } },
     'no-quota-model': { displayName: 'NoQuota' },
@@ -190,10 +197,13 @@ describe('antigravity-client', () => {
       const keyOf = (f: string) => f.replace(/^.*antigravity-(usage|project)-/, '').replace('.json', '');
       expect(keyOf(String(projectSave?.[0]))).toBe(keyOf(String(usageSave?.[0])));
 
-      // 4 quota models survive the filter (chat_/tab_/image/lite/no-quota excluded)
-      expect(result?.buckets).toHaveLength(4);
-      expect(result?.buckets.map((b) => b.modelId)).not.toContain('chat_internal');
-      expect(result?.buckets.map((b) => b.modelId)).not.toContain('gemini-image-gen');
+      // 5 quota models survive (chat_/tab_/rev_/image/lite/no-quota excluded)
+      const ids = result?.buckets.map((b) => b.modelId) ?? [];
+      expect(result?.buckets).toHaveLength(5);
+      expect(ids).not.toContain('chat_internal');
+      expect(ids).not.toContain('gemini-image-gen');
+      expect(ids).not.toContain('rev_internal');
+      expect(ids).toContain('revision-gemini-pro');
 
       // Two family groups, each taking the worst member usage
       expect(result?.groups).toHaveLength(2);
