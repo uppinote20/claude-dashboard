@@ -45,6 +45,9 @@ sidebar:
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
+| `^` | antigravityUsage | | |
+
+`antigravityUsageAll`은 프리셋 문자가 없습니다(`geminiUsageAll`과 동일). custom 모드의 `lines`에서 직접 지정하세요.
 
 ## 예시
 
@@ -68,14 +71,14 @@ sidebar:
 ### 전체 모니터링
 
 ```json
-{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XGLYV" }
+{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XG^LYV" }
 ```
 
 - **1줄:** model, context, cost, rateLimit5h, rateLimit7d
 - **2줄:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 - **3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance
 - **4줄:** tokenBreakdown, forecast, budget
-- **5줄:** codexUsage, geminiUsage, linesChanged, outputStyle, version
+- **5줄:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version
 
 ## 다른 설정과 조합
 

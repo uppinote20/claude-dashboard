@@ -66,6 +66,7 @@ Shows usage for each installed CLI:
 - **Claude**: 5h and 7d rate limits with reset times
 - **Codex**: 5h and 7d limits with plan info (if installed)
 - **Gemini**: Usage percentage with model info (if installed)
+- **Antigravity**: Weekly quota per model family — Gemini vs Claude+GPT (if installed)
 - **z.ai**: Token and MCP usage with model info (if configured)
 
 At the bottom, recommends the CLI with the lowest current usage.

@@ -53,7 +53,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 **2줄:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
 **3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
 **4줄:** tokenBreakdown, forecast, budget, todayCost<br/>
-**5줄:** codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours<br/>
+**5줄:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours<br/>
 **6줄:** lastPrompt, vimMode, apiDuration, tagStatus
 
 ```
@@ -61,7 +61,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 📁 project (main ↑3) │ » feature-auth │ 🔑 abc123 │ ⏱ 45m │ 🔥 5K/m │ ⚡ 67 tok/s │ ⏳ 2h │ ✓ 3/5
 CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% │ 🟢 72%
 📊 In 30K · Out 8K │ 📈 ~$8/h │ 💵 $5/$15 │ 💰 오늘: $4.83
-🔷 codex │ 💎 gemini │ +156 -23 │ concise │ v1.0.80 │ 비피크 (23h9m)
+🔷 codex │ 💎 gemini │ 🪐️ antigravity │ +156 -23 │ concise │ v1.0.80 │ 비피크 (23h9m)
 💬 14:32 미들웨어 인증 버그 수정해줘 │ NORMAL │ API 42% │ 🏷 v1.2.3 +5
 ```
 
@@ -87,4 +87,4 @@ CLAUDE.md: 2 │ ⚙️ Read(app.ts) (12 done) │ 🤖 Agent: 1 │ 📦 85% �
 
 ## 멀티 프로바이더 지원
 
-z.ai/ZHIPU, Codex, Gemini가 설치되어 있으면 자동으로 감지되어 해당 위젯이 표시됩니다. `rateLimit*` 위젯과 `zaiUsage` 위젯은 현재 프로바이더에 따라 상호 배타적으로 동작합니다.
+z.ai/ZHIPU, Codex, Gemini, Antigravity가 설치되어 있으면 자동으로 감지되어 해당 위젯이 표시됩니다. `rateLimit*` 위젯과 `zaiUsage` 위젯은 현재 프로바이더에 따라 상호 배타적으로 동작합니다.

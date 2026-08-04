@@ -45,6 +45,9 @@ This creates a 2-line layout:
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
+| `^` | antigravityUsage | | |
+
+`antigravityUsageAll` has no preset character (same as `geminiUsageAll`); add it through `lines` in custom mode.
 
 ## Examples
 
@@ -68,14 +71,14 @@ Result: model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet -- all
 ### Full monitoring
 
 ```json
-{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XGLYV" }
+{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XG^LYV" }
 ```
 
 - **Line 1:** model, context, cost, rateLimit5h, rateLimit7d
 - **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 - **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance
 - **Line 4:** tokenBreakdown, forecast, budget
-- **Line 5:** codexUsage, geminiUsage, linesChanged, outputStyle, version
+- **Line 5:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version
 
 ## Combining with Other Options
 

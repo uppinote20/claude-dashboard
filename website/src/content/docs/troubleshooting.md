@@ -54,10 +54,11 @@ This updates the `statusLine` path to the latest cached version. Restart Claude 
 
 ## Multi-CLI widgets not appearing
 
-The multi-CLI widgets (`codexUsage`, `geminiUsage`, `zaiUsage`) auto-hide when their respective CLIs are not detected:
+The multi-CLI widgets (`codexUsage`, `geminiUsage`, `antigravityUsage`, `zaiUsage`) auto-hide when their respective CLIs are not detected:
 
 - **codexUsage**: Requires `~/.codex/auth.json` to exist
 - **geminiUsage / geminiUsageAll**: Requires `~/.gemini/oauth_creds.json` to exist
+- **antigravityUsage / antigravityUsageAll**: Requires `~/.gemini/antigravity-cli/antigravity-oauth-token` to exist
 - **zaiUsage**: Requires detection via `ANTHROPIC_BASE_URL` environment variable
 
 Make sure the corresponding CLI is installed and authenticated before expecting these widgets to appear.

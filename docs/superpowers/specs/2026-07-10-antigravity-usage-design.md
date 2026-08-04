@@ -200,3 +200,27 @@ support is a follow-up once the service name is confirmed.
 Single PR against `main` (no `develop` branch): client + widget + types + emoji +
 registration + check-usage + tests + docs. `dist/` rebuilt and committed (plugin users
 don't build). Version bump per release workflow.
+
+## 14. Revision — 2026-08-04 (implemented)
+
+Implementation confirmed a working quota path that supersedes parts of §2/§5/§7/§9:
+
+- **Quota RPC**: `retrieveUserQuotaSummary` is first-party-gated (403 for third-party
+  callers — see the issue #78 investigation). Quota instead comes from
+  `v1internal:fetchAvailableModels`, whose per-model `quotaInfo`
+  (`remainingFraction` / `resetTime` / `isExhausted`) carries the same bucket fields.
+  The §5 family groups are reconstructed client-side from per-model entries
+  (`gemini*` → "Gemini", `claude|gpt` → "Claude+GPT", worst member wins).
+- **Write-back dropped**: §7's atomic write-back to `antigravity-oauth-token` was
+  replaced by a strict never-write policy — a foreign writer could corrupt what the
+  closed-source CLI expects. Refreshed tokens live only in our own cache
+  (`~/.cache/claude-dashboard/antigravity-token-{hash}.json`, mode 0600).
+- **OAuth client**: the `consumer` refresh pair is the community-known public
+  installed-app client (`1071006060591-….apps.googleusercontent.com`).
+- **Host**: prod `cloudcode-pa.googleapis.com` works even when agy itself runs on the
+  `daily-` channel; §9's channel detection is unnecessary.
+- **Additions beyond this design**: `antigravityUsageAll` widget (per-model buckets),
+  preset char `^`, `ICON.antigravity` 🪐️, check-usage section + recommendation
+  scoring via the 7d metric.
+- **Live verification (2026-08-04)**: `fetchAvailableModels` → 200 with a real token;
+  17 models parsed into 2 groups (`Gemini 27% (6d22h)`, `Claude+GPT 39% (6d19h)`).

@@ -1,5 +1,11 @@
 # Antigravity CLI Usage Support Implementation Plan
 
+> **Status 2026-08-04**: implemented with one architectural change — quota comes from
+> `fetchAvailableModels` per-model `quotaInfo` instead of the 403-gated
+> `retrieveUserQuotaSummary`, and token write-back was dropped in favor of an own-cache
+> refresh. See §14 of the design doc for details. The task breakdown below is otherwise
+> historical planning material.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add an `antigravityUsage` status-line widget (and check-usage CLI section) that reports Antigravity CLI (`agy`) weekly quota per model group.

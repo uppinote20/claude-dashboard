@@ -63,7 +63,9 @@ claude-dashboard provides 40 widgets organized by category. Each widget can be i
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) [2] |
 | `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed) [3] |
 | `geminiUsageAll` | Google Gemini CLI - all models (auto-hide if not installed) [3] |
-| `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai) [4] |
+| `antigravityUsage` | Google Antigravity CLI - weekly quota per model family, Gemini vs Claude+GPT (auto-hide if not installed) [4] |
+| `antigravityUsageAll` | Google Antigravity CLI - all model buckets (auto-hide if not installed) [4] |
+| `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai) [5] |
 
 ## Insights
 
@@ -72,7 +74,7 @@ claude-dashboard provides 40 widgets organized by category. Each widget can be i
 | `tokenBreakdown` | Input/output/cache write/read token breakdown |
 | `performance` | Composite efficiency badge (cache hit + output ratio) |
 | `forecast` | Estimated hourly cost based on session rate |
-| `budget` | Daily spending vs configured budget limit [5] |
+| `budget` | Daily spending vs configured budget limit [6] |
 | `todayCost` | Total spending across all sessions today |
 
 ## Info
@@ -89,7 +91,7 @@ claude-dashboard provides 40 widgets organized by category. Each widget can be i
 
 | Widget | Description |
 |--------|-------------|
-| `peakHours` | Peak hours indicator with countdown ([based on PeakClaude](https://github.com/pforret/PeakClaude))[6] |
+| `peakHours` | Peak hours indicator with countdown ([based on PeakClaude](https://github.com/pforret/PeakClaude))[7] |
 | `tagStatus` | Commits ahead of matched git tags (default pattern `v*`, configure via `tagPatterns`) |
 | `slashCommand` | Active slash command for the current turn (🎯), cleared by next plain-text message |
 | `agentMode` | Session agent identity: 👤 custom agent (via `/agent <name>`) or 🤖 subagent type |
@@ -98,10 +100,11 @@ claude-dashboard provides 40 widgets organized by category. Each widget can be i
 
 1. **depletionTime** assumes all utilization came from the current session; accuracy improves as the session runs longer.
 2. **codexUsage** auto-hides if `~/.codex/auth.json` is not found.
-3. **geminiUsage** and **geminiUsageAll** auto-hide if `~/.gemini/oauth_creds.json` is not found.
-4. **zaiUsage** auto-hides if not detected via `ANTHROPIC_BASE_URL`.
-5. **budget** requires `"dailyBudget"` to be set in the configuration file.
-6. **peakHours** peak = weekdays 5-11 AM PT; shows countdown to next transition.
+3. **geminiUsage** and **geminiUsageAll** auto-hide if `~/.gemini/oauth_creds.json` is not found. (Gemini CLI personal tiers retired 2026-06-18; enterprise still supported)
+4. **antigravityUsage** and **antigravityUsageAll** auto-hide if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found.
+5. **zaiUsage** auto-hides if not detected via `ANTHROPIC_BASE_URL`.
+6. **budget** requires `"dailyBudget"` to be set in the configuration file.
+7. **peakHours** peak = weekdays 5-11 AM PT; shows countdown to next transition.
 
 ## Language Support
 

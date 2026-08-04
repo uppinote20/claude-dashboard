@@ -40,7 +40,7 @@ claude-dashboard는 4개의 커맨드를 제공합니다.
 
 ## /claude-dashboard:check-usage
 
-모든 AI CLI(Claude, Codex, Gemini, z.ai)의 사용량 제한을 확인하고, 가장 여유 있는 CLI를 추천합니다.
+모든 AI CLI(Claude, Codex, Gemini, Antigravity, z.ai)의 사용량 제한을 확인하고, 가장 여유 있는 CLI를 추천합니다.
 
 ### 인자
 
@@ -71,6 +71,7 @@ claude-dashboard는 4개의 커맨드를 제공합니다.
 - **Claude**: 5시간 및 7일 속도 제한, 리셋 시간
 - **Codex**: 5시간 및 7일 제한, 플랜 정보 (설치된 경우)
 - **Gemini**: 모델별 사용량 백분율 (설치된 경우)
+- **Antigravity**: 모델 패밀리별 주간 quota — Gemini vs Claude+GPT (설치 시)
 - **z.ai**: 토큰 및 MCP 사용량 (설정된 경우)
 
 하단에 현재 사용량이 가장 낮은 CLI를 추천합니다.
