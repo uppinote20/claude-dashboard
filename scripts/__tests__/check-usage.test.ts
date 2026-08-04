@@ -8,6 +8,7 @@ import {
   parseClaudeUsage,
   parseCodexUsage,
   parseGeminiUsage,
+  parseAntigravityUsage,
   parseZaiUsage,
   calculateRecommendation,
 } from '../check-usage.js';
@@ -15,6 +16,7 @@ import type {
   UsageLimits,
   CodexUsageLimits,
   GeminiUsageLimits,
+  AntigravityUsageLimits,
   CLIUsageInfo,
 } from '../types.js';
 import type { ZaiUsageLimits } from '../utils/zai-api-client.js';
@@ -206,6 +208,67 @@ describe('parseGeminiUsage', () => {
   });
 });
 
+describe('parseAntigravityUsage', () => {
+  it('should return not-installed result when not installed', () => {
+    const result = parseAntigravityUsage(null, false);
+    expect(result.name).toBe('Antigravity');
+    expect(result.available).toBe(false);
+    expect(result.error).toBe(false);
+  });
+
+  it('should return error result when installed but limits null', () => {
+    const result = parseAntigravityUsage(null, true);
+    expect(result.name).toBe('Antigravity');
+    expect(result.available).toBe(true);
+    expect(result.error).toBe(true);
+  });
+
+  it('should expose the tightest family group as the primary/7d metric', () => {
+    const limits: AntigravityUsageLimits = {
+      model: 'Gemini 3.6 Flash (Low)',
+      planType: 'free',
+      groups: [
+        { label: 'Gemini', usedPercent: 27, resetAt: '2026-08-11T00:00:00Z' },
+        { label: 'Claude+GPT', usedPercent: 39, resetAt: '2026-08-10T21:00:00Z' },
+      ],
+      buckets: [
+        { modelId: 'gemini-3-6-flash', label: 'Gemini 3.6 Flash', usedPercent: 27, resetAt: '2026-08-11T00:00:00Z' },
+      ],
+    };
+
+    const result = parseAntigravityUsage(limits, true);
+    expect(result.name).toBe('Antigravity');
+    expect(result.available).toBe(true);
+    expect(result.error).toBe(false);
+    expect(result.primaryPercent).toBe(39);
+    expect(result.fiveHourPercent).toBeNull();
+    expect(result.sevenDayPercent).toBe(39);
+    expect(result.sevenDayReset).toBe('2026-08-10T21:00:00.000Z');
+    expect(result.model).toBe('Gemini 3.6 Flash (Low)');
+    expect(result.plan).toBe('free');
+    expect(result.groups).toHaveLength(2);
+    expect(result.groups?.[1].label).toBe('Claude+GPT');
+    expect(result.groups?.[1].resetAt).toBe('2026-08-10T21:00:00.000Z');
+    expect(result.buckets).toHaveLength(1);
+    expect(result.buckets?.[0].modelId).toBe('gemini-3-6-flash');
+    expect(result.buckets?.[0].label).toBe('Gemini 3.6 Flash');
+  });
+
+  it('should handle groups without percentages', () => {
+    const limits: AntigravityUsageLimits = {
+      groups: [{ label: 'Gemini', usedPercent: null, resetAt: null }],
+      buckets: [],
+    };
+
+    const result = parseAntigravityUsage(limits, true);
+    expect(result.primaryPercent).toBeNull();
+    expect(result.sevenDayPercent).toBeNull();
+    expect(result.sevenDayReset).toBeNull();
+    expect(result.groups).toHaveLength(1);
+    expect(result.buckets).toHaveLength(0);
+  });
+});
+
 describe('parseZaiUsage', () => {
   it('should return not-installed result when not installed', () => {
     const result = parseZaiUsage(null, false);
@@ -264,6 +327,7 @@ describe('calculateRecommendation', () => {
     name: 'Test',
     available: true,
     error: false,
+    primaryPercent: null,
     fiveHourPercent: null,
     sevenDayPercent: null,
     fiveHourReset: null,
@@ -273,61 +337,70 @@ describe('calculateRecommendation', () => {
 
   it('should return noData when no CLIs have valid data', () => {
     const claude = createUsage({ name: 'Claude', error: true });
-    const result = calculateRecommendation(claude, null, null, null, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, null, null], MOCK_TRANSLATIONS);
     expect(result.name).toBeNull();
     expect(result.reason).toBe('No usage data available');
   });
 
-  it('should recommend CLI with lowest 5h usage', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
-    const codex = createUsage({ name: 'Codex', fiveHourPercent: 30 });
-    const gemini = createUsage({ name: 'Gemini', fiveHourPercent: 40 });
+  it('should recommend CLI with lowest primary usage', () => {
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const codex = createUsage({ name: 'Codex', primaryPercent: 30 });
+    const gemini = createUsage({ name: 'Gemini', primaryPercent: 40 });
 
-    const result = calculateRecommendation(claude, codex, gemini, null, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, codex, gemini], MOCK_TRANSLATIONS);
     expect(result.name).toBe('codex');
     expect(result.reason).toContain('30%');
   });
 
   it('should skip CLIs that are not available', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
-    const codex = createUsage({ name: 'Codex', available: false, fiveHourPercent: 10 });
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const codex = createUsage({ name: 'Codex', available: false, primaryPercent: 10 });
 
-    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, codex], MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
   it('should skip CLIs with errors', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
-    const codex = createUsage({ name: 'Codex', error: true, fiveHourPercent: 10 });
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const codex = createUsage({ name: 'Codex', error: true, primaryPercent: 10 });
 
-    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, codex], MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
-  it('should skip CLIs with null fiveHourPercent', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
-    const codex = createUsage({ name: 'Codex', fiveHourPercent: null });
+  it('should skip CLIs with null primaryPercent', () => {
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const codex = createUsage({ name: 'Codex', primaryPercent: null });
 
-    const result = calculateRecommendation(claude, codex, null, null, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, codex], MOCK_TRANSLATIONS);
     expect(result.name).toBe('claude');
   });
 
   it('should consider z.ai in recommendation', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 50 });
-    const zai = createUsage({ name: 'z.ai', fiveHourPercent: 5 });
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const zai = createUsage({ name: 'z.ai', primaryPercent: 5 });
 
-    const result = calculateRecommendation(claude, null, null, zai, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, zai], MOCK_TRANSLATIONS);
     expect(result.name).toBe('z.ai');
     expect(result.reason).toContain('5%');
   });
 
-  it('should handle all CLIs with equal usage', () => {
-    const claude = createUsage({ name: 'Claude', fiveHourPercent: 25 });
-    const codex = createUsage({ name: 'Codex', fiveHourPercent: 25 });
-    const gemini = createUsage({ name: 'Gemini', fiveHourPercent: 25 });
-    const zai = createUsage({ name: 'z.ai', fiveHourPercent: 25 });
+  it('should consider antigravity via its weekly primary metric', () => {
+    const claude = createUsage({ name: 'Claude', primaryPercent: 50 });
+    const antigravity = createUsage({ name: 'Antigravity', primaryPercent: 7 });
 
-    const result = calculateRecommendation(claude, codex, gemini, zai, MOCK_TRANSLATIONS);
+    const result = calculateRecommendation([claude, antigravity], MOCK_TRANSLATIONS);
+    expect(result.name).toBe('antigravity');
+    expect(result.reason).toContain('7%');
+  });
+
+  it('should handle all CLIs with equal usage', () => {
+    const claude = createUsage({ name: 'Claude', primaryPercent: 25 });
+    const codex = createUsage({ name: 'Codex', primaryPercent: 25 });
+    const gemini = createUsage({ name: 'Gemini', primaryPercent: 25 });
+    const zai = createUsage({ name: 'z.ai', primaryPercent: 25 });
+
+    const result = calculateRecommendation([claude, codex, gemini, zai], MOCK_TRANSLATIONS);
     // Should pick first one alphabetically after sort (all have same score)
     expect(result.name).not.toBeNull();
     expect(result.reason).toContain('25%');

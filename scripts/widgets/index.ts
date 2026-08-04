@@ -3,6 +3,7 @@
  * @handbook 3.2-widget-lifecycle
  * @handbook 3.4-widget-registration
  * @handbook 6.1-hierarchical-defense
+ * @tested scripts/__tests__/widgets.test.ts
  */
 
 import type { Widget, WidgetRenderResult } from './base.js';
@@ -36,6 +37,7 @@ import { depletionTimeWidget } from './depletion-time.js';
 import { cacheHitWidget } from './cache-hit.js';
 import { codexUsageWidget } from './codex-usage.js';
 import { geminiUsageWidget, geminiUsageAllWidget } from './gemini-usage.js';
+import { antigravityUsageWidget, antigravityUsageAllWidget } from './antigravity-usage.js';
 import { zaiUsageWidget } from './zai-usage.js';
 import { sessionIdWidget, sessionIdFullWidget } from './session-id.js';
 import { tokenBreakdownWidget } from './token-breakdown.js';
@@ -82,6 +84,8 @@ const widgetRegistry = new Map<WidgetId, Widget>([
   ['codexUsage', codexUsageWidget],
   ['geminiUsage', geminiUsageWidget],
   ['geminiUsageAll', geminiUsageAllWidget],
+  ['antigravityUsage', antigravityUsageWidget],
+  ['antigravityUsageAll', antigravityUsageAllWidget],
   ['zaiUsage', zaiUsageWidget],
   ['sessionId', sessionIdWidget],
   ['sessionIdFull', sessionIdFullWidget],

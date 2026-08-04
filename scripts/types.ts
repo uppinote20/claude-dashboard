@@ -125,6 +125,8 @@ export type WidgetId =
   | 'codexUsage'
   | 'geminiUsage'
   | 'geminiUsageAll'
+  | 'antigravityUsage'
+  | 'antigravityUsageAll'
   | 'zaiUsage'
   | 'tokenBreakdown'
   | 'performance'
@@ -169,7 +171,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
-    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
+    ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
   ],
 };
@@ -245,6 +247,7 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   H: 'cacheHit',
   X: 'codexUsage',
   G: 'geminiUsage',
+  '^': 'antigravityUsage',
   Z: 'zaiUsage',
   K: 'configCounts',
   N: 'tokenBreakdown',
@@ -596,6 +599,49 @@ export interface GeminiUsageAllData {
 }
 
 /**
+ * Antigravity CLI usage limits from Google Code Assist API.
+ * Quota is shared per model family (weekly window); `groups` mirrors agy's
+ * own family grouping while `buckets` keeps the raw per-model entries.
+ */
+export interface AntigravityUsageLimits {
+  /** Current model from settings.json (display-name style) */
+  model?: string;
+  /** Plan type from loadCodeAssist (when provided) */
+  planType?: string;
+  /** Model-family groups sharing a weekly quota window */
+  groups: Array<{
+    label: string;
+    usedPercent: number | null;
+    resetAt: string | null;
+  }>;
+  /** Per-model buckets from fetchAvailableModels */
+  buckets: Array<{
+    modelId: string;
+    label: string;
+    usedPercent: number | null;
+    resetAt: string | null;
+  }>;
+}
+
+/**
+ * Antigravity usage widget data (model-family groups)
+ */
+export interface AntigravityUsageData {
+  groups: AntigravityUsageLimits['groups'];
+  /** Indicates API error occurred */
+  isError?: boolean;
+}
+
+/**
+ * Antigravity usage all widget data (per-model buckets)
+ */
+export interface AntigravityUsageAllData {
+  buckets: AntigravityUsageLimits['buckets'];
+  /** Indicates API error occurred */
+  isError?: boolean;
+}
+
+/**
  * Session ID widget data
  */
 export interface SessionIdData {
@@ -797,6 +843,8 @@ export type WidgetData =
   | CodexUsageData
   | GeminiUsageData
   | GeminiUsageAllData
+  | AntigravityUsageData
+  | AntigravityUsageAllData
   | ZaiUsageData
   | TokenBreakdownData
   | PerformanceData
@@ -882,6 +930,8 @@ export interface ParsedTranscript {
  */
 export interface BucketUsageInfo {
   modelId: string;
+  /** Human-readable display name when it differs from modelId */
+  label?: string;
   usedPercent: number | null;
   resetAt: string | null;
 }
@@ -893,6 +943,8 @@ export interface CLIUsageInfo {
   name: string;
   available: boolean;
   error: boolean;
+  /** Primary scoring metric for recommendations — window varies per CLI (5h, weekly, token bucket) */
+  primaryPercent: number | null;
   fiveHourPercent: number | null;
   sevenDayPercent: number | null;
   fiveHourReset: string | null;
@@ -900,6 +952,8 @@ export interface CLIUsageInfo {
   model?: string;
   plan?: string;
   buckets?: BucketUsageInfo[];
+  /** Family-group quota rows for CLIs with grouped limits (e.g., Antigravity) */
+  groups?: Array<{ label: string; usedPercent: number | null; resetAt: string | null }>;
 }
 
 /**
@@ -909,6 +963,7 @@ export interface CheckUsageOutput {
   claude: CLIUsageInfo;
   codex: CLIUsageInfo | null;
   gemini: CLIUsageInfo | null;
+  antigravity: CLIUsageInfo | null;
   zai: CLIUsageInfo | null;
   recommendation: string | null;
   recommendationReason: string;

@@ -36,6 +36,7 @@ export const ICON = {
   chart: '📊️',
   blueDiamond: '🔷️',
   gem: '💎️',
+  antigravity: '🪐️',
   orangeCircle: '🟠️',
   greenCircle: '🟢️',
   yellowCircle: '🟡️',

@@ -8,32 +8,11 @@
 
 import type { Widget } from './base.js';
 import type { WidgetContext, GeminiUsageData, GeminiUsageAllData } from '../types.js';
-import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
+import { colorize, getTheme } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import { isGeminiInstalled, fetchGeminiUsage } from '../utils/gemini-client.js';
-import { formatTimeRemaining } from '../utils/formatters.js';
+import { formatUsageWithReset } from './usage-format.js';
 import { debugLog } from '../utils/debug.js';
-
-/**
- * Format usage with optional reset time
- */
-function formatUsage(
-  percent: number,
-  resetAt: string | null,
-  ctx: WidgetContext
-): string {
-  const color = getColorForPercent(percent);
-  let result = colorize(`${Math.round(percent)}%`, color);
-
-  if (resetAt) {
-    const resetTime = formatTimeRemaining(new Date(resetAt), ctx.translations);
-    if (resetTime) {
-      result += ` (${resetTime})`;
-    }
-  }
-
-  return result;
-}
 
 export const geminiUsageWidget: Widget<GeminiUsageData> = {
   id: 'geminiUsage',
@@ -74,7 +53,7 @@ export const geminiUsageWidget: Widget<GeminiUsageData> = {
     if (data.isError) {
       parts.push(colorize(ICON.warning, theme.warning));
     } else if (data.usedPercent !== null) {
-      parts.push(formatUsage(data.usedPercent, data.resetAt, ctx));
+      parts.push(formatUsageWithReset(data.usedPercent, data.resetAt, ctx.translations));
     }
 
     return parts.join(` ${colorize('│', theme.dim)} `);
@@ -127,7 +106,7 @@ export const geminiUsageAllWidget: Widget<GeminiUsageAllData> = {
     const parts = data.buckets.map((bucket) => {
       const modelShort = bucket.modelId.replace('gemini-', '');
       if (bucket.usedPercent !== null) {
-        return `${colorize(modelShort, theme.secondary)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, ctx)}`;
+        return `${colorize(modelShort, theme.secondary)}: ${formatUsageWithReset(bucket.usedPercent, bucket.resetAt, ctx.translations)}`;
       }
       return `${colorize(modelShort, theme.secondary)}: ${colorize('--', theme.secondary)}`;
     });
