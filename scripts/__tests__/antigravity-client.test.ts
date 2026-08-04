@@ -184,6 +184,12 @@ describe('antigravity-client', () => {
       expect(result?.model).toBe('Gemini 3.6 Flash (Low)');
       expect(result?.planType).toBe('free');
 
+      // Caches are keyed by the stable refresh token, not the rotating access token
+      const usageSave = saveSpy.mock.calls.find(([f]) => String(f).includes('antigravity-usage-'));
+      const projectSave = saveSpy.mock.calls.find(([f]) => String(f).includes('antigravity-project-'));
+      const keyOf = (f: string) => f.replace(/^.*antigravity-(usage|project)-/, '').replace('.json', '');
+      expect(keyOf(String(projectSave?.[0]))).toBe(keyOf(String(usageSave?.[0])));
+
       // 4 quota models survive the filter (chat_/tab_/image/lite/no-quota excluded)
       expect(result?.buckets).toHaveLength(4);
       expect(result?.buckets.map((b) => b.modelId)).not.toContain('chat_internal');
@@ -227,6 +233,48 @@ describe('antigravity-client', () => {
       const result = await fetchAntigravityUsage();
 
       expect(result?.buckets[0]?.usedPercent).toBe(39); // 100 - 61
+    });
+
+    it('should persist a project-meta failure marker when loadCodeAssist fails', async () => {
+      mockFs(FUTURE_EXPIRY);
+      const saveSpy = mockFileCache();
+      vi.spyOn(globalThis, 'fetch').mockImplementation(((url: unknown) =>
+        String(url).includes(':loadCodeAssist')
+          ? Promise.resolve(new Response('{}', { status: 500 }))
+          : Promise.resolve(new Response(JSON.stringify(MODELS_RESPONSE), { status: 200 }))) as typeof fetch);
+
+      const { fetchAntigravityUsage } = await importClient();
+      const result = await fetchAntigravityUsage();
+
+      // Project id is optional for fetchAvailableModels, so quota still resolves
+      expect(result).not.toBeNull();
+      expect(saveSpy).toHaveBeenCalledWith(
+        expect.stringContaining('antigravity-project-'),
+        expect.objectContaining({ projectId: null, failedAt: expect.any(Number) })
+      );
+    });
+
+    it('should honor a fresh project-meta failure marker without retrying', async () => {
+      mockFs(FUTURE_EXPIRY);
+      mockFileCache({
+        loadFileCache: vi.fn().mockImplementation((cacheFile: string) =>
+          Promise.resolve(
+            cacheFile.includes('antigravity-project-')
+              ? { data: { projectId: null, failedAt: Date.now() - 1_000 }, timestamp: Date.now() - 1_000 }
+              : null
+          )
+        ),
+      });
+      const fetchMock = mockCloudFetch();
+
+      const { fetchAntigravityUsage } = await importClient();
+      const result = await fetchAntigravityUsage();
+
+      expect(result).not.toBeNull();
+      const loadCalls = fetchMock.mock.calls.filter(([u]) => String(u).includes(':loadCodeAssist'));
+      expect(loadCalls).toHaveLength(0);
+      const modelsCall = fetchMock.mock.calls.find(([u]) => String(u).includes(':fetchAvailableModels'));
+      expect((modelsCall?.[1] as RequestInit | undefined)?.body).toBe('{}');
     });
 
     it('should reuse cached project meta and skip loadCodeAssist', async () => {
@@ -391,6 +439,32 @@ describe('antigravity-client', () => {
 
       expect(result).toBeNull();
       expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('should serve stale usage when the token expired and refresh fails', async () => {
+      const stale = {
+        model: 'Gemini 3.6 Flash (Low)',
+        groups: [{ label: 'Gemini', usedPercent: 12, resetAt: null }],
+        buckets: [],
+      };
+      mockFs(NANO_PAST_EXPIRY);
+      mockFileCache({
+        // Usage cache holds data older than the fresh TTL but within the stale window
+        loadFileCache: vi.fn().mockImplementation((cacheFile: string, ttlSeconds: number) =>
+          Promise.resolve(
+            cacheFile.includes('antigravity-usage-') && !cacheFile.includes('-err-') && ttlSeconds > 60
+              ? { data: stale, timestamp: Date.now() - 120_000 }
+              : null
+          )
+        ),
+      });
+      mockCloudFetch({ refreshStatus: 400 });
+
+      const { fetchAntigravityUsage } = await importClient();
+      const result = await fetchAntigravityUsage();
+
+      // Widget keeps showing the last known quota instead of a warning
+      expect(result).toEqual(stale);
     });
 
     it('should reuse a previously refreshed token from the file cache', async () => {

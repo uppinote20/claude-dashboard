@@ -111,6 +111,6 @@ export const geminiUsageAllWidget: Widget<GeminiUsageAllData> = {
       return `${colorize(modelShort, theme.secondary)}: ${colorize('--', theme.secondary)}`;
     });
 
-    return `${colorize(ICON.gem, theme.info)} ${parts.join(' │ ')}`;
+    return `${colorize(ICON.gem, theme.info)} ${parts.join(` ${colorize('│', theme.dim)} `)}`;
   },
 };

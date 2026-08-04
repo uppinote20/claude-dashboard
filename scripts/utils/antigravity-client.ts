@@ -191,10 +191,19 @@ function tokenNeedsRefresh(credentials: AntigravityCredentials): boolean {
 }
 
 /**
+ * Stable per-account cache key. Access tokens rotate on every refresh, so
+ * keying caches by them would miss on each rotation and leave orphaned files;
+ * the refresh token stays put for the life of the grant.
+ */
+function accountKeyFor(credentials: AntigravityCredentials): string {
+  return hashToken(credentials.refreshToken ?? credentials.accessToken);
+}
+
+/**
  * Cross-process cache path for refreshed access tokens
  */
-function refreshedTokenCachePath(refreshHash: string): string {
-  return fileCachePath(`antigravity-token-${refreshHash}.json`);
+function refreshedTokenCachePath(accountKey: string): string {
+  return fileCachePath(`antigravity-token-${accountKey}.json`);
 }
 
 interface RefreshedTokenCache {
@@ -211,10 +220,10 @@ interface RefreshedTokenCache {
  */
 async function getCachedRefreshedCredentials(
   refreshTokenValue: string,
-  refreshHash: string
+  accountKey: string
 ): Promise<AntigravityCredentials | 'backoff' | null> {
   const fromFile = await loadFileCache<RefreshedTokenCache>(
-    refreshedTokenCachePath(refreshHash),
+    refreshedTokenCachePath(accountKey),
     STALE_CACHE_TTL_SECONDS
   );
   if (!fromFile?.data) {
@@ -242,8 +251,8 @@ async function getCachedRefreshedCredentials(
 /**
  * Persist a refresh failure marker for cross-process backoff
  */
-async function recordRefreshFailure(refreshHash: string): Promise<void> {
-  await saveFileCache(refreshedTokenCachePath(refreshHash), {
+async function recordRefreshFailure(accountKey: string): Promise<void> {
+  await saveFileCache(refreshedTokenCachePath(accountKey), {
     refreshFailedAt: Date.now(),
   });
 }
@@ -255,7 +264,7 @@ async function recordRefreshFailure(refreshHash: string): Promise<void> {
  */
 async function refreshTokenInternal(
   refreshTokenValue: string,
-  refreshHash: string
+  accountKey: string
 ): Promise<AntigravityCredentials | null> {
   try {
     debugLog('antigravity', 'refreshTokenInternal: attempting refresh...');
@@ -286,13 +295,19 @@ async function refreshTokenInternal(
       return null;
     }
 
+    // Google always sends a numeric expires_in, but a missing/NaN value would
+    // make tokenNeedsRefresh() treat the token as valid forever
+    const expiresInMs = typeof data.expires_in === 'number' && Number.isFinite(data.expires_in)
+      ? data.expires_in * 1000
+      : 3_600_000;
+
     const newCredentials: AntigravityCredentials = {
       accessToken: data.access_token,
       refreshToken: refreshTokenValue,
-      expiryDate: Date.now() + (data.expires_in * 1000),
+      expiryDate: Date.now() + expiresInMs,
     };
 
-    await saveFileCache(refreshedTokenCachePath(refreshHash), {
+    await saveFileCache(refreshedTokenCachePath(accountKey), {
       accessToken: newCredentials.accessToken,
       expiryDate: newCredentials.expiryDate,
     });
@@ -311,24 +326,24 @@ async function refreshTokenInternal(
  */
 function refreshToken(
   refreshTokenValue: string,
-  refreshHash: string
+  accountKey: string
 ): Promise<AntigravityCredentials | null> {
-  const pending = pendingRefreshRequests.get(refreshHash);
+  const pending = pendingRefreshRequests.get(accountKey);
   if (pending) {
     debugLog('antigravity', 'refreshToken: using pending refresh request');
     return pending;
   }
 
   const refreshPromise = (async () => {
-    const refreshed = await refreshTokenInternal(refreshTokenValue, refreshHash);
+    const refreshed = await refreshTokenInternal(refreshTokenValue, accountKey);
     if (!refreshed) {
-      await recordRefreshFailure(refreshHash);
+      await recordRefreshFailure(accountKey);
     }
     return refreshed;
   })().finally(() => {
-    pendingRefreshRequests.delete(refreshHash);
+    pendingRefreshRequests.delete(accountKey);
   });
-  pendingRefreshRequests.set(refreshHash, refreshPromise);
+  pendingRefreshRequests.set(accountKey, refreshPromise);
 
   return refreshPromise;
 }
@@ -337,12 +352,10 @@ function refreshToken(
  * Get valid credentials: fresh file token first (agy keeps it current while
  * in use), then a previously refreshed token, then a new refresh.
  */
-async function getValidCredentials(): Promise<AntigravityCredentials | null> {
-  const fileCreds = await getCredentialsFromFile();
-  if (!fileCreds) {
-    return null;
-  }
-
+async function getValidCredentials(
+  fileCreds: AntigravityCredentials,
+  accountKey: string
+): Promise<AntigravityCredentials | null> {
   if (!tokenNeedsRefresh(fileCreds)) {
     return fileCreds;
   }
@@ -351,9 +364,8 @@ async function getValidCredentials(): Promise<AntigravityCredentials | null> {
     debugLog('antigravity', 'getValidCredentials: token expired, no refresh token');
     return null;
   }
-  const refreshHash = hashToken(fileCreds.refreshToken);
 
-  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, refreshHash);
+  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, accountKey);
   if (reused === 'backoff') {
     return null;
   }
@@ -362,7 +374,7 @@ async function getValidCredentials(): Promise<AntigravityCredentials | null> {
   }
 
   debugLog('antigravity', 'getValidCredentials: token expired, attempting refresh');
-  return refreshToken(fileCreds.refreshToken, refreshHash);
+  return refreshToken(fileCreds.refreshToken, accountKey);
 }
 
 /**
@@ -400,6 +412,8 @@ async function getAntigravitySettings(): Promise<AntigravitySettings | null> {
 interface ProjectMeta {
   projectId: string | null;
   planType?: string;
+  /** Set when loadCodeAssist failed — suppresses retries for NEGATIVE_CACHE_SECONDS */
+  failedAt?: number;
 }
 const projectMetaCacheMap: Map<string, { data: ProjectMeta; timestamp: number }> = new Map();
 const PROJECT_META_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes (in-process)
@@ -428,19 +442,33 @@ async function postCodeAssist(rpc: string, accessToken: string, body: unknown): 
  */
 async function getProjectMeta(
   credentials: AntigravityCredentials,
-  tokenHash: string
+  accountKey: string
 ): Promise<ProjectMeta> {
-  const cached = projectMetaCacheMap.get(tokenHash);
-  if (cached && (Date.now() - cached.timestamp) < PROJECT_META_CACHE_TTL_MS) {
+  const cacheFile = fileCachePath(`antigravity-project-${accountKey}.json`);
+
+  // A failure entry is only honored for the short negative window
+  const isUsable = (meta: ProjectMeta, timestamp: number): boolean =>
+    meta.failedAt === undefined || (Date.now() - timestamp) / 1000 < NEGATIVE_CACHE_SECONDS;
+
+  const cached = projectMetaCacheMap.get(accountKey);
+  if (cached && (Date.now() - cached.timestamp) < PROJECT_META_CACHE_TTL_MS && isUsable(cached.data, cached.timestamp)) {
     return cached.data;
   }
 
-  const cacheFile = fileCachePath(`antigravity-project-${tokenHash}.json`);
   const fromFile = await loadFileCache<ProjectMeta>(cacheFile, PROJECT_META_FILE_TTL_SECONDS);
-  if (fromFile) {
-    projectMetaCacheMap.set(tokenHash, { data: fromFile.data, timestamp: fromFile.timestamp });
+  if (fromFile && isUsable(fromFile.data, fromFile.timestamp)) {
+    projectMetaCacheMap.set(accountKey, { data: fromFile.data, timestamp: fromFile.timestamp });
     return fromFile.data;
   }
+
+  // Every failure path persists a marker so the next fresh process doesn't
+  // immediately re-issue the RPC (renders spawn a new process each time)
+  const failed = async (): Promise<ProjectMeta> => {
+    const meta: ProjectMeta = { projectId: null, failedAt: Date.now() };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  };
 
   try {
     const response = await postCodeAssist('loadCodeAssist', credentials.accessToken, {
@@ -449,7 +477,7 @@ async function getProjectMeta(
 
     if (!response.ok) {
       debugLog('antigravity', 'loadCodeAssist: response not ok', response.status);
-      return { projectId: null };
+      return failed();
     }
 
     const data = await response.json() as LoadCodeAssistResponse;
@@ -457,12 +485,12 @@ async function getProjectMeta(
     const projectId = typeof rawProject === 'string' ? rawProject : rawProject?.id ?? null;
 
     const meta: ProjectMeta = { projectId, planType: data?.planInfo?.planType };
-    projectMetaCacheMap.set(tokenHash, { data: meta, timestamp: Date.now() });
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
     await saveFileCache(cacheFile, meta);
     return meta;
   } catch (err) {
     debugLog('antigravity', 'loadCodeAssist error:', err);
-    return { projectId: null };
+    return failed();
   }
 }
 
@@ -470,7 +498,8 @@ async function getProjectMeta(
  * Internal/feature-specific model ids excluded from quota display
  */
 function isExcludedModelId(modelId: string): boolean {
-  if (modelId.startsWith('chat_') || modelId.startsWith('tab_') || modelId.startsWith('rev')) {
+  // Delimiter-anchored so a future user-facing id like `revision-pro` survives
+  if (modelId.startsWith('chat_') || modelId.startsWith('tab_') || modelId.startsWith('rev_')) {
     return true;
   }
   return modelId.includes('image') || modelId.includes('mquery') || modelId.includes('lite');
@@ -515,18 +544,20 @@ export function fetchAntigravityUsage(ttlSeconds: number = 60): Promise<Antigrav
 }
 
 async function fetchAntigravityUsageInternal(ttlSeconds: number): Promise<AntigravityUsageLimits | null> {
-  const credentials = await getValidCredentials();
-  if (!credentials) {
-    debugLog('antigravity', 'fetchAntigravityUsage: no valid credentials');
+  // Caches are probed before credentials are validated: a failed refresh must
+  // still be able to serve the usage fetched moments earlier
+  const fileCreds = await getCredentialsFromFile();
+  if (!fileCreds) {
+    debugLog('antigravity', 'fetchAntigravityUsage: no credentials file');
     return null;
   }
 
-  const tokenHash = hashToken(credentials.accessToken);
-  const cacheFile = fileCachePath(`antigravity-usage-${tokenHash}.json`);
-  const errCacheFile = fileCachePath(`antigravity-usage-err-${tokenHash}.json`);
+  const accountKey = accountKeyFor(fileCreds);
+  const cacheFile = fileCachePath(`antigravity-usage-${accountKey}.json`);
+  const errCacheFile = fileCachePath(`antigravity-usage-err-${accountKey}.json`);
 
   // Check memory cache (includes negative cache entries)
-  const cached = antigravityCacheMap.get(tokenHash);
+  const cached = antigravityCacheMap.get(accountKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1000;
     const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
@@ -544,19 +575,38 @@ async function fetchAntigravityUsageInternal(ttlSeconds: number): Promise<Antigr
   const fileEntry = await loadFileCache<AntigravityUsageLimits>(cacheFile, STALE_CACHE_TTL_SECONDS);
   if (fileEntry && (Date.now() - fileEntry.timestamp) / 1000 < ttlSeconds) {
     debugLog('antigravity', 'file cache hit');
-    antigravityCacheMap.set(tokenHash, { data: fileEntry.data, timestamp: fileEntry.timestamp });
+    antigravityCacheMap.set(accountKey, { data: fileEntry.data, timestamp: fileEntry.timestamp });
     return fileEntry.data;
   }
+
+  /** Best available stale data when a fresh fetch is impossible */
+  const staleFallback = (): AntigravityUsageLimits | null => {
+    if (cached && !cached.isError) {
+      debugLog('antigravity', 'Returning stale cache data');
+      return cached.data;
+    }
+    if (fileEntry) {
+      debugLog('antigravity', 'stale file cache fallback');
+      return fileEntry.data;
+    }
+    return null;
+  };
 
   // Cross-process failure backoff — every render is a fresh process, so a
   // memory-only negative cache would retry the API on each render during an outage
   const errEntry = await loadFileCache<{ failedAt: number }>(errCacheFile, NEGATIVE_CACHE_SECONDS);
   if (errEntry) {
     debugLog('antigravity', 'cross-process negative cache hit, skipping API call');
-    return fileEntry?.data ?? null;
+    return staleFallback();
   }
 
-  const result = await fetchFromAntigravityApi(credentials, tokenHash);
+  const credentials = await getValidCredentials(fileCreds, accountKey);
+  if (!credentials) {
+    debugLog('antigravity', 'fetchAntigravityUsage: no valid credentials, serving stale');
+    return staleFallback();
+  }
+
+  const result = await fetchFromAntigravityApi(credentials, accountKey);
   if (result) {
     await saveFileCache(cacheFile, result);
     return result;
@@ -564,23 +614,14 @@ async function fetchAntigravityUsageInternal(ttlSeconds: number): Promise<Antigr
 
   // API failed - set negative caches to prevent rapid retries
   debugLog('antigravity', `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
-  antigravityCacheMap.set(tokenHash, {
+  antigravityCacheMap.set(accountKey, {
     data: null,
     timestamp: Date.now(),
     isError: true,
   });
   await saveFileCache(errCacheFile, { failedAt: Date.now() });
 
-  // Fall back to stale data: memory first, then the file entry read above
-  if (cached && !cached.isError) {
-    debugLog('antigravity', 'Returning stale cache data');
-    return cached.data;
-  }
-  if (fileEntry) {
-    debugLog('antigravity', 'stale file cache fallback');
-    return fileEntry.data;
-  }
-  return null;
+  return staleFallback();
 }
 
 /**
@@ -588,14 +629,14 @@ async function fetchAntigravityUsageInternal(ttlSeconds: number): Promise<Antigr
  */
 async function fetchFromAntigravityApi(
   credentials: AntigravityCredentials,
-  tokenHash: string
+  accountKey: string
 ): Promise<AntigravityUsageLimits | null> {
   try {
     debugLog('antigravity', 'fetchFromAntigravityApi: starting...');
 
     // Settings read is local I/O — overlap it with the loadCodeAssist RTT
     const [meta, settings] = await Promise.all([
-      getProjectMeta(credentials, tokenHash),
+      getProjectMeta(credentials, accountKey),
       getAntigravitySettings(),
     ]);
 
@@ -668,7 +709,7 @@ async function fetchFromAntigravityApi(
     };
 
     // Update cache
-    antigravityCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
+    antigravityCacheMap.set(accountKey, { data: limits, timestamp: Date.now() });
     debugLog('antigravity', `fetchFromAntigravityApi: success, ${buckets.length} models / ${limits.groups.length} groups`);
 
     return limits;

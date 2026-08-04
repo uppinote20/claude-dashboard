@@ -113,6 +113,6 @@ export const antigravityUsageAllWidget: Widget<AntigravityUsageAllData> = {
       return `${colorize(bucket.label, theme.secondary)}: ${colorize('--', theme.secondary)}`;
     });
 
-    return `${icon} ${parts.join(' │ ')}`;
+    return `${icon} ${parts.join(` ${colorize('│', theme.dim)} `)}`;
   },
 };

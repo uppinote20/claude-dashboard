@@ -3102,7 +3102,7 @@ var geminiUsageAllWidget = {
       }
       return `${colorize(modelShort, theme.secondary)}: ${colorize("--", theme.secondary)}`;
     });
-    return `${colorize(ICON.gem, theme.info)} ${parts.join(" \u2502 ")}`;
+    return `${colorize(ICON.gem, theme.info)} ${parts.join(` ${colorize("\u2502", theme.dim)} `)}`;
   }
 };
 
@@ -3182,12 +3182,15 @@ function tokenNeedsRefresh2(credentials) {
   }
   return credentials.expiryDate < Date.now() + TOKEN_REFRESH_BUFFER_MS2;
 }
-function refreshedTokenCachePath(refreshHash) {
-  return fileCachePath(`antigravity-token-${refreshHash}.json`);
+function accountKeyFor(credentials) {
+  return hashToken(credentials.refreshToken ?? credentials.accessToken);
 }
-async function getCachedRefreshedCredentials(refreshTokenValue, refreshHash) {
+function refreshedTokenCachePath(accountKey) {
+  return fileCachePath(`antigravity-token-${accountKey}.json`);
+}
+async function getCachedRefreshedCredentials(refreshTokenValue, accountKey) {
   const fromFile = await loadFileCache(
-    refreshedTokenCachePath(refreshHash),
+    refreshedTokenCachePath(accountKey),
     STALE_CACHE_TTL_SECONDS
   );
   if (!fromFile?.data) {
@@ -3207,12 +3210,12 @@ async function getCachedRefreshedCredentials(refreshTokenValue, refreshHash) {
   };
   return tokenNeedsRefresh2(creds) ? null : creds;
 }
-async function recordRefreshFailure(refreshHash) {
-  await saveFileCache(refreshedTokenCachePath(refreshHash), {
+async function recordRefreshFailure(accountKey) {
+  await saveFileCache(refreshedTokenCachePath(accountKey), {
     refreshFailedAt: Date.now()
   });
 }
-async function refreshTokenInternal2(refreshTokenValue, refreshHash) {
+async function refreshTokenInternal2(refreshTokenValue, accountKey) {
   try {
     debugLog("antigravity", "refreshTokenInternal: attempting refresh...");
     const response = await fetch(GOOGLE_TOKEN_ENDPOINT2, {
@@ -3237,12 +3240,13 @@ async function refreshTokenInternal2(refreshTokenValue, refreshHash) {
       debugLog("antigravity", "refreshTokenInternal: no access_token in response");
       return null;
     }
+    const expiresInMs = typeof data.expires_in === "number" && Number.isFinite(data.expires_in) ? data.expires_in * 1e3 : 36e5;
     const newCredentials = {
       accessToken: data.access_token,
       refreshToken: refreshTokenValue,
-      expiryDate: Date.now() + data.expires_in * 1e3
+      expiryDate: Date.now() + expiresInMs
     };
-    await saveFileCache(refreshedTokenCachePath(refreshHash), {
+    await saveFileCache(refreshedTokenCachePath(accountKey), {
       accessToken: newCredentials.accessToken,
       expiryDate: newCredentials.expiryDate
     });
@@ -3253,29 +3257,25 @@ async function refreshTokenInternal2(refreshTokenValue, refreshHash) {
     return null;
   }
 }
-function refreshToken2(refreshTokenValue, refreshHash) {
-  const pending = pendingRefreshRequests2.get(refreshHash);
+function refreshToken2(refreshTokenValue, accountKey) {
+  const pending = pendingRefreshRequests2.get(accountKey);
   if (pending) {
     debugLog("antigravity", "refreshToken: using pending refresh request");
     return pending;
   }
   const refreshPromise = (async () => {
-    const refreshed = await refreshTokenInternal2(refreshTokenValue, refreshHash);
+    const refreshed = await refreshTokenInternal2(refreshTokenValue, accountKey);
     if (!refreshed) {
-      await recordRefreshFailure(refreshHash);
+      await recordRefreshFailure(accountKey);
     }
     return refreshed;
   })().finally(() => {
-    pendingRefreshRequests2.delete(refreshHash);
+    pendingRefreshRequests2.delete(accountKey);
   });
-  pendingRefreshRequests2.set(refreshHash, refreshPromise);
+  pendingRefreshRequests2.set(accountKey, refreshPromise);
   return refreshPromise;
 }
-async function getValidCredentials2() {
-  const fileCreds = await getCredentialsFromFile3();
-  if (!fileCreds) {
-    return null;
-  }
+async function getValidCredentials2(fileCreds, accountKey) {
   if (!tokenNeedsRefresh2(fileCreds)) {
     return fileCreds;
   }
@@ -3283,8 +3283,7 @@ async function getValidCredentials2() {
     debugLog("antigravity", "getValidCredentials: token expired, no refresh token");
     return null;
   }
-  const refreshHash = hashToken(fileCreds.refreshToken);
-  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, refreshHash);
+  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, accountKey);
   if (reused === "backoff") {
     return null;
   }
@@ -3292,7 +3291,7 @@ async function getValidCredentials2() {
     return reused;
   }
   debugLog("antigravity", "getValidCredentials: token expired, attempting refresh");
-  return refreshToken2(fileCreds.refreshToken, refreshHash);
+  return refreshToken2(fileCreds.refreshToken, accountKey);
 }
 async function getAntigravitySettings() {
   try {
@@ -3328,39 +3327,46 @@ async function postCodeAssist(rpc, accessToken, body) {
     signal: AbortSignal.timeout(API_TIMEOUT_MS4)
   });
 }
-async function getProjectMeta(credentials, tokenHash) {
-  const cached = projectMetaCacheMap.get(tokenHash);
-  if (cached && Date.now() - cached.timestamp < PROJECT_META_CACHE_TTL_MS) {
+async function getProjectMeta(credentials, accountKey) {
+  const cacheFile = fileCachePath(`antigravity-project-${accountKey}.json`);
+  const isUsable = (meta, timestamp) => meta.failedAt === void 0 || (Date.now() - timestamp) / 1e3 < NEGATIVE_CACHE_SECONDS;
+  const cached = projectMetaCacheMap.get(accountKey);
+  if (cached && Date.now() - cached.timestamp < PROJECT_META_CACHE_TTL_MS && isUsable(cached.data, cached.timestamp)) {
     return cached.data;
   }
-  const cacheFile = fileCachePath(`antigravity-project-${tokenHash}.json`);
   const fromFile = await loadFileCache(cacheFile, PROJECT_META_FILE_TTL_SECONDS);
-  if (fromFile) {
-    projectMetaCacheMap.set(tokenHash, { data: fromFile.data, timestamp: fromFile.timestamp });
+  if (fromFile && isUsable(fromFile.data, fromFile.timestamp)) {
+    projectMetaCacheMap.set(accountKey, { data: fromFile.data, timestamp: fromFile.timestamp });
     return fromFile.data;
   }
+  const failed = async () => {
+    const meta = { projectId: null, failedAt: Date.now() };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  };
   try {
     const response = await postCodeAssist("loadCodeAssist", credentials.accessToken, {
       metadata: CODE_ASSIST_METADATA
     });
     if (!response.ok) {
       debugLog("antigravity", "loadCodeAssist: response not ok", response.status);
-      return { projectId: null };
+      return failed();
     }
     const data = await response.json();
     const rawProject = data?.cloudaicompanionProject;
     const projectId = typeof rawProject === "string" ? rawProject : rawProject?.id ?? null;
     const meta = { projectId, planType: data?.planInfo?.planType };
-    projectMetaCacheMap.set(tokenHash, { data: meta, timestamp: Date.now() });
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
     await saveFileCache(cacheFile, meta);
     return meta;
   } catch (err) {
     debugLog("antigravity", "loadCodeAssist error:", err);
-    return { projectId: null };
+    return failed();
   }
 }
 function isExcludedModelId(modelId) {
-  if (modelId.startsWith("chat_") || modelId.startsWith("tab_") || modelId.startsWith("rev")) {
+  if (modelId.startsWith("chat_") || modelId.startsWith("tab_") || modelId.startsWith("rev_")) {
     return true;
   }
   return modelId.includes("image") || modelId.includes("mquery") || modelId.includes("lite");
@@ -3390,15 +3396,15 @@ function fetchAntigravityUsage(ttlSeconds = 60) {
   return inFlightFetch;
 }
 async function fetchAntigravityUsageInternal(ttlSeconds) {
-  const credentials = await getValidCredentials2();
-  if (!credentials) {
-    debugLog("antigravity", "fetchAntigravityUsage: no valid credentials");
+  const fileCreds = await getCredentialsFromFile3();
+  if (!fileCreds) {
+    debugLog("antigravity", "fetchAntigravityUsage: no credentials file");
     return null;
   }
-  const tokenHash = hashToken(credentials.accessToken);
-  const cacheFile = fileCachePath(`antigravity-usage-${tokenHash}.json`);
-  const errCacheFile = fileCachePath(`antigravity-usage-err-${tokenHash}.json`);
-  const cached = antigravityCacheMap.get(tokenHash);
+  const accountKey = accountKeyFor(fileCreds);
+  const cacheFile = fileCachePath(`antigravity-usage-${accountKey}.json`);
+  const errCacheFile = fileCachePath(`antigravity-usage-err-${accountKey}.json`);
+  const cached = antigravityCacheMap.get(accountKey);
   if (cached) {
     const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
     const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
@@ -3414,41 +3420,49 @@ async function fetchAntigravityUsageInternal(ttlSeconds) {
   const fileEntry = await loadFileCache(cacheFile, STALE_CACHE_TTL_SECONDS);
   if (fileEntry && (Date.now() - fileEntry.timestamp) / 1e3 < ttlSeconds) {
     debugLog("antigravity", "file cache hit");
-    antigravityCacheMap.set(tokenHash, { data: fileEntry.data, timestamp: fileEntry.timestamp });
+    antigravityCacheMap.set(accountKey, { data: fileEntry.data, timestamp: fileEntry.timestamp });
     return fileEntry.data;
   }
+  const staleFallback = () => {
+    if (cached && !cached.isError) {
+      debugLog("antigravity", "Returning stale cache data");
+      return cached.data;
+    }
+    if (fileEntry) {
+      debugLog("antigravity", "stale file cache fallback");
+      return fileEntry.data;
+    }
+    return null;
+  };
   const errEntry = await loadFileCache(errCacheFile, NEGATIVE_CACHE_SECONDS);
   if (errEntry) {
     debugLog("antigravity", "cross-process negative cache hit, skipping API call");
-    return fileEntry?.data ?? null;
+    return staleFallback();
   }
-  const result = await fetchFromAntigravityApi(credentials, tokenHash);
+  const credentials = await getValidCredentials2(fileCreds, accountKey);
+  if (!credentials) {
+    debugLog("antigravity", "fetchAntigravityUsage: no valid credentials, serving stale");
+    return staleFallback();
+  }
+  const result = await fetchFromAntigravityApi(credentials, accountKey);
   if (result) {
     await saveFileCache(cacheFile, result);
     return result;
   }
   debugLog("antigravity", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
-  antigravityCacheMap.set(tokenHash, {
+  antigravityCacheMap.set(accountKey, {
     data: null,
     timestamp: Date.now(),
     isError: true
   });
   await saveFileCache(errCacheFile, { failedAt: Date.now() });
-  if (cached && !cached.isError) {
-    debugLog("antigravity", "Returning stale cache data");
-    return cached.data;
-  }
-  if (fileEntry) {
-    debugLog("antigravity", "stale file cache fallback");
-    return fileEntry.data;
-  }
-  return null;
+  return staleFallback();
 }
-async function fetchFromAntigravityApi(credentials, tokenHash) {
+async function fetchFromAntigravityApi(credentials, accountKey) {
   try {
     debugLog("antigravity", "fetchFromAntigravityApi: starting...");
     const [meta, settings] = await Promise.all([
-      getProjectMeta(credentials, tokenHash),
+      getProjectMeta(credentials, accountKey),
       getAntigravitySettings()
     ]);
     const response = await postCodeAssist(
@@ -3506,7 +3520,7 @@ async function fetchFromAntigravityApi(credentials, tokenHash) {
       groups: Array.from(groupMap.values()).sort((a, b) => a.label.localeCompare(b.label)),
       buckets
     };
-    antigravityCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
+    antigravityCacheMap.set(accountKey, { data: limits, timestamp: Date.now() });
     debugLog("antigravity", `fetchFromAntigravityApi: success, ${buckets.length} models / ${limits.groups.length} groups`);
     return limits;
   } catch (err) {
@@ -3586,7 +3600,7 @@ var antigravityUsageAllWidget = {
       }
       return `${colorize(bucket.label, theme.secondary)}: ${colorize("--", theme.secondary)}`;
     });
-    return `${icon} ${parts.join(" \u2502 ")}`;
+    return `${icon} ${parts.join(` ${colorize("\u2502", theme.dim)} `)}`;
   }
 };
 
