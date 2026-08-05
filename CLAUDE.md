@@ -45,6 +45,7 @@ claude-dashboard/
 │   │   ├── gemini-usage.ts  # Gemini CLI usage widget
 │   │   ├── antigravity-usage.ts # Antigravity CLI usage widget
 │   │   ├── zai-usage.ts     # z.ai/ZHIPU usage widget
+│   │   ├── usage-format.ts  # Shared percent + reset countdown formatter
 │   │   ├── token-breakdown.ts # Token breakdown widget
 │   │   ├── performance.ts   # Performance badge widget
 │   │   ├── forecast.ts      # Cost forecast widget
@@ -110,6 +111,7 @@ claude-dashboard/
 | API 클라이언트 | `scripts/utils/api-client.ts` |
 | Cross-process file cache | `scripts/utils/file-cache.ts` |
 | 포매팅 유틸리티 | `scripts/utils/formatters.ts` |
+| 외부 CLI 사용량 표시 (퍼센트 + 리셋) | `scripts/widgets/usage-format.ts` |
 | 이모지 아이콘 (단일 출처) | `scripts/utils/emoji.ts` |
 | Registry invariant 테스트 | `scripts/__tests__/emoji.test.ts` |
 

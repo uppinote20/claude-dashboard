@@ -36,6 +36,11 @@
  * @covers scripts/widgets/tag-status.ts
  * @covers scripts/widgets/slash-command.ts
  * @covers scripts/widgets/agent-mode.ts
+ * @covers scripts/utils/transcript-parser.ts
+ * @covers scripts/utils/session.ts
+ * @covers scripts/utils/budget.ts
+ * @covers scripts/utils/codex-client.ts
+ * @covers scripts/utils/git.ts (countUntrackedLines via mock)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget, getDefaultEffort } from '../widgets/model.js';
