@@ -49,6 +49,8 @@ const CLEANABLE_PREFIXES = [
   'cache-',
   'codex-usage-',
   'gemini-usage-',
+  'antigravity-usage-',
+  'antigravity-token-',
   'zai-usage-',
 ];
 

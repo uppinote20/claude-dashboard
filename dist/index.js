@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile9, stat as stat10 } from "fs/promises";
+import { readFile as readFile10, stat as stat11 } from "fs/promises";
 import { join as join8 } from "path";
 import { homedir as homedir4 } from "os";
 
@@ -19,7 +19,7 @@ var DISPLAY_PRESETS = {
     ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
     ["tokenBreakdown", "forecast", "budget", "todayCost"],
-    ["codexUsage", "geminiUsage", "linesChanged", "outputStyle", "version", "peakHours"],
+    ["codexUsage", "geminiUsage", "antigravityUsage", "linesChanged", "outputStyle", "version", "peakHours"],
     ["lastPrompt", "vimMode", "apiDuration", "tagStatus"]
   ]
 };
@@ -45,6 +45,7 @@ var PRESET_CHAR_MAP = {
   H: "cacheHit",
   X: "codexUsage",
   G: "geminiUsage",
+  "^": "antigravityUsage",
   Z: "zaiUsage",
   K: "configCounts",
   N: "tokenBreakdown",
@@ -476,6 +477,7 @@ var ICON = {
   chart: "\u{1F4CA}\uFE0F",
   blueDiamond: "\u{1F537}\uFE0F",
   gem: "\u{1F48E}\uFE0F",
+  antigravity: "\u{1FA90}\uFE0F",
   orangeCircle: "\u{1F7E0}\uFE0F",
   greenCircle: "\u{1F7E2}\uFE0F",
   yellowCircle: "\u{1F7E1}\uFE0F",
@@ -610,6 +612,8 @@ var CLEANABLE_PREFIXES = [
   "cache-",
   "codex-usage-",
   "gemini-usage-",
+  "antigravity-usage-",
+  "antigravity-token-",
   "zai-usage-"
 ];
 var lastCleanupTime = 0;
@@ -1559,9 +1563,9 @@ async function countFiles(dir, pattern) {
     return 0;
   }
 }
-async function fileExists(path4) {
+async function fileExists(path5) {
   try {
-    await stat4(path4);
+    await stat4(path5);
     return true;
   } catch {
     return false;
@@ -1590,9 +1594,9 @@ async function countMcps(projectDir) {
     { path: join4(homeDir, ".config", "claude-code", "mcp.json"), key: "mcpServers" }
   ];
   const counts = await Promise.all(
-    mcpPaths.map(async ({ path: path4, key }) => {
+    mcpPaths.map(async ({ path: path5, key }) => {
       try {
-        const content = await readFile4(path4, "utf-8");
+        const content = await readFile4(path5, "utf-8");
         const config = JSON.parse(content);
         return Object.keys(config[key] || {}).length;
       } catch {
@@ -3010,18 +3014,17 @@ async function fetchFromGeminiApi(credentials, projectId) {
   }
 }
 
-// scripts/widgets/gemini-usage.ts
-function formatUsage(percent, resetAt, ctx) {
-  const color = getColorForPercent(percent);
-  let result = colorize(`${Math.round(percent)}%`, color);
-  if (resetAt) {
-    const resetTime = formatTimeRemaining(new Date(resetAt), ctx.translations);
-    if (resetTime) {
-      result += ` (${resetTime})`;
-    }
+// scripts/widgets/usage-format.ts
+function formatUsageWithReset(percent, resetAt, translations) {
+  const result = colorize(`${Math.round(percent)}%`, getColorForPercent(percent));
+  if (!resetAt) {
+    return result;
   }
-  return result;
+  const resetTime = formatTimeRemaining(new Date(resetAt), translations);
+  return resetTime ? `${result} (${resetTime})` : result;
 }
+
+// scripts/widgets/gemini-usage.ts
 var geminiUsageWidget = {
   id: "geminiUsage",
   name: "Gemini Usage",
@@ -3054,7 +3057,7 @@ var geminiUsageWidget = {
     if (data.isError) {
       parts.push(colorize(ICON.warning, theme.warning));
     } else if (data.usedPercent !== null) {
-      parts.push(formatUsage(data.usedPercent, data.resetAt, ctx));
+      parts.push(formatUsageWithReset(data.usedPercent, data.resetAt, ctx.translations));
     }
     return parts.join(` ${colorize("\u2502", theme.dim)} `);
   }
@@ -3095,16 +3098,514 @@ var geminiUsageAllWidget = {
     const parts = data.buckets.map((bucket) => {
       const modelShort = bucket.modelId.replace("gemini-", "");
       if (bucket.usedPercent !== null) {
-        return `${colorize(modelShort, theme.secondary)}: ${formatUsage(bucket.usedPercent, bucket.resetAt, ctx)}`;
+        return `${colorize(modelShort, theme.secondary)}: ${formatUsageWithReset(bucket.usedPercent, bucket.resetAt, ctx.translations)}`;
       }
       return `${colorize(modelShort, theme.secondary)}: ${colorize("--", theme.secondary)}`;
     });
-    return `${colorize(ICON.gem, theme.info)} ${parts.join(" \u2502 ")}`;
+    return `${colorize(ICON.gem, theme.info)} ${parts.join(` ${colorize("\u2502", theme.dim)} `)}`;
+  }
+};
+
+// scripts/utils/antigravity-client.ts
+import { readFile as readFile8, stat as stat9 } from "fs/promises";
+import os4 from "os";
+import path4 from "path";
+var API_TIMEOUT_MS4 = 5e3;
+var ANTIGRAVITY_DIR = path4.join(".gemini", "antigravity-cli");
+var OAUTH_TOKEN_FILE = "antigravity-oauth-token";
+var SETTINGS_FILE2 = "settings.json";
+var CODE_ASSIST_ENDPOINT2 = "https://cloudcode-pa.googleapis.com";
+var CODE_ASSIST_API_VERSION2 = "v1internal";
+var CODE_ASSIST_METADATA = {
+  ideType: "ANTIGRAVITY",
+  platform: "PLATFORM_UNSPECIFIED",
+  pluginType: "GEMINI"
+};
+var USER_AGENT = "antigravity";
+var GOOGLE_TOKEN_ENDPOINT2 = "https://oauth2.googleapis.com/token";
+var OAUTH_CLIENT_ID2 = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
+var OAUTH_CLIENT_SECRET2 = "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";
+var TOKEN_REFRESH_BUFFER_MS2 = 5 * 60 * 1e3;
+var antigravityCacheMap = /* @__PURE__ */ new Map();
+var inFlightFetch = null;
+var pendingRefreshRequests2 = /* @__PURE__ */ new Map();
+var installedCheck = null;
+var cachedCredentials2 = null;
+var cachedSettings2 = null;
+function getTokenPath() {
+  return path4.join(os4.homedir(), ANTIGRAVITY_DIR, OAUTH_TOKEN_FILE);
+}
+function isAntigravityInstalled() {
+  installedCheck ??= stat9(getTokenPath()).then(
+    () => true,
+    () => false
+  );
+  return installedCheck;
+}
+function parseExpiry(expiry) {
+  if (typeof expiry !== "string") {
+    return void 0;
+  }
+  let ms = Date.parse(expiry);
+  if (Number.isNaN(ms)) {
+    ms = Date.parse(expiry.replace(/\.(\d{3})\d+/, ".$1"));
+  }
+  return Number.isNaN(ms) ? void 0 : ms;
+}
+async function getCredentialsFromFile3() {
+  try {
+    const tokenPath = getTokenPath();
+    const fileStat = await stat9(tokenPath);
+    if (cachedCredentials2 && cachedCredentials2.mtime === fileStat.mtimeMs) {
+      return cachedCredentials2.data;
+    }
+    const raw = await readFile8(tokenPath, "utf-8");
+    const json = JSON.parse(raw);
+    const accessToken = json?.token?.access_token;
+    if (!accessToken) {
+      return null;
+    }
+    const data = {
+      accessToken,
+      refreshToken: json?.token?.refresh_token,
+      expiryDate: parseExpiry(json?.token?.expiry)
+    };
+    cachedCredentials2 = { data, mtime: fileStat.mtimeMs };
+    return data;
+  } catch {
+    return null;
+  }
+}
+function tokenNeedsRefresh2(credentials) {
+  if (!credentials.expiryDate) {
+    return false;
+  }
+  return credentials.expiryDate < Date.now() + TOKEN_REFRESH_BUFFER_MS2;
+}
+function accountKeyFor(credentials) {
+  return hashToken(credentials.refreshToken ?? credentials.accessToken);
+}
+function refreshedTokenCachePath(accountKey) {
+  return fileCachePath(`antigravity-token-${accountKey}.json`);
+}
+async function getCachedRefreshedCredentials(refreshTokenValue, accountKey) {
+  const fromFile = await loadFileCache(
+    refreshedTokenCachePath(accountKey),
+    STALE_CACHE_TTL_SECONDS
+  );
+  if (!fromFile?.data) {
+    return null;
+  }
+  if (fromFile.data.refreshFailedAt !== void 0 && (Date.now() - fromFile.data.refreshFailedAt) / 1e3 < NEGATIVE_CACHE_SECONDS) {
+    debugLog("antigravity", "refresh backoff active, skipping refresh attempt");
+    return "backoff";
+  }
+  if (!fromFile.data.accessToken) {
+    return null;
+  }
+  const creds = {
+    accessToken: fromFile.data.accessToken,
+    refreshToken: refreshTokenValue,
+    expiryDate: fromFile.data.expiryDate
+  };
+  return tokenNeedsRefresh2(creds) ? null : creds;
+}
+async function recordRefreshFailure(accountKey) {
+  await saveFileCache(refreshedTokenCachePath(accountKey), {
+    refreshFailedAt: Date.now()
+  });
+}
+async function refreshTokenInternal2(refreshTokenValue, accountKey) {
+  try {
+    debugLog("antigravity", "refreshTokenInternal: attempting refresh...");
+    const response = await fetch(GOOGLE_TOKEN_ENDPOINT2, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshTokenValue,
+        client_id: OAUTH_CLIENT_ID2,
+        client_secret: OAUTH_CLIENT_SECRET2
+      }),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+    });
+    if (!response.ok) {
+      debugLog("antigravity", "refreshTokenInternal: failed", response.status);
+      return null;
+    }
+    const data = await response.json();
+    if (!data.access_token) {
+      debugLog("antigravity", "refreshTokenInternal: no access_token in response");
+      return null;
+    }
+    const expiresInMs = typeof data.expires_in === "number" && Number.isFinite(data.expires_in) ? data.expires_in * 1e3 : 36e5;
+    const newCredentials = {
+      accessToken: data.access_token,
+      refreshToken: refreshTokenValue,
+      expiryDate: Date.now() + expiresInMs
+    };
+    await saveFileCache(refreshedTokenCachePath(accountKey), {
+      accessToken: newCredentials.accessToken,
+      expiryDate: newCredentials.expiryDate
+    });
+    debugLog("antigravity", "refreshTokenInternal: success");
+    return newCredentials;
+  } catch (err) {
+    debugLog("antigravity", "refreshTokenInternal: error", err);
+    return null;
+  }
+}
+function refreshToken2(refreshTokenValue, accountKey) {
+  const pending = pendingRefreshRequests2.get(accountKey);
+  if (pending) {
+    debugLog("antigravity", "refreshToken: using pending refresh request");
+    return pending;
+  }
+  const refreshPromise = (async () => {
+    const refreshed = await refreshTokenInternal2(refreshTokenValue, accountKey);
+    if (!refreshed) {
+      await recordRefreshFailure(accountKey);
+    }
+    return refreshed;
+  })().finally(() => {
+    pendingRefreshRequests2.delete(accountKey);
+  });
+  pendingRefreshRequests2.set(accountKey, refreshPromise);
+  return refreshPromise;
+}
+async function getValidCredentials2(fileCreds, accountKey) {
+  if (!tokenNeedsRefresh2(fileCreds)) {
+    return fileCreds;
+  }
+  if (!fileCreds.refreshToken) {
+    debugLog("antigravity", "getValidCredentials: token expired, no refresh token");
+    return null;
+  }
+  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, accountKey);
+  if (reused === "backoff") {
+    return null;
+  }
+  if (reused) {
+    return reused;
+  }
+  debugLog("antigravity", "getValidCredentials: token expired, attempting refresh");
+  return refreshToken2(fileCreds.refreshToken, accountKey);
+}
+async function getAntigravitySettings() {
+  try {
+    const settingsPath = path4.join(os4.homedir(), ANTIGRAVITY_DIR, SETTINGS_FILE2);
+    const fileStat = await stat9(settingsPath);
+    if (cachedSettings2 && cachedSettings2.mtime === fileStat.mtimeMs) {
+      return cachedSettings2.data;
+    }
+    const raw = await readFile8(settingsPath, "utf-8");
+    const json = JSON.parse(raw);
+    const data = {
+      model: typeof json?.model === "string" ? json.model : void 0
+    };
+    cachedSettings2 = { data, mtime: fileStat.mtimeMs };
+    return data;
+  } catch {
+    return null;
+  }
+}
+var projectMetaCacheMap = /* @__PURE__ */ new Map();
+var PROJECT_META_CACHE_TTL_MS = 5 * 60 * 1e3;
+var PROJECT_META_FILE_TTL_SECONDS = 86400;
+async function postCodeAssist(rpc, accessToken, body) {
+  return fetch(`${CODE_ASSIST_ENDPOINT2}/${CODE_ASSIST_API_VERSION2}:${rpc}`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT,
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+  });
+}
+async function getProjectMeta(credentials, accountKey) {
+  const cacheFile = fileCachePath(`antigravity-project-${accountKey}.json`);
+  const isUsable = (meta, timestamp) => meta.failedAt === void 0 || (Date.now() - timestamp) / 1e3 < NEGATIVE_CACHE_SECONDS;
+  const cached = projectMetaCacheMap.get(accountKey);
+  if (cached && Date.now() - cached.timestamp < PROJECT_META_CACHE_TTL_MS && isUsable(cached.data, cached.timestamp)) {
+    return cached.data;
+  }
+  const fromFile = await loadFileCache(cacheFile, PROJECT_META_FILE_TTL_SECONDS);
+  if (fromFile && isUsable(fromFile.data, fromFile.timestamp)) {
+    projectMetaCacheMap.set(accountKey, { data: fromFile.data, timestamp: fromFile.timestamp });
+    return fromFile.data;
+  }
+  const failed = async () => {
+    const meta = { projectId: null, failedAt: Date.now() };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  };
+  try {
+    const response = await postCodeAssist("loadCodeAssist", credentials.accessToken, {
+      metadata: CODE_ASSIST_METADATA
+    });
+    if (!response.ok) {
+      debugLog("antigravity", "loadCodeAssist: response not ok", response.status);
+      return failed();
+    }
+    const data = await response.json();
+    const rawProject = data?.cloudaicompanionProject;
+    const projectId = typeof rawProject === "string" ? rawProject : rawProject?.id ?? null;
+    const meta = { projectId, planType: data?.planInfo?.planType };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  } catch (err) {
+    debugLog("antigravity", "loadCodeAssist error:", err);
+    return failed();
+  }
+}
+function isExcludedModelId(modelId) {
+  if (modelId.startsWith("chat_") || modelId.startsWith("tab_") || modelId.startsWith("rev_")) {
+    return true;
+  }
+  return modelId.includes("image") || modelId.includes("mquery") || modelId.includes("lite");
+}
+function usedPercentFrom(quota) {
+  const remaining = quota.remainingFraction;
+  if (remaining === void 0) {
+    return quota.isExhausted ? 100 : null;
+  }
+  const used = remaining <= 1 ? (1 - remaining) * 100 : 100 - remaining;
+  return clampPercent(used);
+}
+function familyLabel(modelId, label) {
+  const haystack = `${modelId} ${label}`.toLowerCase();
+  if (haystack.includes("gemini")) {
+    return "Gemini";
+  }
+  if (haystack.includes("claude") || haystack.includes("gpt")) {
+    return "Claude+GPT";
+  }
+  return label;
+}
+function fetchAntigravityUsage(ttlSeconds = 60) {
+  inFlightFetch ??= fetchAntigravityUsageInternal(ttlSeconds).finally(() => {
+    inFlightFetch = null;
+  });
+  return inFlightFetch;
+}
+async function fetchAntigravityUsageInternal(ttlSeconds) {
+  const fileCreds = await getCredentialsFromFile3();
+  if (!fileCreds) {
+    debugLog("antigravity", "fetchAntigravityUsage: no credentials file");
+    return null;
+  }
+  const accountKey = accountKeyFor(fileCreds);
+  const cacheFile = fileCachePath(`antigravity-usage-${accountKey}.json`);
+  const errCacheFile = fileCachePath(`antigravity-usage-err-${accountKey}.json`);
+  const cached = antigravityCacheMap.get(accountKey);
+  if (cached) {
+    const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog("antigravity", "Negative cache hit, skipping API call");
+        return null;
+      }
+      debugLog("antigravity", "fetchAntigravityUsage: returning cached data");
+      return cached.data;
+    }
+  }
+  const fileEntry = await loadFileCache(cacheFile, STALE_CACHE_TTL_SECONDS);
+  if (fileEntry && (Date.now() - fileEntry.timestamp) / 1e3 < ttlSeconds) {
+    debugLog("antigravity", "file cache hit");
+    antigravityCacheMap.set(accountKey, { data: fileEntry.data, timestamp: fileEntry.timestamp });
+    return fileEntry.data;
+  }
+  const staleFallback = () => {
+    if (cached && !cached.isError) {
+      debugLog("antigravity", "Returning stale cache data");
+      return cached.data;
+    }
+    if (fileEntry) {
+      debugLog("antigravity", "stale file cache fallback");
+      return fileEntry.data;
+    }
+    return null;
+  };
+  const errEntry = await loadFileCache(errCacheFile, NEGATIVE_CACHE_SECONDS);
+  if (errEntry) {
+    debugLog("antigravity", "cross-process negative cache hit, skipping API call");
+    return staleFallback();
+  }
+  const credentials = await getValidCredentials2(fileCreds, accountKey);
+  if (!credentials) {
+    debugLog("antigravity", "fetchAntigravityUsage: no valid credentials, serving stale");
+    return staleFallback();
+  }
+  const result = await fetchFromAntigravityApi(credentials, accountKey);
+  if (result) {
+    await saveFileCache(cacheFile, result);
+    return result;
+  }
+  debugLog("antigravity", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+  antigravityCacheMap.set(accountKey, {
+    data: null,
+    timestamp: Date.now(),
+    isError: true
+  });
+  await saveFileCache(errCacheFile, { failedAt: Date.now() });
+  return staleFallback();
+}
+async function fetchFromAntigravityApi(credentials, accountKey) {
+  try {
+    debugLog("antigravity", "fetchFromAntigravityApi: starting...");
+    const [meta, settings] = await Promise.all([
+      getProjectMeta(credentials, accountKey),
+      getAntigravitySettings()
+    ]);
+    const response = await postCodeAssist(
+      "fetchAvailableModels",
+      credentials.accessToken,
+      meta.projectId ? { project: meta.projectId } : {}
+    );
+    debugLog("antigravity", "fetchAvailableModels: response status", response.status);
+    if (!response.ok) {
+      return null;
+    }
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      debugLog("antigravity", "fetchAvailableModels: invalid JSON response");
+      return null;
+    }
+    if (!data || typeof data !== "object") {
+      debugLog("antigravity", "fetchAvailableModels: invalid response - not an object");
+      return null;
+    }
+    const models = data.models ?? {};
+    const buckets = [];
+    for (const [modelId, info] of Object.entries(models)) {
+      if (!info.quotaInfo || isExcludedModelId(modelId)) {
+        continue;
+      }
+      buckets.push({
+        modelId,
+        label: info.displayName || modelId,
+        usedPercent: usedPercentFrom(info.quotaInfo),
+        resetAt: info.quotaInfo.resetTime ?? null
+      });
+    }
+    const groupMap = /* @__PURE__ */ new Map();
+    for (const bucket of buckets) {
+      const label = familyLabel(bucket.modelId, bucket.label);
+      let group = groupMap.get(label);
+      if (!group) {
+        group = { label, usedPercent: null, resetAt: null };
+        groupMap.set(label, group);
+      }
+      if (bucket.usedPercent !== null && (group.usedPercent === null || bucket.usedPercent > group.usedPercent)) {
+        group.usedPercent = bucket.usedPercent;
+      }
+      if (bucket.resetAt && (!group.resetAt || Date.parse(bucket.resetAt) < Date.parse(group.resetAt))) {
+        group.resetAt = bucket.resetAt;
+      }
+    }
+    buckets.sort((a, b) => a.label.localeCompare(b.label));
+    const limits = {
+      model: settings?.model,
+      planType: meta.planType,
+      groups: Array.from(groupMap.values()).sort((a, b) => a.label.localeCompare(b.label)),
+      buckets
+    };
+    antigravityCacheMap.set(accountKey, { data: limits, timestamp: Date.now() });
+    debugLog("antigravity", `fetchFromAntigravityApi: success, ${buckets.length} models / ${limits.groups.length} groups`);
+    return limits;
+  } catch (err) {
+    debugLog("antigravity", "fetchFromAntigravityApi: error", err);
+    return null;
+  }
+}
+
+// scripts/widgets/antigravity-usage.ts
+async function getLimits(ctx) {
+  const installed = await isAntigravityInstalled();
+  debugLog("antigravity", "isAntigravityInstalled:", installed);
+  if (!installed) {
+    return "uninstalled";
+  }
+  const limits = await fetchAntigravityUsage(ctx.config.cache.ttlSeconds);
+  debugLog("antigravity", "fetchAntigravityUsage result:", limits);
+  return limits;
+}
+var antigravityUsageWidget = {
+  id: "antigravityUsage",
+  name: "Antigravity Usage",
+  async getData(ctx) {
+    const limits = await getLimits(ctx);
+    if (limits === "uninstalled") {
+      return null;
+    }
+    if (!limits) {
+      return { groups: [], isError: true };
+    }
+    return { groups: limits.groups };
+  },
+  render(data, ctx) {
+    const theme = getTheme();
+    const icon = colorize(ICON.antigravity, theme.info);
+    if (data.isError) {
+      return `${icon} Antigravity ${colorize(ICON.warning, theme.warning)}`;
+    }
+    if (data.groups.length === 0) {
+      return `${icon} Antigravity ${colorize("--", theme.secondary)}`;
+    }
+    const parts = data.groups.map((group) => {
+      const label = colorize(group.label, theme.secondary);
+      if (group.usedPercent !== null) {
+        return `${label} ${formatUsageWithReset(group.usedPercent, group.resetAt, ctx.translations)}`;
+      }
+      return `${label} ${colorize("--", theme.secondary)}`;
+    });
+    return `${icon} ${parts.join(` ${colorize("\u2502", theme.dim)} `)}`;
+  }
+};
+var antigravityUsageAllWidget = {
+  id: "antigravityUsageAll",
+  name: "Antigravity Usage All",
+  async getData(ctx) {
+    const limits = await getLimits(ctx);
+    if (limits === "uninstalled") {
+      return null;
+    }
+    if (!limits) {
+      return { buckets: [], isError: true };
+    }
+    return { buckets: limits.buckets };
+  },
+  render(data, ctx) {
+    const theme = getTheme();
+    const icon = colorize(ICON.antigravity, theme.info);
+    if (data.isError) {
+      return `${icon} Antigravity ${colorize(ICON.warning, theme.warning)}`;
+    }
+    if (data.buckets.length === 0) {
+      return `${icon} Antigravity ${colorize("--", theme.secondary)}`;
+    }
+    const parts = data.buckets.map((bucket) => {
+      if (bucket.usedPercent !== null) {
+        return `${colorize(bucket.label, theme.secondary)}: ${formatUsageWithReset(bucket.usedPercent, bucket.resetAt, ctx.translations)}`;
+      }
+      return `${colorize(bucket.label, theme.secondary)}: ${colorize("--", theme.secondary)}`;
+    });
+    return `${icon} ${parts.join(` ${colorize("\u2502", theme.dim)} `)}`;
   }
 };
 
 // scripts/utils/zai-api-client.ts
-var API_TIMEOUT_MS4 = 5e3;
+var API_TIMEOUT_MS5 = 5e3;
 function calculateUsagePercent(currentValue, remaining) {
   const total = currentValue + remaining;
   if (total <= 0) {
@@ -3209,7 +3710,7 @@ async function fetchFromZaiApi(baseUrl, authToken) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${authToken}`
       },
-      signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+      signal: AbortSignal.timeout(API_TIMEOUT_MS5)
     });
     debugLog("zai", "fetchFromZaiApi: response status", response.status);
     if (!response.ok) {
@@ -3469,7 +3970,7 @@ var forecastWidget = {
 };
 
 // scripts/utils/budget.ts
-import { readFile as readFile8, mkdir as mkdir4, writeFile as writeFile4 } from "fs/promises";
+import { readFile as readFile9, mkdir as mkdir4, writeFile as writeFile4 } from "fs/promises";
 import { join as join6 } from "path";
 import { homedir as homedir3 } from "os";
 var BUDGET_DIR = join6(homedir3(), ".cache", "claude-dashboard");
@@ -3487,7 +3988,7 @@ async function loadBudgetState() {
   }
   const fresh = { date: today, dailyTotal: 0, sessions: {} };
   try {
-    const content = await readFile8(BUDGET_FILE, "utf-8");
+    const content = await readFile9(BUDGET_FILE, "utf-8");
     const state = JSON.parse(content);
     if (state.date !== today || !Number.isFinite(state.dailyTotal) || !state.sessions || typeof state.sessions !== "object") {
       return fresh;
@@ -3701,7 +4202,7 @@ var todayCostWidget = {
 };
 
 // scripts/utils/history-parser.ts
-import { open as open3, stat as stat9 } from "fs/promises";
+import { open as open3, stat as stat10 } from "fs/promises";
 import { join as join7 } from "path";
 var CHUNK = 16 * 1024;
 function resolvePastedText(display, pastedContents) {
@@ -3716,7 +4217,7 @@ var historyCache = null;
 async function getLastUserPrompt(sessionId) {
   try {
     const historyPath = join7(getClaudeConfigDir(), "history.jsonl");
-    const fileStat = await stat9(historyPath);
+    const fileStat = await stat10(historyPath);
     if (historyCache && historyCache.path === historyPath && historyCache.fileSize === fileStat.size) {
       const cached = historyCache.results.get(sessionId);
       if (cached !== void 0)
@@ -4003,6 +4504,8 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["codexUsage", codexUsageWidget],
   ["geminiUsage", geminiUsageWidget],
   ["geminiUsageAll", geminiUsageAllWidget],
+  ["antigravityUsage", antigravityUsageWidget],
+  ["antigravityUsageAll", antigravityUsageAllWidget],
   ["zaiUsage", zaiUsageWidget],
   ["sessionId", sessionIdWidget],
   ["sessionIdFull", sessionIdFullWidget],
@@ -4088,12 +4591,12 @@ async function readStdin() {
 }
 async function loadConfig() {
   try {
-    const fileStat = await stat10(CONFIG_PATH);
+    const fileStat = await stat11(CONFIG_PATH);
     const mtime = fileStat.mtimeMs;
     if (configCache?.mtime === mtime) {
       return configCache.config;
     }
-    const content = await readFile9(CONFIG_PATH, "utf-8");
+    const content = await readFile10(CONFIG_PATH, "utf-8");
     const userConfig = JSON.parse(content);
     const config = {
       ...DEFAULT_CONFIG,

@@ -123,6 +123,8 @@ var CLEANABLE_PREFIXES = [
   "cache-",
   "codex-usage-",
   "gemini-usage-",
+  "antigravity-usage-",
+  "antigravity-token-",
   "zai-usage-"
 ];
 var lastCleanupTime = 0;
@@ -1074,6 +1076,455 @@ async function fetchFromGeminiApi(credentials, projectId) {
   }
 }
 
+// scripts/utils/antigravity-client.ts
+import { readFile as readFile5, stat as stat5 } from "fs/promises";
+import os4 from "os";
+import path4 from "path";
+
+// scripts/utils/formatters.ts
+function formatTimeRemaining(resetAt, t) {
+  const reset = typeof resetAt === "string" ? new Date(resetAt) : resetAt;
+  const now = /* @__PURE__ */ new Date();
+  const diffMs = reset.getTime() - now.getTime();
+  if (diffMs <= 0)
+    return `0${t.time.minutes}`;
+  const totalMinutes = Math.floor(diffMs / (1e3 * 60));
+  const totalHours = Math.floor(totalMinutes / 60);
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = totalMinutes % 60;
+  if (days > 0) {
+    return `${days}${t.time.days}${hours}${t.time.hours}`;
+  }
+  if (hours > 0) {
+    return `${hours}${t.time.hours}${minutes}${t.time.minutes}`;
+  }
+  return `${minutes}${t.time.minutes}`;
+}
+function clampPercent(value) {
+  return Math.min(100, Math.max(0, Math.round(value)));
+}
+
+// scripts/utils/antigravity-client.ts
+var API_TIMEOUT_MS4 = 5e3;
+var ANTIGRAVITY_DIR = path4.join(".gemini", "antigravity-cli");
+var OAUTH_TOKEN_FILE = "antigravity-oauth-token";
+var SETTINGS_FILE2 = "settings.json";
+var CODE_ASSIST_ENDPOINT2 = "https://cloudcode-pa.googleapis.com";
+var CODE_ASSIST_API_VERSION2 = "v1internal";
+var CODE_ASSIST_METADATA = {
+  ideType: "ANTIGRAVITY",
+  platform: "PLATFORM_UNSPECIFIED",
+  pluginType: "GEMINI"
+};
+var USER_AGENT = "antigravity";
+var GOOGLE_TOKEN_ENDPOINT2 = "https://oauth2.googleapis.com/token";
+var OAUTH_CLIENT_ID2 = "1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com";
+var OAUTH_CLIENT_SECRET2 = "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";
+var TOKEN_REFRESH_BUFFER_MS2 = 5 * 60 * 1e3;
+var antigravityCacheMap = /* @__PURE__ */ new Map();
+var inFlightFetch = null;
+var pendingRefreshRequests2 = /* @__PURE__ */ new Map();
+var installedCheck = null;
+var cachedCredentials2 = null;
+var cachedSettings2 = null;
+function getTokenPath() {
+  return path4.join(os4.homedir(), ANTIGRAVITY_DIR, OAUTH_TOKEN_FILE);
+}
+function isAntigravityInstalled() {
+  installedCheck ??= stat5(getTokenPath()).then(
+    () => true,
+    () => false
+  );
+  return installedCheck;
+}
+function parseExpiry(expiry) {
+  if (typeof expiry !== "string") {
+    return void 0;
+  }
+  let ms = Date.parse(expiry);
+  if (Number.isNaN(ms)) {
+    ms = Date.parse(expiry.replace(/\.(\d{3})\d+/, ".$1"));
+  }
+  return Number.isNaN(ms) ? void 0 : ms;
+}
+async function getCredentialsFromFile3() {
+  try {
+    const tokenPath = getTokenPath();
+    const fileStat = await stat5(tokenPath);
+    if (cachedCredentials2 && cachedCredentials2.mtime === fileStat.mtimeMs) {
+      return cachedCredentials2.data;
+    }
+    const raw = await readFile5(tokenPath, "utf-8");
+    const json = JSON.parse(raw);
+    const accessToken = json?.token?.access_token;
+    if (!accessToken) {
+      return null;
+    }
+    const data = {
+      accessToken,
+      refreshToken: json?.token?.refresh_token,
+      expiryDate: parseExpiry(json?.token?.expiry)
+    };
+    cachedCredentials2 = { data, mtime: fileStat.mtimeMs };
+    return data;
+  } catch {
+    return null;
+  }
+}
+function tokenNeedsRefresh2(credentials) {
+  if (!credentials.expiryDate) {
+    return false;
+  }
+  return credentials.expiryDate < Date.now() + TOKEN_REFRESH_BUFFER_MS2;
+}
+function accountKeyFor(credentials) {
+  return hashToken(credentials.refreshToken ?? credentials.accessToken);
+}
+function refreshedTokenCachePath(accountKey) {
+  return fileCachePath(`antigravity-token-${accountKey}.json`);
+}
+async function getCachedRefreshedCredentials(refreshTokenValue, accountKey) {
+  const fromFile = await loadFileCache(
+    refreshedTokenCachePath(accountKey),
+    STALE_CACHE_TTL_SECONDS
+  );
+  if (!fromFile?.data) {
+    return null;
+  }
+  if (fromFile.data.refreshFailedAt !== void 0 && (Date.now() - fromFile.data.refreshFailedAt) / 1e3 < NEGATIVE_CACHE_SECONDS) {
+    debugLog("antigravity", "refresh backoff active, skipping refresh attempt");
+    return "backoff";
+  }
+  if (!fromFile.data.accessToken) {
+    return null;
+  }
+  const creds = {
+    accessToken: fromFile.data.accessToken,
+    refreshToken: refreshTokenValue,
+    expiryDate: fromFile.data.expiryDate
+  };
+  return tokenNeedsRefresh2(creds) ? null : creds;
+}
+async function recordRefreshFailure(accountKey) {
+  await saveFileCache(refreshedTokenCachePath(accountKey), {
+    refreshFailedAt: Date.now()
+  });
+}
+async function refreshTokenInternal2(refreshTokenValue, accountKey) {
+  try {
+    debugLog("antigravity", "refreshTokenInternal: attempting refresh...");
+    const response = await fetch(GOOGLE_TOKEN_ENDPOINT2, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshTokenValue,
+        client_id: OAUTH_CLIENT_ID2,
+        client_secret: OAUTH_CLIENT_SECRET2
+      }),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+    });
+    if (!response.ok) {
+      debugLog("antigravity", "refreshTokenInternal: failed", response.status);
+      return null;
+    }
+    const data = await response.json();
+    if (!data.access_token) {
+      debugLog("antigravity", "refreshTokenInternal: no access_token in response");
+      return null;
+    }
+    const expiresInMs = typeof data.expires_in === "number" && Number.isFinite(data.expires_in) ? data.expires_in * 1e3 : 36e5;
+    const newCredentials = {
+      accessToken: data.access_token,
+      refreshToken: refreshTokenValue,
+      expiryDate: Date.now() + expiresInMs
+    };
+    await saveFileCache(refreshedTokenCachePath(accountKey), {
+      accessToken: newCredentials.accessToken,
+      expiryDate: newCredentials.expiryDate
+    });
+    debugLog("antigravity", "refreshTokenInternal: success");
+    return newCredentials;
+  } catch (err) {
+    debugLog("antigravity", "refreshTokenInternal: error", err);
+    return null;
+  }
+}
+function refreshToken2(refreshTokenValue, accountKey) {
+  const pending = pendingRefreshRequests2.get(accountKey);
+  if (pending) {
+    debugLog("antigravity", "refreshToken: using pending refresh request");
+    return pending;
+  }
+  const refreshPromise = (async () => {
+    const refreshed = await refreshTokenInternal2(refreshTokenValue, accountKey);
+    if (!refreshed) {
+      await recordRefreshFailure(accountKey);
+    }
+    return refreshed;
+  })().finally(() => {
+    pendingRefreshRequests2.delete(accountKey);
+  });
+  pendingRefreshRequests2.set(accountKey, refreshPromise);
+  return refreshPromise;
+}
+async function getValidCredentials2(fileCreds, accountKey) {
+  if (!tokenNeedsRefresh2(fileCreds)) {
+    return fileCreds;
+  }
+  if (!fileCreds.refreshToken) {
+    debugLog("antigravity", "getValidCredentials: token expired, no refresh token");
+    return null;
+  }
+  const reused = await getCachedRefreshedCredentials(fileCreds.refreshToken, accountKey);
+  if (reused === "backoff") {
+    return null;
+  }
+  if (reused) {
+    return reused;
+  }
+  debugLog("antigravity", "getValidCredentials: token expired, attempting refresh");
+  return refreshToken2(fileCreds.refreshToken, accountKey);
+}
+async function getAntigravitySettings() {
+  try {
+    const settingsPath = path4.join(os4.homedir(), ANTIGRAVITY_DIR, SETTINGS_FILE2);
+    const fileStat = await stat5(settingsPath);
+    if (cachedSettings2 && cachedSettings2.mtime === fileStat.mtimeMs) {
+      return cachedSettings2.data;
+    }
+    const raw = await readFile5(settingsPath, "utf-8");
+    const json = JSON.parse(raw);
+    const data = {
+      model: typeof json?.model === "string" ? json.model : void 0
+    };
+    cachedSettings2 = { data, mtime: fileStat.mtimeMs };
+    return data;
+  } catch {
+    return null;
+  }
+}
+var projectMetaCacheMap = /* @__PURE__ */ new Map();
+var PROJECT_META_CACHE_TTL_MS = 5 * 60 * 1e3;
+var PROJECT_META_FILE_TTL_SECONDS = 86400;
+async function postCodeAssist(rpc, accessToken, body) {
+  return fetch(`${CODE_ASSIST_ENDPOINT2}/${CODE_ASSIST_API_VERSION2}:${rpc}`, {
+    method: "POST",
+    headers: {
+      "Accept": "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": USER_AGENT,
+      "Authorization": `Bearer ${accessToken}`
+    },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+  });
+}
+async function getProjectMeta(credentials, accountKey) {
+  const cacheFile = fileCachePath(`antigravity-project-${accountKey}.json`);
+  const isUsable = (meta, timestamp) => meta.failedAt === void 0 || (Date.now() - timestamp) / 1e3 < NEGATIVE_CACHE_SECONDS;
+  const cached = projectMetaCacheMap.get(accountKey);
+  if (cached && Date.now() - cached.timestamp < PROJECT_META_CACHE_TTL_MS && isUsable(cached.data, cached.timestamp)) {
+    return cached.data;
+  }
+  const fromFile = await loadFileCache(cacheFile, PROJECT_META_FILE_TTL_SECONDS);
+  if (fromFile && isUsable(fromFile.data, fromFile.timestamp)) {
+    projectMetaCacheMap.set(accountKey, { data: fromFile.data, timestamp: fromFile.timestamp });
+    return fromFile.data;
+  }
+  const failed = async () => {
+    const meta = { projectId: null, failedAt: Date.now() };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  };
+  try {
+    const response = await postCodeAssist("loadCodeAssist", credentials.accessToken, {
+      metadata: CODE_ASSIST_METADATA
+    });
+    if (!response.ok) {
+      debugLog("antigravity", "loadCodeAssist: response not ok", response.status);
+      return failed();
+    }
+    const data = await response.json();
+    const rawProject = data?.cloudaicompanionProject;
+    const projectId = typeof rawProject === "string" ? rawProject : rawProject?.id ?? null;
+    const meta = { projectId, planType: data?.planInfo?.planType };
+    projectMetaCacheMap.set(accountKey, { data: meta, timestamp: Date.now() });
+    await saveFileCache(cacheFile, meta);
+    return meta;
+  } catch (err) {
+    debugLog("antigravity", "loadCodeAssist error:", err);
+    return failed();
+  }
+}
+function isExcludedModelId(modelId) {
+  if (modelId.startsWith("chat_") || modelId.startsWith("tab_") || modelId.startsWith("rev_")) {
+    return true;
+  }
+  return modelId.includes("image") || modelId.includes("mquery") || modelId.includes("lite");
+}
+function usedPercentFrom(quota) {
+  const remaining = quota.remainingFraction;
+  if (remaining === void 0) {
+    return quota.isExhausted ? 100 : null;
+  }
+  const used = remaining <= 1 ? (1 - remaining) * 100 : 100 - remaining;
+  return clampPercent(used);
+}
+function familyLabel(modelId, label) {
+  const haystack = `${modelId} ${label}`.toLowerCase();
+  if (haystack.includes("gemini")) {
+    return "Gemini";
+  }
+  if (haystack.includes("claude") || haystack.includes("gpt")) {
+    return "Claude+GPT";
+  }
+  return label;
+}
+function fetchAntigravityUsage(ttlSeconds = 60) {
+  inFlightFetch ??= fetchAntigravityUsageInternal(ttlSeconds).finally(() => {
+    inFlightFetch = null;
+  });
+  return inFlightFetch;
+}
+async function fetchAntigravityUsageInternal(ttlSeconds) {
+  const fileCreds = await getCredentialsFromFile3();
+  if (!fileCreds) {
+    debugLog("antigravity", "fetchAntigravityUsage: no credentials file");
+    return null;
+  }
+  const accountKey = accountKeyFor(fileCreds);
+  const cacheFile = fileCachePath(`antigravity-usage-${accountKey}.json`);
+  const errCacheFile = fileCachePath(`antigravity-usage-err-${accountKey}.json`);
+  const cached = antigravityCacheMap.get(accountKey);
+  if (cached) {
+    const ageSeconds = (Date.now() - cached.timestamp) / 1e3;
+    const effectiveTtl = cached.isError ? NEGATIVE_CACHE_SECONDS : ttlSeconds;
+    if (ageSeconds < effectiveTtl) {
+      if (cached.isError) {
+        debugLog("antigravity", "Negative cache hit, skipping API call");
+        return null;
+      }
+      debugLog("antigravity", "fetchAntigravityUsage: returning cached data");
+      return cached.data;
+    }
+  }
+  const fileEntry = await loadFileCache(cacheFile, STALE_CACHE_TTL_SECONDS);
+  if (fileEntry && (Date.now() - fileEntry.timestamp) / 1e3 < ttlSeconds) {
+    debugLog("antigravity", "file cache hit");
+    antigravityCacheMap.set(accountKey, { data: fileEntry.data, timestamp: fileEntry.timestamp });
+    return fileEntry.data;
+  }
+  const staleFallback = () => {
+    if (cached && !cached.isError) {
+      debugLog("antigravity", "Returning stale cache data");
+      return cached.data;
+    }
+    if (fileEntry) {
+      debugLog("antigravity", "stale file cache fallback");
+      return fileEntry.data;
+    }
+    return null;
+  };
+  const errEntry = await loadFileCache(errCacheFile, NEGATIVE_CACHE_SECONDS);
+  if (errEntry) {
+    debugLog("antigravity", "cross-process negative cache hit, skipping API call");
+    return staleFallback();
+  }
+  const credentials = await getValidCredentials2(fileCreds, accountKey);
+  if (!credentials) {
+    debugLog("antigravity", "fetchAntigravityUsage: no valid credentials, serving stale");
+    return staleFallback();
+  }
+  const result = await fetchFromAntigravityApi(credentials, accountKey);
+  if (result) {
+    await saveFileCache(cacheFile, result);
+    return result;
+  }
+  debugLog("antigravity", `Setting negative cache for ${NEGATIVE_CACHE_SECONDS}s`);
+  antigravityCacheMap.set(accountKey, {
+    data: null,
+    timestamp: Date.now(),
+    isError: true
+  });
+  await saveFileCache(errCacheFile, { failedAt: Date.now() });
+  return staleFallback();
+}
+async function fetchFromAntigravityApi(credentials, accountKey) {
+  try {
+    debugLog("antigravity", "fetchFromAntigravityApi: starting...");
+    const [meta, settings] = await Promise.all([
+      getProjectMeta(credentials, accountKey),
+      getAntigravitySettings()
+    ]);
+    const response = await postCodeAssist(
+      "fetchAvailableModels",
+      credentials.accessToken,
+      meta.projectId ? { project: meta.projectId } : {}
+    );
+    debugLog("antigravity", "fetchAvailableModels: response status", response.status);
+    if (!response.ok) {
+      return null;
+    }
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      debugLog("antigravity", "fetchAvailableModels: invalid JSON response");
+      return null;
+    }
+    if (!data || typeof data !== "object") {
+      debugLog("antigravity", "fetchAvailableModels: invalid response - not an object");
+      return null;
+    }
+    const models = data.models ?? {};
+    const buckets = [];
+    for (const [modelId, info] of Object.entries(models)) {
+      if (!info.quotaInfo || isExcludedModelId(modelId)) {
+        continue;
+      }
+      buckets.push({
+        modelId,
+        label: info.displayName || modelId,
+        usedPercent: usedPercentFrom(info.quotaInfo),
+        resetAt: info.quotaInfo.resetTime ?? null
+      });
+    }
+    const groupMap = /* @__PURE__ */ new Map();
+    for (const bucket of buckets) {
+      const label = familyLabel(bucket.modelId, bucket.label);
+      let group = groupMap.get(label);
+      if (!group) {
+        group = { label, usedPercent: null, resetAt: null };
+        groupMap.set(label, group);
+      }
+      if (bucket.usedPercent !== null && (group.usedPercent === null || bucket.usedPercent > group.usedPercent)) {
+        group.usedPercent = bucket.usedPercent;
+      }
+      if (bucket.resetAt && (!group.resetAt || Date.parse(bucket.resetAt) < Date.parse(group.resetAt))) {
+        group.resetAt = bucket.resetAt;
+      }
+    }
+    buckets.sort((a, b) => a.label.localeCompare(b.label));
+    const limits = {
+      model: settings?.model,
+      planType: meta.planType,
+      groups: Array.from(groupMap.values()).sort((a, b) => a.label.localeCompare(b.label)),
+      buckets
+    };
+    antigravityCacheMap.set(accountKey, { data: limits, timestamp: Date.now() });
+    debugLog("antigravity", `fetchFromAntigravityApi: success, ${buckets.length} models / ${limits.groups.length} groups`);
+    return limits;
+  } catch (err) {
+    debugLog("antigravity", "fetchFromAntigravityApi: error", err);
+    return null;
+  }
+}
+
 // scripts/utils/provider.ts
 function detectProvider() {
   const baseUrl = process.env.ANTHROPIC_BASE_URL || "";
@@ -1102,32 +1553,8 @@ function getZaiApiBaseUrl() {
   }
 }
 
-// scripts/utils/formatters.ts
-function formatTimeRemaining(resetAt, t) {
-  const reset = typeof resetAt === "string" ? new Date(resetAt) : resetAt;
-  const now = /* @__PURE__ */ new Date();
-  const diffMs = reset.getTime() - now.getTime();
-  if (diffMs <= 0)
-    return `0${t.time.minutes}`;
-  const totalMinutes = Math.floor(diffMs / (1e3 * 60));
-  const totalHours = Math.floor(totalMinutes / 60);
-  const days = Math.floor(totalHours / 24);
-  const hours = totalHours % 24;
-  const minutes = totalMinutes % 60;
-  if (days > 0) {
-    return `${days}${t.time.days}${hours}${t.time.hours}`;
-  }
-  if (hours > 0) {
-    return `${hours}${t.time.hours}${minutes}${t.time.minutes}`;
-  }
-  return `${minutes}${t.time.minutes}`;
-}
-function clampPercent(value) {
-  return Math.min(100, Math.max(0, Math.round(value)));
-}
-
 // scripts/utils/zai-api-client.ts
-var API_TIMEOUT_MS4 = 5e3;
+var API_TIMEOUT_MS5 = 5e3;
 function calculateUsagePercent(currentValue, remaining) {
   const total = currentValue + remaining;
   if (total <= 0) {
@@ -1232,7 +1659,7 @@ async function fetchFromZaiApi(baseUrl, authToken) {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${authToken}`
       },
-      signal: AbortSignal.timeout(API_TIMEOUT_MS4)
+      signal: AbortSignal.timeout(API_TIMEOUT_MS5)
     });
     debugLog("zai", "fetchFromZaiApi: response status", response.status);
     if (!response.ok) {
@@ -1663,6 +2090,7 @@ var ICON = {
   chart: "\u{1F4CA}\uFE0F",
   blueDiamond: "\u{1F537}\uFE0F",
   gem: "\u{1F48E}\uFE0F",
+  antigravity: "\u{1FA90}\uFE0F",
   orangeCircle: "\u{1F7E0}\uFE0F",
   greenCircle: "\u{1F7E2}\uFE0F",
   yellowCircle: "\u{1F7E1}\uFE0F",
@@ -1848,6 +2276,22 @@ function formatUsageRow(label, percent, resetStr) {
   const color = getColorForPercent(percent);
   return `${label}: ${colorize(`${percent}%`, color)}${resetStr ? ` (${resetStr})` : ""}`;
 }
+function renderUsageRows(lines, rows, t) {
+  if (rows.length === 0) {
+    return;
+  }
+  const maxLabelLen = Math.max(...rows.map((r) => r.label.length));
+  for (const row of rows) {
+    const paddedLabel = row.label.padEnd(maxLabelLen);
+    if (row.usedPercent !== null) {
+      const color = getColorForPercent(row.usedPercent);
+      const reset = row.resetAt ? ` (${formatTimeRemaining(row.resetAt, t)})` : "";
+      lines.push(`  ${colorize(paddedLabel, COLORS.pastelGray)}  ${colorize(`${row.usedPercent}%`, color)}${reset}`);
+    } else {
+      lines.push(`  ${colorize(paddedLabel, COLORS.pastelGray)}  ${colorize("--", COLORS.gray)}`);
+    }
+  }
+}
 function renderGenericSection(name, usage, t, extraParts) {
   return renderSection(name, usage, t, (lines) => {
     const parts = [];
@@ -1895,18 +2339,15 @@ function renderGeminiSection(usage, geminiData, t) {
   }
   return renderSection("Gemini", usage, t, (lines) => {
     if (geminiData.buckets && geminiData.buckets.length > 0) {
-      const maxModelLen = Math.max(...geminiData.buckets.map((b) => (b.modelId || "unknown").length));
-      for (const bucket of geminiData.buckets) {
-        const modelName = bucket.modelId || "unknown";
-        const paddedModel = modelName.padEnd(maxModelLen);
-        if (bucket.usedPercent !== null) {
-          const color = getColorForPercent(bucket.usedPercent);
-          const reset = bucket.resetAt ? ` (${formatTimeRemaining(bucket.resetAt, t)})` : "";
-          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
-        } else {
-          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize("--", COLORS.gray)}`);
-        }
-      }
+      renderUsageRows(
+        lines,
+        geminiData.buckets.map((b) => ({
+          label: b.modelId || "unknown",
+          usedPercent: b.usedPercent,
+          resetAt: b.resetAt
+        })),
+        t
+      );
     } else if (geminiData.usedPercent !== null) {
       const color = getColorForPercent(geminiData.usedPercent);
       const reset = geminiData.resetAt ? ` (${formatTimeRemaining(geminiData.resetAt, t)})` : "";
@@ -1915,20 +2356,27 @@ function renderGeminiSection(usage, geminiData, t) {
     }
   });
 }
-function calculateRecommendation(claudeUsage, codexUsage, geminiUsage, zaiUsage, t) {
-  const candidates = [];
-  if (!isZaiProvider() && !claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
-    candidates.push({ name: "claude", score: claudeUsage.fiveHourPercent });
+function renderAntigravitySection(usage, antigravityData, t) {
+  if (!antigravityData) {
+    return renderSection("Antigravity", usage, t, () => {
+    }, false);
   }
-  if (codexUsage && codexUsage.available && !codexUsage.error && codexUsage.fiveHourPercent !== null) {
-    candidates.push({ name: "codex", score: codexUsage.fiveHourPercent });
-  }
-  if (geminiUsage && geminiUsage.available && !geminiUsage.error && geminiUsage.fiveHourPercent !== null) {
-    candidates.push({ name: "gemini", score: geminiUsage.fiveHourPercent });
-  }
-  if (zaiUsage && zaiUsage.available && !zaiUsage.error && zaiUsage.fiveHourPercent !== null) {
-    candidates.push({ name: "z.ai", score: zaiUsage.fiveHourPercent });
-  }
+  return renderSection("Antigravity", usage, t, (lines) => {
+    renderUsageRows(lines, antigravityData.groups, t);
+    const extras = [];
+    if (antigravityData.model) {
+      extras.push(`Model: ${colorize(antigravityData.model, COLORS.pastelGray)}`);
+    }
+    if (antigravityData.planType) {
+      extras.push(`Plan: ${colorize(antigravityData.planType, COLORS.pastelGray)}`);
+    }
+    if (extras.length > 0) {
+      lines.push(`  ${extras.join("  |  ")}`);
+    }
+  });
+}
+function calculateRecommendation(usages, t) {
+  const candidates = usages.filter((u) => u !== null && u.available && !u.error && u.primaryPercent !== null).map((u) => ({ name: u.name.toLowerCase(), score: u.primaryPercent }));
   if (candidates.length === 0) {
     return {
       name: null,
@@ -1945,6 +2393,7 @@ function createNotInstalledResult(name) {
     name,
     available: false,
     error: false,
+    primaryPercent: null,
     fiveHourPercent: null,
     sevenDayPercent: null,
     fiveHourReset: null,
@@ -1956,6 +2405,7 @@ function createErrorResult(name) {
     name,
     available: true,
     error: true,
+    primaryPercent: null,
     fiveHourPercent: null,
     sevenDayPercent: null,
     fiveHourReset: null,
@@ -1970,6 +2420,7 @@ function parseClaudeUsage(limits) {
     name: "Claude",
     available: true,
     error: false,
+    primaryPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
     fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
@@ -1985,6 +2436,7 @@ function parseCodexUsage(limits, installed) {
     name: "Codex",
     available: true,
     error: false,
+    primaryPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
     fiveHourPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
     sevenDayPercent: limits.secondary ? Math.round(limits.secondary.usedPercent) : null,
     fiveHourReset: limits.primary ? new Date(limits.primary.resetAt * 1e3).toISOString() : null,
@@ -2007,12 +2459,49 @@ function parseGeminiUsage(limits, installed) {
     name: "Gemini",
     available: true,
     error: false,
+    primaryPercent: limits.usedPercent,
     fiveHourPercent: limits.usedPercent,
     sevenDayPercent: null,
     fiveHourReset: normalizeToISO(limits.resetAt),
     sevenDayReset: null,
     model: limits.model,
     buckets
+  };
+}
+function parseAntigravityUsage(limits, installed) {
+  if (!installed)
+    return createNotInstalledResult("Antigravity");
+  if (!limits)
+    return createErrorResult("Antigravity");
+  let worst = null;
+  for (const group of limits.groups) {
+    if (group.usedPercent !== null && (worst?.usedPercent == null || group.usedPercent > worst.usedPercent)) {
+      worst = group;
+    }
+  }
+  return {
+    name: "Antigravity",
+    available: true,
+    error: false,
+    // Weekly family-group limits — the tightest group is the primary/7d metric
+    primaryPercent: worst?.usedPercent ?? null,
+    fiveHourPercent: null,
+    sevenDayPercent: worst?.usedPercent ?? null,
+    fiveHourReset: null,
+    sevenDayReset: normalizeToISO(worst?.resetAt ?? null),
+    model: limits.model,
+    plan: limits.planType,
+    groups: limits.groups.map((g) => ({
+      label: g.label,
+      usedPercent: g.usedPercent,
+      resetAt: normalizeToISO(g.resetAt)
+    })),
+    buckets: limits.buckets.map((b) => ({
+      modelId: b.modelId,
+      label: b.label,
+      usedPercent: b.usedPercent,
+      resetAt: normalizeToISO(b.resetAt)
+    }))
   };
 }
 function parseZaiUsage(limits, installed) {
@@ -2024,6 +2513,7 @@ function parseZaiUsage(limits, installed) {
     name: "z.ai",
     available: true,
     error: false,
+    primaryPercent: limits.tokensPercent,
     fiveHourPercent: limits.tokensPercent,
     sevenDayPercent: limits.mcpPercent,
     fiveHourReset: limits.tokensResetAt ? new Date(limits.tokensResetAt).toISOString() : null,
@@ -2050,26 +2540,33 @@ async function main() {
   const [
     claudeLimits,
     codexInstalled,
-    geminiInstalled
+    geminiInstalled,
+    antigravityInstalled
   ] = await Promise.all([
     fetchUsageLimits(CHECK_USAGE_TTL_SECONDS),
     isCodexInstalled(),
-    isGeminiInstalled()
+    isGeminiInstalled(),
+    isAntigravityInstalled()
   ]);
-  const [codexLimits, geminiLimits, zaiLimits] = await Promise.all([
+  const [codexLimits, geminiLimits, antigravityLimits, zaiLimits] = await Promise.all([
     codexInstalled ? fetchCodexUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
     geminiInstalled ? fetchGeminiUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
+    antigravityInstalled ? fetchAntigravityUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
     zaiInstalled ? fetchZaiUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null)
   ]);
   const claudeUsage = parseClaudeUsage(claudeLimits);
   const codexUsage = parseCodexUsage(codexLimits, codexInstalled);
   const geminiUsage = parseGeminiUsage(geminiLimits, geminiInstalled);
+  const antigravityUsage = parseAntigravityUsage(antigravityLimits, antigravityInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
   const recommendation = calculateRecommendation(
-    claudeUsage,
-    codexInstalled ? codexUsage : null,
-    geminiInstalled ? geminiUsage : null,
-    zaiInstalled ? zaiUsage : null,
+    [
+      isZaiProvider() ? null : claudeUsage,
+      codexInstalled ? codexUsage : null,
+      geminiInstalled ? geminiUsage : null,
+      antigravityInstalled ? antigravityUsage : null,
+      zaiInstalled ? zaiUsage : null
+    ],
     t
   );
   if (isJsonMode) {
@@ -2077,6 +2574,7 @@ async function main() {
       claude: claudeUsage,
       codex: codexInstalled ? codexUsage : null,
       gemini: geminiInstalled ? geminiUsage : null,
+      antigravity: antigravityInstalled ? antigravityUsage : null,
       zai: zaiInstalled ? zaiUsage : null,
       recommendation: recommendation.name,
       recommendationReason: recommendation.reason
@@ -2108,6 +2606,13 @@ async function main() {
     const geminiLines = renderGeminiSection(geminiUsage, geminiLimits, t);
     if (geminiLines.length > 0) {
       outputLines.push(...geminiLines);
+      outputLines.push("");
+    }
+  }
+  if (antigravityInstalled) {
+    const antigravityLines = renderAntigravitySection(antigravityUsage, antigravityLimits, t);
+    if (antigravityLines.length > 0) {
+      outputLines.push(...antigravityLines);
       outputLines.push("");
     }
   }
@@ -2145,6 +2650,7 @@ main().catch((err) => {
 export {
   calculateRecommendation,
   normalizeToISO,
+  parseAntigravityUsage,
   parseClaudeUsage,
   parseCodexUsage,
   parseGeminiUsage,

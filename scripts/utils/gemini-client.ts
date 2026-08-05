@@ -37,7 +37,7 @@ const CODE_ASSIST_API_VERSION = 'v1internal';
 // Note: Client secret is safe to embed per Google's installed app guidelines
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const OAUTH_CLIENT_ID = '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com';
-const OAUTH_CLIENT_SECRET = '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';
+const OAUTH_CLIENT_SECRET = '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'; // gitleaks:allow
 
 // Token refresh buffer (refresh 5 minutes before expiry)
 const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;

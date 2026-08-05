@@ -198,7 +198,7 @@ sidebar:
 
 - **ID**: `geminiUsage`
 - **데이터 소스**: Gemini API (Google Code Assist)
-- **표시 내용**: Google Gemini CLI의 현재 모델 사용률. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다.
+- **표시 내용**: Google Gemini CLI의 현재 모델 사용률. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다. (Gemini CLI 개인 티어는 2026-06-18 종료, enterprise는 계속 지원)
 - **출력 예시**: `💎 gemini 2.5-pro 45%`
 
 ### geminiUsageAll
@@ -207,6 +207,20 @@ sidebar:
 - **데이터 소스**: Gemini API (Google Code Assist)
 - **표시 내용**: Google Gemini CLI의 모든 모델 버킷 사용률. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다.
 - **출력 예시**: `💎 2.5-pro:45% 2.5-flash:20%`
+
+### antigravityUsage
+
+- **ID**: `antigravityUsage`
+- **데이터 소스**: Antigravity API (Google Code Assist)
+- **표시 내용**: Google Antigravity CLI — 모델 패밀리별 주간 quota 그룹 (Gemini / Claude+GPT). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+- **출력 예시**: `🪐️ Gemini 27% (6d22h) │ Claude+GPT 39% (6d19h)`
+
+### antigravityUsageAll
+
+- **ID**: `antigravityUsageAll`
+- **데이터 소스**: Antigravity API (Google Code Assist)
+- **표시 내용**: Google Antigravity CLI — 모델별 quota 상세 (모델 표시 이름 사용). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+- **출력 예시**: `🪐️ Gemini 3.6 Flash: 27% │ Claude Opus: 39%`
 
 ### zaiUsage
 

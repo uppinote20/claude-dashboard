@@ -3,7 +3,7 @@
 ![License](https://img.shields.io/github/license/uppinote20/claude-dashboard)
 ![Stars](https://img.shields.io/github/stars/uppinote20/claude-dashboard)
 
-Comprehensive status line plugin for Claude Code — unified usage monitoring across Claude, Codex, Gemini, and z.ai CLIs, with context, rate limits, cost tracking, and a modular widget system.
+Comprehensive status line plugin for Claude Code — unified usage monitoring across Claude, Codex, Gemini, Antigravity, and z.ai CLIs, with context, rate limits, cost tracking, and a modular widget system.
 
 ## Demo
 
@@ -46,9 +46,9 @@ git clone https://github.com/uppinote20/claude-dashboard.git "${CLAUDE_CONFIG_DI
 
 ![Detailed](images/detailed.png)
 
-> Adds depletion time, config counts, tool/agent status, cache hit, performance badge, token breakdown, forecast, budget, Codex/Gemini usage
+> Adds depletion time, config counts, tool/agent status, cache hit, performance badge, token breakdown, forecast, budget, Codex/Gemini/Antigravity usage
 
-Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
+Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected when installed.
 
 
 ## Widgets
@@ -81,6 +81,8 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | **Multi-CLI** | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed)² |
 | | `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed)³ |
 | | `geminiUsageAll` | Google Gemini CLI - all models (auto-hide if not installed)³ |
+| | `antigravityUsage` | Google Antigravity CLI - weekly quota by model family (auto-hide if not installed)⁸ |
+| | `antigravityUsageAll` | Google Antigravity CLI - per-model quota (auto-hide if not installed)⁸ |
 | | `zaiUsage` | z.ai/ZHIPU usage (auto-hide if not using z.ai)⁴ |
 | **Insights** | `tokenBreakdown` | Input/output/cache write/read token breakdown |
 | | `performance` | Composite efficiency badge (cache hit + output ratio) |
@@ -99,7 +101,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini auto-detected when installed.
 | | `apiDuration` | API time as % of total session time |
 
 > ¹ Assumes all utilization came from this session; improves as session runs longer.
-> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found. ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config. ⁶ Peak = weekdays 5-11 AM PT; shows countdown to next transition. ⁷ Uses `tagPatterns` config (default `["v*"]`); auto-hides when no pattern matches a reachable tag.
+> ² Auto-hides if `~/.codex/auth.json` not found. ³ Auto-hides if `~/.gemini/oauth_creds.json` not found — Gemini CLI personal tiers were retired 2026-06-18 in favor of Antigravity CLI (enterprise still supported). ⁴ Auto-hides if not detected via `ANTHROPIC_BASE_URL`. ⁵ Requires `"dailyBudget"` in config. ⁶ Peak = weekdays 5-11 AM PT; shows countdown to next transition. ⁷ Uses `tagPatterns` config (default `["v*"]`); auto-hides when no pattern matches a reachable tag. ⁸ Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` not found.
 
 i18n: English and Korean supported (auto-detect or set via setup).
 
@@ -134,7 +136,7 @@ i18n: English and Korean supported (auto-detect or set via setup).
 |------|-------|---------|
 | `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage |
 | `normal` | 2 | + projectInfo, sessionId, sessionDuration, burnRate, todoProgress |
-| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus |
+| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus |
 
 **Configuration file** (`~/.claude/claude-dashboard.local.json`):
 
@@ -188,7 +190,7 @@ Configure the status line display mode, language, and plan. See [Configuration](
 
 ### `/claude-dashboard:check-usage`
 
-Check usage limits for all AI CLIs (Claude, Codex, Gemini, z.ai) at once and get a recommendation for which CLI has the most available capacity.
+Check usage limits for all AI CLIs (Claude, Codex, Gemini, Antigravity, z.ai) at once and get a recommendation for which CLI has the most available capacity.
 
 ```bash
 /claude-dashboard:check-usage              # Interactive output with colors

@@ -10,6 +10,7 @@
 import { fetchUsageLimits } from './utils/api-client.js';
 import { fetchCodexUsage, isCodexInstalled } from './utils/codex-client.js';
 import { fetchGeminiUsage, isGeminiInstalled } from './utils/gemini-client.js';
+import { fetchAntigravityUsage, isAntigravityInstalled } from './utils/antigravity-client.js';
 import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-api-client.js';
 import { isZaiProvider } from './utils/provider.js';
 import { formatTimeRemaining } from './utils/formatters.js';
@@ -20,6 +21,7 @@ import type {
   UsageLimits,
   CodexUsageLimits,
   GeminiUsageLimits,
+  AntigravityUsageLimits,
   Translations,
   CLIUsageInfo,
   BucketUsageInfo,
@@ -99,6 +101,31 @@ function formatUsageRow(label: string, percent: number, resetStr: string): strin
 }
 
 /**
+ * Render aligned label/percent rows — shared by bucket- and group-based sections
+ */
+function renderUsageRows(
+  lines: string[],
+  rows: Array<{ label: string; usedPercent: number | null; resetAt: string | null }>,
+  t: Translations
+): void {
+  if (rows.length === 0) {
+    return;
+  }
+  const maxLabelLen = Math.max(...rows.map((r) => r.label.length));
+
+  for (const row of rows) {
+    const paddedLabel = row.label.padEnd(maxLabelLen);
+    if (row.usedPercent !== null) {
+      const color = getColorForPercent(row.usedPercent);
+      const reset = row.resetAt ? ` (${formatTimeRemaining(row.resetAt, t)})` : '';
+      lines.push(`  ${colorize(paddedLabel, COLORS.pastelGray)}  ${colorize(`${row.usedPercent}%`, color)}${reset}`);
+    } else {
+      lines.push(`  ${colorize(paddedLabel, COLORS.pastelGray)}  ${colorize('--', COLORS.gray)}`);
+    }
+  }
+}
+
+/**
  * Render Claude/z.ai-style section from CLIUsageInfo
  */
 function renderGenericSection(
@@ -173,22 +200,15 @@ function renderGeminiSection(
 
   return renderSection('Gemini', usage, t, (lines) => {
     if (geminiData.buckets && geminiData.buckets.length > 0) {
-      const maxModelLen = Math.max(...geminiData.buckets.map(b => (b.modelId || 'unknown').length));
-
-      for (const bucket of geminiData.buckets) {
-        const modelName = bucket.modelId || 'unknown';
-        const paddedModel = modelName.padEnd(maxModelLen);
-
-        if (bucket.usedPercent !== null) {
-          const color = getColorForPercent(bucket.usedPercent);
-          const reset = bucket.resetAt
-            ? ` (${formatTimeRemaining(bucket.resetAt, t)})`
-            : '';
-          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize(`${bucket.usedPercent}%`, color)}${reset}`);
-        } else {
-          lines.push(`  ${colorize(paddedModel, COLORS.pastelGray)}  ${colorize('--', COLORS.gray)}`);
-        }
-      }
+      renderUsageRows(
+        lines,
+        geminiData.buckets.map((b) => ({
+          label: b.modelId || 'unknown',
+          usedPercent: b.usedPercent,
+          resetAt: b.resetAt,
+        })),
+        t
+      );
     } else if (geminiData.usedPercent !== null) {
       const color = getColorForPercent(geminiData.usedPercent);
       const reset = geminiData.resetAt
@@ -201,37 +221,46 @@ function renderGeminiSection(
 }
 
 /**
+ * Render Antigravity-specific section with model-family groups
+ */
+function renderAntigravitySection(
+  usage: CLIUsageInfo,
+  antigravityData: AntigravityUsageLimits | null,
+  t: Translations
+): string[] {
+  if (!antigravityData) {
+    return renderSection('Antigravity', usage, t, () => {}, false);
+  }
+
+  return renderSection('Antigravity', usage, t, (lines) => {
+    renderUsageRows(lines, antigravityData.groups, t);
+
+    const extras: string[] = [];
+    if (antigravityData.model) {
+      extras.push(`Model: ${colorize(antigravityData.model, COLORS.pastelGray)}`);
+    }
+    if (antigravityData.planType) {
+      extras.push(`Plan: ${colorize(antigravityData.planType, COLORS.pastelGray)}`);
+    }
+    if (extras.length > 0) {
+      lines.push(`  ${extras.join('  |  ')}`);
+    }
+  });
+}
+
+/**
  * Calculate recommendation based on lowest usage
  */
 export function calculateRecommendation(
-  claudeUsage: CLIUsageInfo,
-  codexUsage: CLIUsageInfo | null,
-  geminiUsage: CLIUsageInfo | null,
-  zaiUsage: CLIUsageInfo | null,
+  usages: Array<CLIUsageInfo | null>,
   t: Translations
 ): { name: string | null; reason: string } {
-  const candidates: { name: string; score: number }[] = [];
-
-  // Claude score (lower is better - using 5h as primary metric)
-  // Exclude from recommendations when using z.ai provider (different quota system)
-  if (!isZaiProvider() && !claudeUsage.error && claudeUsage.fiveHourPercent !== null) {
-    candidates.push({ name: 'claude', score: claudeUsage.fiveHourPercent });
-  }
-
-  // Codex score
-  if (codexUsage && codexUsage.available && !codexUsage.error && codexUsage.fiveHourPercent !== null) {
-    candidates.push({ name: 'codex', score: codexUsage.fiveHourPercent });
-  }
-
-  // Gemini score (uses single usage percent)
-  if (geminiUsage && geminiUsage.available && !geminiUsage.error && geminiUsage.fiveHourPercent !== null) {
-    candidates.push({ name: 'gemini', score: geminiUsage.fiveHourPercent });
-  }
-
-  // z.ai score (uses token percent as primary metric)
-  if (zaiUsage && zaiUsage.available && !zaiUsage.error && zaiUsage.fiveHourPercent !== null) {
-    candidates.push({ name: 'z.ai', score: zaiUsage.fiveHourPercent });
-  }
+  // Each CLI exposes its own primary metric via primaryPercent (5h window for
+  // Claude/Codex/Gemini, weekly family limit for Antigravity, token bucket for
+  // z.ai); pass null to exclude a CLI from scoring.
+  const candidates = usages
+    .filter((u): u is CLIUsageInfo => u !== null && u.available && !u.error && u.primaryPercent !== null)
+    .map((u) => ({ name: u.name.toLowerCase(), score: u.primaryPercent! }));
 
   if (candidates.length === 0) {
     return {
@@ -257,6 +286,7 @@ function createNotInstalledResult(name: string): CLIUsageInfo {
     name,
     available: false,
     error: false,
+    primaryPercent: null,
     fiveHourPercent: null,
     sevenDayPercent: null,
     fiveHourReset: null,
@@ -272,6 +302,7 @@ function createErrorResult(name: string): CLIUsageInfo {
     name,
     available: true,
     error: true,
+    primaryPercent: null,
     fiveHourPercent: null,
     sevenDayPercent: null,
     fiveHourReset: null,
@@ -292,6 +323,7 @@ export function parseClaudeUsage(limits: UsageLimits | null): CLIUsageInfo {
     name: 'Claude',
     available: true,
     error: false,
+    primaryPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
     fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
@@ -310,6 +342,7 @@ export function parseCodexUsage(limits: CodexUsageLimits | null, installed: bool
     name: 'Codex',
     available: true,
     error: false,
+    primaryPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
     fiveHourPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
     sevenDayPercent: limits.secondary ? Math.round(limits.secondary.usedPercent) : null,
     fiveHourReset: limits.primary ? new Date(limits.primary.resetAt * 1000).toISOString() : null,
@@ -337,12 +370,55 @@ export function parseGeminiUsage(limits: GeminiUsageLimits | null, installed: bo
     name: 'Gemini',
     available: true,
     error: false,
+    primaryPercent: limits.usedPercent,
     fiveHourPercent: limits.usedPercent,
     sevenDayPercent: null,
     fiveHourReset: normalizeToISO(limits.resetAt),
     sevenDayReset: null,
     model: limits.model,
     buckets,
+  };
+}
+
+/**
+ * Parse Antigravity usage limits.
+ * Quota is a weekly per-family limit; the tightest group is exposed as the
+ * 7d metric and groups map to buckets for JSON consumers.
+ */
+export function parseAntigravityUsage(limits: AntigravityUsageLimits | null, installed: boolean): CLIUsageInfo {
+  if (!installed) return createNotInstalledResult('Antigravity');
+  if (!limits) return createErrorResult('Antigravity');
+
+  let worst: AntigravityUsageLimits['groups'][number] | null = null;
+  for (const group of limits.groups) {
+    if (group.usedPercent !== null && (worst?.usedPercent == null || group.usedPercent > worst.usedPercent)) {
+      worst = group;
+    }
+  }
+
+  return {
+    name: 'Antigravity',
+    available: true,
+    error: false,
+    // Weekly family-group limits — the tightest group is the primary/7d metric
+    primaryPercent: worst?.usedPercent ?? null,
+    fiveHourPercent: null,
+    sevenDayPercent: worst?.usedPercent ?? null,
+    fiveHourReset: null,
+    sevenDayReset: normalizeToISO(worst?.resetAt ?? null),
+    model: limits.model,
+    plan: limits.planType,
+    groups: limits.groups.map((g) => ({
+      label: g.label,
+      usedPercent: g.usedPercent,
+      resetAt: normalizeToISO(g.resetAt),
+    })),
+    buckets: limits.buckets.map((b) => ({
+      modelId: b.modelId,
+      label: b.label,
+      usedPercent: b.usedPercent,
+      resetAt: normalizeToISO(b.resetAt),
+    })),
   };
 }
 
@@ -357,6 +433,7 @@ export function parseZaiUsage(limits: ZaiUsageLimits | null, installed: boolean)
     name: 'z.ai',
     available: true,
     error: false,
+    primaryPercent: limits.tokensPercent,
     fiveHourPercent: limits.tokensPercent,
     sevenDayPercent: limits.mcpPercent,
     fiveHourReset: limits.tokensResetAt ? new Date(limits.tokensResetAt).toISOString() : null,
@@ -393,16 +470,19 @@ async function main(): Promise<void> {
     claudeLimits,
     codexInstalled,
     geminiInstalled,
+    antigravityInstalled,
   ] = await Promise.all([
     fetchUsageLimits(CHECK_USAGE_TTL_SECONDS),
     isCodexInstalled(),
     isGeminiInstalled(),
+    isAntigravityInstalled(),
   ]);
 
   // Fetch Codex, Gemini, and z.ai only if installed
-  const [codexLimits, geminiLimits, zaiLimits] = await Promise.all([
+  const [codexLimits, geminiLimits, antigravityLimits, zaiLimits] = await Promise.all([
     codexInstalled ? fetchCodexUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
     geminiInstalled ? fetchGeminiUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
+    antigravityInstalled ? fetchAntigravityUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
     zaiInstalled ? fetchZaiUsage(CHECK_USAGE_TTL_SECONDS) : Promise.resolve(null),
   ]);
 
@@ -410,14 +490,19 @@ async function main(): Promise<void> {
   const claudeUsage = parseClaudeUsage(claudeLimits);
   const codexUsage = parseCodexUsage(codexLimits, codexInstalled);
   const geminiUsage = parseGeminiUsage(geminiLimits, geminiInstalled);
+  const antigravityUsage = parseAntigravityUsage(antigravityLimits, antigravityInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
 
   // Calculate recommendation
+  // z.ai provider replaces the Anthropic quota system, so Claude is excluded there
   const recommendation = calculateRecommendation(
-    claudeUsage,
-    codexInstalled ? codexUsage : null,
-    geminiInstalled ? geminiUsage : null,
-    zaiInstalled ? zaiUsage : null,
+    [
+      isZaiProvider() ? null : claudeUsage,
+      codexInstalled ? codexUsage : null,
+      geminiInstalled ? geminiUsage : null,
+      antigravityInstalled ? antigravityUsage : null,
+      zaiInstalled ? zaiUsage : null,
+    ],
     t
   );
 
@@ -427,6 +512,7 @@ async function main(): Promise<void> {
       claude: claudeUsage,
       codex: codexInstalled ? codexUsage : null,
       gemini: geminiInstalled ? geminiUsage : null,
+      antigravity: antigravityInstalled ? antigravityUsage : null,
       zai: zaiInstalled ? zaiUsage : null,
       recommendation: recommendation.name,
       recommendationReason: recommendation.reason,
@@ -467,6 +553,15 @@ async function main(): Promise<void> {
     const geminiLines = renderGeminiSection(geminiUsage, geminiLimits, t);
     if (geminiLines.length > 0) {
       outputLines.push(...geminiLines);
+      outputLines.push('');
+    }
+  }
+
+  // Antigravity section
+  if (antigravityInstalled) {
+    const antigravityLines = renderAntigravitySection(antigravityUsage, antigravityLimits, t);
+    if (antigravityLines.length > 0) {
+      outputLines.push(...antigravityLines);
       outputLines.push('');
     }
   }

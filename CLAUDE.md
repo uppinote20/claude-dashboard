@@ -43,7 +43,9 @@ claude-dashboard/
 │   │   ├── depletion-time.ts # Depletion time widget
 │   │   ├── codex-usage.ts   # Codex CLI usage widget
 │   │   ├── gemini-usage.ts  # Gemini CLI usage widget
+│   │   ├── antigravity-usage.ts # Antigravity CLI usage widget
 │   │   ├── zai-usage.ts     # z.ai/ZHIPU usage widget
+│   │   ├── usage-format.ts  # Shared percent + reset countdown formatter
 │   │   ├── token-breakdown.ts # Token breakdown widget
 │   │   ├── performance.ts   # Performance badge widget
 │   │   ├── forecast.ts      # Cost forecast widget
@@ -57,6 +59,7 @@ claude-dashboard/
 │       ├── api-client.ts    # OAuth API client with caching
 │       ├── codex-client.ts  # Codex CLI API client
 │       ├── gemini-client.ts # Gemini CLI API client
+│       ├── antigravity-client.ts # Antigravity CLI API client
 │       ├── zai-api-client.ts # z.ai/ZHIPU API client
 │       ├── provider.ts      # Provider detection (anthropic/zai/zhipu)
 │       ├── colors.ts        # ANSI color codes + theme system
@@ -108,6 +111,7 @@ claude-dashboard/
 | API 클라이언트 | `scripts/utils/api-client.ts` |
 | Cross-process file cache | `scripts/utils/file-cache.ts` |
 | 포매팅 유틸리티 | `scripts/utils/formatters.ts` |
+| 외부 CLI 사용량 표시 (퍼센트 + 리셋) | `scripts/widgets/usage-format.ts` |
 | 이모지 아이콘 (단일 출처) | `scripts/utils/emoji.ts` |
 | Registry invariant 테스트 | `scripts/__tests__/emoji.test.ts` |
 
@@ -150,8 +154,10 @@ interface Widget<T extends WidgetData> {
 | `cacheHit` | stdin | Cache hit rate percentage |
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model, 5h, 7d) |
-| `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only) |
+| `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |
 | `geminiUsageAll` | Gemini API | Google Gemini CLI usage (all model buckets) |
+| `antigravityUsage` | Antigravity API | Google Antigravity CLI weekly quota by model family (Gemini / Claude+GPT). Auto-hides without `~/.gemini/antigravity-cli/antigravity-oauth-token` |
+| `antigravityUsageAll` | Antigravity API | Google Antigravity CLI per-model quota buckets |
 | `zaiUsage` | z.ai API | z.ai/ZHIPU GLM usage (5h tokens, 1m MCP) |
 | `tokenBreakdown` | stdin | Input/output/cache write/read token breakdown |
 | `performance` | stdin + session | Composite efficiency badge (cache hit + output ratio) |
@@ -179,18 +185,18 @@ type DisplayMode = 'compact' | 'normal' | 'detailed' | 'custom';
 // Additive approach: each mode adds lines, widgets stay in same position
 const DISPLAY_PRESETS = {
   compact: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'rateLimit7dFable', 'zaiUsage'],
   ],
   normal: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'rateLimit7dFable', 'zaiUsage'],
     ['projectInfo', 'sessionId', 'sessionDuration', 'burnRate', 'todoProgress'],
   ],
   detailed: [
-    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'zaiUsage'],
+    ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'rateLimit7dFable', 'zaiUsage'],
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
-    ['codexUsage', 'geminiUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
+    ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
   ],
 };
@@ -226,6 +232,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
+| `^` | antigravityUsage | | |
 
 ### Theme System
 
@@ -305,11 +312,14 @@ Before committing:
 
 1. Create `scripts/widgets/{widget-name}.ts`
 2. Implement `Widget` interface with `getData()` and `render()`
-3. Add widget ID to `WidgetId` type in `types.ts`
+3. Add widget ID to `WidgetId` type in `types.ts` (+ data type to the `WidgetData` union)
 4. Register widget in `scripts/widgets/index.ts`
-5. Add translations to `locales/*.json` if needed
-6. Update `DISPLAY_PRESETS` if adding to default modes
-7. Rebuild and test
+5. Add icon to `scripts/utils/emoji.ts` (value must end with U+FE0F) and a `PRESET_CHAR_MAP` char if needed
+6. Add translations to `locales/*.json` if needed
+7. Update `DISPLAY_PRESETS` if adding to default modes
+8. API-backed widget with its own file cache? Add the prefix to `CLEANABLE_PREFIXES` in `scripts/utils/file-cache.ts`
+9. Update docs: `README.md`, this file's tables, `commands/setup.md`, `website/src/content/docs/` (EN + KO)
+10. Rebuild and test
 
 ### Adding a new locale
 
@@ -353,7 +363,7 @@ Before committing:
 
 - **Trigger**: Time-based (once per hour maximum)
 - **Target**: Files older than `CACHE_MAX_AGE_SECONDS` (1 hour)
-- **Pattern**: `cache-*.json` (Anthropic), `codex-usage-*.json`, `gemini-usage-*.json`, `zai-usage-*.json` in cache directory
+- **Pattern**: `cache-*.json` (Anthropic), `codex-usage-*.json`, `gemini-usage-*.json`, `antigravity-usage-*.json`, `antigravity-token-*.json`, `zai-usage-*.json` in cache directory
 
 ### Request Deduplication
 

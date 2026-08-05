@@ -13,6 +13,9 @@
  * @covers scripts/widgets/depletion-time.ts
  * @covers scripts/widgets/codex-usage.ts
  * @covers scripts/widgets/gemini-usage.ts
+ * @covers scripts/widgets/antigravity-usage.ts
+ * @covers scripts/widgets/usage-format.ts
+ * @covers scripts/widgets/index.ts
  * @covers scripts/widgets/config-counts.ts
  * @covers scripts/widgets/session-duration.ts
  * @covers scripts/widgets/version.ts
@@ -33,6 +36,11 @@
  * @covers scripts/widgets/tag-status.ts
  * @covers scripts/widgets/slash-command.ts
  * @covers scripts/widgets/agent-mode.ts
+ * @covers scripts/utils/transcript-parser.ts
+ * @covers scripts/utils/session.ts
+ * @covers scripts/utils/budget.ts
+ * @covers scripts/utils/codex-client.ts
+ * @covers scripts/utils/git.ts (countUntrackedLines via mock)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { modelWidget, getDefaultEffort } from '../widgets/model.js';
@@ -52,6 +60,8 @@ import { cacheHitWidget } from '../widgets/cache-hit.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
 import { codexUsageWidget } from '../widgets/codex-usage.js';
 import { geminiUsageWidget } from '../widgets/gemini-usage.js';
+import { antigravityUsageWidget, antigravityUsageAllWidget } from '../widgets/antigravity-usage.js';
+import { getWidget } from '../widgets/index.js';
 import { configCountsWidget } from '../widgets/config-counts.js';
 import { sessionDurationWidget } from '../widgets/session-duration.js';
 import { versionWidget } from '../widgets/version.js';
@@ -78,10 +88,12 @@ import * as zaiClient from '../utils/zai-api-client.js';
 import * as historyParser from '../utils/history-parser.js';
 import * as gitUtils from '../utils/git.js';
 import * as geminiClient from '../utils/gemini-client.js';
+import * as antigravityClient from '../utils/antigravity-client.js';
 import * as sessionUtils from '../utils/session.js';
 import * as budgetUtils from '../utils/budget.js';
 import * as transcriptParser from '../utils/transcript-parser.js';
 import type { WidgetContext, StdinInput, ModelData } from '../types.js';
+import { PRESET_CHAR_MAP } from '../types.js';
 import { MOCK_TRANSLATIONS, MOCK_CONFIG, MOCK_STDIN } from './fixtures.js';
 
 // Mock version module for codex-client
@@ -1267,6 +1279,149 @@ describe('widgets', () => {
       expect(result).toContain(ICON.gem);
       expect(result).toContain('gemini');
       expect(result).toContain(ICON.warning);
+    });
+  });
+
+  describe('antigravityUsageWidget', () => {
+    it('should have correct id and name', () => {
+      expect(antigravityUsageWidget.id).toBe('antigravityUsage');
+      expect(antigravityUsageWidget.name).toBe('Antigravity Usage');
+    });
+
+    it('should return null when Antigravity is not installed', async () => {
+      vi.spyOn(antigravityClient, 'isAntigravityInstalled').mockResolvedValue(false);
+
+      const ctx = createContext();
+      const data = await antigravityUsageWidget.getData(ctx);
+
+      expect(data).toBeNull();
+    });
+
+    it('should return family groups when API call succeeds', async () => {
+      vi.spyOn(antigravityClient, 'isAntigravityInstalled').mockResolvedValue(true);
+      vi.spyOn(antigravityClient, 'fetchAntigravityUsage').mockResolvedValue({
+        model: 'Gemini 3.6 Flash (Low)',
+        planType: 'free',
+        groups: [
+          { label: 'Gemini', usedPercent: 27, resetAt: '2026-08-11T00:00:00Z' },
+          { label: 'Claude+GPT', usedPercent: 39, resetAt: '2026-08-10T21:00:00Z' },
+        ],
+        buckets: [
+          { modelId: 'gemini-3-6-flash', label: 'Gemini 3.6 Flash', usedPercent: 27, resetAt: '2026-08-11T00:00:00Z' },
+        ],
+      });
+
+      const ctx = createContext();
+      const data = await antigravityUsageWidget.getData(ctx);
+
+      expect(data).not.toBeNull();
+      expect(data?.groups).toHaveLength(2);
+      expect(data?.groups[0].label).toBe('Gemini');
+      expect(data?.groups[1].usedPercent).toBe(39);
+    });
+
+    it('should return error state when API call fails', async () => {
+      vi.spyOn(antigravityClient, 'isAntigravityInstalled').mockResolvedValue(true);
+      vi.spyOn(antigravityClient, 'fetchAntigravityUsage').mockResolvedValue(null);
+
+      const ctx = createContext();
+      const data = await antigravityUsageWidget.getData(ctx);
+
+      expect(data?.isError).toBe(true);
+      expect(data?.groups).toHaveLength(0);
+    });
+
+    it('should render family groups with percentages', () => {
+      const ctx = createContext();
+      const data = {
+        groups: [
+          { label: 'Gemini', usedPercent: 27, resetAt: null },
+          { label: 'Claude+GPT', usedPercent: 39, resetAt: null },
+        ],
+      };
+      const result = antigravityUsageWidget.render(data, ctx);
+
+      expect(result).toContain(ICON.antigravity);
+      expect(result).toContain('Gemini');
+      expect(result).toContain('27%');
+      expect(result).toContain('Claude+GPT');
+      expect(result).toContain('39%');
+    });
+
+    it('should render placeholder for group without percentage', () => {
+      const ctx = createContext();
+      const data = { groups: [{ label: 'Gemini', usedPercent: null, resetAt: null }] };
+      const result = antigravityUsageWidget.render(data, ctx);
+
+      expect(result).toContain('Gemini');
+      expect(result).toContain('--');
+      expect(result).not.toContain('%');
+    });
+
+    it('should render error indicator when isError is true', () => {
+      const ctx = createContext();
+      const data = { groups: [], isError: true };
+      const result = antigravityUsageWidget.render(data, ctx);
+
+      expect(result).toContain(ICON.antigravity);
+      expect(result).toContain('Antigravity');
+      expect(result).toContain(ICON.warning);
+    });
+  });
+
+  describe('antigravityUsageAllWidget', () => {
+    it('should have correct id and name', () => {
+      expect(antigravityUsageAllWidget.id).toBe('antigravityUsageAll');
+      expect(antigravityUsageAllWidget.name).toBe('Antigravity Usage All');
+    });
+
+    it('should return per-model buckets when API call succeeds', async () => {
+      vi.spyOn(antigravityClient, 'isAntigravityInstalled').mockResolvedValue(true);
+      vi.spyOn(antigravityClient, 'fetchAntigravityUsage').mockResolvedValue({
+        groups: [{ label: 'Gemini', usedPercent: 27, resetAt: null }],
+        buckets: [
+          { modelId: 'gemini-3-6-flash', label: 'Gemini 3.6 Flash', usedPercent: 27, resetAt: null },
+          { modelId: 'claude-opus', label: 'Claude Opus', usedPercent: 39, resetAt: null },
+        ],
+      });
+
+      const ctx = createContext();
+      const data = await antigravityUsageAllWidget.getData(ctx);
+
+      expect(data?.buckets).toHaveLength(2);
+      expect(data?.buckets[0].label).toBe('Gemini 3.6 Flash');
+    });
+
+    it('should render every bucket label', () => {
+      const ctx = createContext();
+      const data = {
+        buckets: [
+          { modelId: 'gemini-3-6-flash', label: 'Gemini 3.6 Flash', usedPercent: 27, resetAt: null },
+          { modelId: 'claude-opus', label: 'Claude Opus', usedPercent: 39, resetAt: null },
+        ],
+      };
+      const result = antigravityUsageAllWidget.render(data, ctx);
+
+      expect(result).toContain('Gemini 3.6 Flash');
+      expect(result).toContain('Claude Opus');
+      expect(result).toContain('27%');
+      expect(result).toContain('39%');
+    });
+
+    it('should render error indicator when isError is true', () => {
+      const ctx = createContext();
+      const data = { buckets: [], isError: true };
+      const result = antigravityUsageAllWidget.render(data, ctx);
+
+      expect(result).toContain(ICON.warning);
+    });
+  });
+
+  describe('antigravity widget registration', () => {
+    it('should register both widgets and the ^ preset char', () => {
+      expect(getWidget('antigravityUsage')).toBe(antigravityUsageWidget);
+      expect(getWidget('antigravityUsageAll')).toBe(antigravityUsageAllWidget);
+      expect(PRESET_CHAR_MAP['^']).toBe('antigravityUsage');
     });
   });
 

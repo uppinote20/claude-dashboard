@@ -69,10 +69,11 @@ rm -rf ~/.cache/claude-dashboard/
 
 ## 멀티 CLI 위젯이 표시되지 않는 경우
 
-Codex, Gemini, z.ai 위젯은 해당 CLI가 설치되어 있을 때만 표시됩니다:
+Codex, Gemini, Antigravity, z.ai 위젯은 해당 CLI가 설치되어 있을 때만 표시됩니다:
 
 - **Codex**: `~/.codex/auth.json` 파일이 필요합니다. Codex CLI를 설치하고 인증을 완료하세요.
 - **Gemini**: `~/.gemini/oauth_creds.json` 파일이 필요합니다. Gemini CLI를 설치하고 인증을 완료하세요.
+- **Antigravity**: `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다. Antigravity CLI를 설치하고 인증을 완료하세요.
 - **z.ai**: `ANTHROPIC_BASE_URL` 환경 변수를 통해 z.ai가 감지되어야 합니다.
 
 해당 파일이나 설정이 없으면 관련 위젯은 자동으로 숨겨지며, 오류가 발생하지 않습니다.

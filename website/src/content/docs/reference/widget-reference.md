@@ -350,7 +350,7 @@ codex o4-mini 5h:30% 7d:45%
 |----------|-------|
 | **Widget ID** | `geminiUsage` |
 | **Data Source** | Gemini API (Code Assist) |
-| **Description** | Shows Google Gemini CLI usage for the current model only. Auto-hides if `~/.gemini/oauth_creds.json` is not found. |
+| **Description** | Shows Google Gemini CLI usage for the current model only. Auto-hides if `~/.gemini/oauth_creds.json` is not found. (Gemini CLI personal tiers retired 2026-06-18; enterprise still supported) |
 
 **Example output:**
 ```
@@ -368,6 +368,32 @@ gemini 2.5-pro 60%
 **Example output:**
 ```
 gemini pro:60% flash:20%
+```
+
+### antigravityUsage
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `antigravityUsage` |
+| **Data Source** | Antigravity API (Code Assist) |
+| **Description** | Shows Google Antigravity CLI weekly quota grouped by model family, such as Gemini and Claude+GPT. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found. |
+
+**Example output:**
+```
+🪐️ Gemini 27% (6d22h) │ Claude+GPT 39% (6d19h)
+```
+
+### antigravityUsageAll
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `antigravityUsageAll` |
+| **Data Source** | Antigravity API (Code Assist) |
+| **Description** | Shows Google Antigravity CLI weekly quota for every model bucket, using each model's display name. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found. |
+
+**Example output:**
+```
+🪐️ Gemini 3.6 Flash: 27% │ Claude Opus: 39%
 ```
 
 ### zaiUsage

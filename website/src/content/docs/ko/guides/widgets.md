@@ -63,7 +63,9 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 | Codex 사용량 | `codexUsage` | OpenAI Codex CLI 사용량 (미설치 시 자동 숨김)[2] |
 | Gemini 사용량 | `geminiUsage` | Google Gemini CLI - 현재 모델 (미설치 시 자동 숨김)[3] |
 | Gemini 전체 | `geminiUsageAll` | Google Gemini CLI - 전체 모델 (미설치 시 자동 숨김)[3] |
-| z.ai 사용량 | `zaiUsage` | z.ai/ZHIPU 사용량 (z.ai 미사용 시 자동 숨김)[4] |
+| Antigravity 사용량 | `antigravityUsage` | Google Antigravity CLI — 모델 패밀리별 주간 quota 그룹 (Gemini / Claude+GPT), 미설치 시 자동 숨김[4] |
+| Antigravity 전체 | `antigravityUsageAll` | Google Antigravity CLI — 모델별 quota 상세, 미설치 시 자동 숨김[4] |
+| z.ai 사용량 | `zaiUsage` | z.ai/ZHIPU 사용량 (z.ai 미사용 시 자동 숨김)[5] |
 
 ## Insights
 
@@ -72,7 +74,7 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 | 토큰 분석 | `tokenBreakdown` | 입력/출력/캐시 쓰기/캐시 읽기 토큰 분석 |
 | 성능 배지 | `performance` | 복합 효율성 배지 (캐시 히트율 + 출력 비율) |
 | 비용 예측 | `forecast` | 세션 속도 기반 시간당 예상 비용 |
-| 예산 | `budget` | 일일 지출 vs 설정된 예산 한도[5] |
+| 예산 | `budget` | 일일 지출 vs 설정된 예산 한도[6] |
 | 오늘의 비용 | `todayCost` | 오늘 전체 세션 누적 비용 |
 
 ## Info
@@ -89,7 +91,7 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 
 | 위젯 | ID | 설명 |
 |------|-----|------|
-| 피크 시간 | `peakHours` | 피크 시간 표시 및 카운트다운 ([PeakClaude 기반](https://github.com/pforret/PeakClaude))[6] |
+| 피크 시간 | `peakHours` | 피크 시간 표시 및 카운트다운 ([PeakClaude 기반](https://github.com/pforret/PeakClaude))[7] |
 | 태그 상태 | `tagStatus` | 매칭된 git 태그로부터의 커밋 수 (기본 패턴 `v*`, `tagPatterns`로 설정) |
 | 슬래시 명령 | `slashCommand` | 현재 턴을 시작한 slash command 표시 (🎯), 다음 일반 메시지에 자동 해제 |
 | 에이전트 모드 | `agentMode` | 현재 세션의 에이전트 정체성: 👤 커스텀 에이전트(`/agent <name>`) 또는 🤖 서브에이전트 타입 |
@@ -98,10 +100,11 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 
 1. 모든 사용량이 현재 세션에서 발생했다고 가정합니다. 세션이 길어질수록 정확도가 향상됩니다.
 2. `~/.codex/auth.json`이 없으면 자동 숨김됩니다.
-3. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다.
-4. `ANTHROPIC_BASE_URL`을 통해 z.ai가 감지되지 않으면 자동 숨김됩니다.
-5. 설정 파일에 `"dailyBudget"` 값이 필요합니다.
-6. 피크 = 평일 5-11 AM PT; 다음 전환까지 카운트다운을 표시합니다.
+3. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다. (Gemini CLI 개인 티어는 2026-06-18 종료, enterprise는 계속 지원)
+4. `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+5. `ANTHROPIC_BASE_URL`을 통해 z.ai가 감지되지 않으면 자동 숨김됩니다.
+6. 설정 파일에 `"dailyBudget"` 값이 필요합니다.
+7. 피크 = 평일 5-11 AM PT; 다음 전환까지 카운트다운을 표시합니다.
 
 ## 다국어 지원
 
