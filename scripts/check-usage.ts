@@ -13,7 +13,7 @@ import { fetchGeminiUsage, isGeminiInstalled } from './utils/gemini-client.js';
 import { fetchAntigravityUsage, isAntigravityInstalled } from './utils/antigravity-client.js';
 import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-api-client.js';
 import { isZaiProvider } from './utils/provider.js';
-import { formatTimeRemaining } from './utils/formatters.js';
+import { formatTimeRemaining, formatWindowLabel } from './utils/formatters.js';
 import { getColorForPercent, colorize, COLORS } from './utils/colors.js';
 import { ICON } from './utils/emoji.js';
 import { getTranslationsByLang, detectSystemLanguage } from './utils/i18n.js';
@@ -170,11 +170,13 @@ function renderCodexSection(
 
     if (codexData.primary) {
       const percent = Math.round(codexData.primary.usedPercent);
-      parts.push(formatUsageRow(t.labels['5h'], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+      const label = formatWindowLabel(codexData.primary.windowSeconds, t.labels['5h'], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
     }
     if (codexData.secondary) {
       const percent = Math.round(codexData.secondary.usedPercent);
-      parts.push(formatUsageRow(t.labels['7d'], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+      const label = formatWindowLabel(codexData.secondary.windowSeconds, t.labels['7d'], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
     }
     if (codexData.planType) {
       parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);

@@ -1117,6 +1117,18 @@ function truncate(str, maxLen) {
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
 }
+function formatWindowLabel(windowSeconds, fallback, t) {
+  if (typeof windowSeconds !== "number" || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return fallback;
+  }
+  const HOUR = 3600;
+  const DAY = 86400;
+  if (windowSeconds === 5 * HOUR)
+    return t.labels["5h"];
+  if (windowSeconds === 7 * DAY)
+    return t.labels["7d"];
+  return windowSeconds >= DAY ? `${Math.round(windowSeconds / DAY)}d` : `${Math.round(windowSeconds / HOUR)}h`;
+}
 function osc8Link(url, text) {
   return `\x1B]8;;${url}\x1B\\${text}\x1B]8;;\x1B\\`;
 }
@@ -2511,11 +2523,13 @@ async function fetchFromCodexApi(auth, tokenHash) {
       planType: data.plan_type,
       primary: data.rate_limit.primary_window ? {
         usedPercent: data.rate_limit.primary_window.used_percent,
-        resetAt: data.rate_limit.primary_window.reset_at
+        resetAt: data.rate_limit.primary_window.reset_at,
+        windowSeconds: data.rate_limit.primary_window.limit_window_seconds ?? null
       } : null,
       secondary: data.rate_limit.secondary_window ? {
         usedPercent: data.rate_limit.secondary_window.used_percent,
-        resetAt: data.rate_limit.secondary_window.reset_at
+        resetAt: data.rate_limit.secondary_window.reset_at,
+        windowSeconds: data.rate_limit.secondary_window.limit_window_seconds ?? null
       } : null
     };
     codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
@@ -2568,8 +2582,10 @@ var codexUsageWidget = {
       planType: limits.planType,
       primaryPercent: limits.primary?.usedPercent ?? null,
       primaryResetAt: limits.primary?.resetAt ?? null,
+      primaryWindowSeconds: limits.primary?.windowSeconds ?? null,
       secondaryPercent: limits.secondary?.usedPercent ?? null,
-      secondaryResetAt: limits.secondary?.resetAt ?? null
+      secondaryResetAt: limits.secondary?.resetAt ?? null,
+      secondaryWindowSeconds: limits.secondary?.windowSeconds ?? null
     };
   },
   render(data, ctx) {
@@ -2581,10 +2597,12 @@ var codexUsageWidget = {
       parts.push(colorize(ICON.warning, theme.warning));
     } else {
       if (data.primaryPercent !== null) {
-        parts.push(formatRateLimit(t.labels["5h"], data.primaryPercent, data.primaryResetAt, ctx));
+        const label = formatWindowLabel(data.primaryWindowSeconds, t.labels["5h"], t);
+        parts.push(formatRateLimit(label, data.primaryPercent, data.primaryResetAt, ctx));
       }
       if (data.secondaryPercent !== null) {
-        parts.push(formatRateLimit(t.labels["7d"], data.secondaryPercent, data.secondaryResetAt, ctx));
+        const label = formatWindowLabel(data.secondaryWindowSeconds, t.labels["7d"], t);
+        parts.push(formatRateLimit(label, data.secondaryPercent, data.secondaryResetAt, ctx));
       }
     }
     return parts.join(` ${colorize("\u2502", theme.dim)} `);

@@ -1103,6 +1103,45 @@ describe('widgets', () => {
       expect(result).toContain('10%');
     });
 
+    it('should label a weekly primary window as 7d (Codex Pro)', async () => {
+      // Pro returns one 604800s primary window and no secondary; labelling by
+      // position rendered this as "5h" even though the reset was ~6 days out.
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
+      vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue({
+        model: 'gpt-5.2-codex',
+        planType: 'pro',
+        primary: { usedPercent: 3, resetAt: 1786843831, windowSeconds: 604800 },
+        secondary: null,
+      });
+
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+      expect(data?.primaryWindowSeconds).toBe(604800);
+
+      const result = codexUsageWidget.render(data!, ctx);
+      expect(result).toContain('7d:');
+      expect(result).not.toContain('5h:');
+    });
+
+    it('should keep positional labels when the API omits window durations', () => {
+      // Back-compat: cached payloads written before windowSeconds existed
+      const ctx = createContext();
+      const result = codexUsageWidget.render(
+        {
+          model: 'gpt-5.2-codex',
+          planType: 'plus',
+          primaryPercent: 25,
+          primaryResetAt: null,
+          secondaryPercent: 10,
+          secondaryResetAt: null,
+        },
+        ctx
+      );
+
+      expect(result).toContain('5h:');
+      expect(result).toContain('7d:');
+    });
+
     it('should render reset times', () => {
       const ctx = createContext();
       const data = {

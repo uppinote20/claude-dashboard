@@ -635,11 +635,13 @@ async function fetchFromCodexApi(auth, tokenHash) {
       planType: data.plan_type,
       primary: data.rate_limit.primary_window ? {
         usedPercent: data.rate_limit.primary_window.used_percent,
-        resetAt: data.rate_limit.primary_window.reset_at
+        resetAt: data.rate_limit.primary_window.reset_at,
+        windowSeconds: data.rate_limit.primary_window.limit_window_seconds ?? null
       } : null,
       secondary: data.rate_limit.secondary_window ? {
         usedPercent: data.rate_limit.secondary_window.used_percent,
-        resetAt: data.rate_limit.secondary_window.reset_at
+        resetAt: data.rate_limit.secondary_window.reset_at,
+        windowSeconds: data.rate_limit.secondary_window.limit_window_seconds ?? null
       } : null
     };
     codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
@@ -1103,6 +1105,18 @@ function formatTimeRemaining(resetAt, t) {
 }
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+function formatWindowLabel(windowSeconds, fallback, t) {
+  if (typeof windowSeconds !== "number" || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return fallback;
+  }
+  const HOUR = 3600;
+  const DAY = 86400;
+  if (windowSeconds === 5 * HOUR)
+    return t.labels["5h"];
+  if (windowSeconds === 7 * DAY)
+    return t.labels["7d"];
+  return windowSeconds >= DAY ? `${Math.round(windowSeconds / DAY)}d` : `${Math.round(windowSeconds / HOUR)}h`;
 }
 
 // scripts/utils/antigravity-client.ts
@@ -2318,11 +2332,13 @@ function renderCodexSection(usage, codexData, t) {
     const parts = [];
     if (codexData.primary) {
       const percent = Math.round(codexData.primary.usedPercent);
-      parts.push(formatUsageRow(t.labels["5h"], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+      const label = formatWindowLabel(codexData.primary.windowSeconds, t.labels["5h"], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
     }
     if (codexData.secondary) {
       const percent = Math.round(codexData.secondary.usedPercent);
-      parts.push(formatUsageRow(t.labels["7d"], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+      const label = formatWindowLabel(codexData.secondary.windowSeconds, t.labels["7d"], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
     }
     if (codexData.planType) {
       parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);

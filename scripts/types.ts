@@ -530,15 +530,19 @@ export interface CodexUsageLimits {
   model: string;
   /** Plan type: plus, pro, etc. */
   planType: string;
-  /** Primary (5h) rate limit window */
+  /** Primary rate limit window (duration varies by plan — see windowSeconds) */
   primary: {
     usedPercent: number;
     resetAt: number;
+    /** Window length in seconds; absent on responses/caches predating this field */
+    windowSeconds?: number | null;
   } | null;
-  /** Secondary (7d) rate limit window */
+  /** Secondary rate limit window, when the plan has one */
   secondary: {
     usedPercent: number;
     resetAt: number;
+    /** Window length in seconds; absent on responses/caches predating this field */
+    windowSeconds?: number | null;
   } | null;
 }
 
@@ -550,8 +554,12 @@ export interface CodexUsageData {
   planType: string;
   primaryPercent: number | null;
   primaryResetAt: number | null;
+  /** Primary window length in seconds; drives the displayed label */
+  primaryWindowSeconds?: number | null;
   secondaryPercent: number | null;
   secondaryResetAt: number | null;
+  /** Secondary window length in seconds; drives the displayed label */
+  secondaryWindowSeconds?: number | null;
   /** Indicates API error occurred */
   isError?: boolean;
 }
