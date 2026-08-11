@@ -1123,21 +1123,22 @@ describe('widgets', () => {
       expect(result).not.toContain('5h:');
     });
 
-    it('should keep positional labels when the API omits window durations', () => {
-      // Back-compat: cached payloads written before windowSeconds existed
-      const ctx = createContext();
-      const result = codexUsageWidget.render(
-        {
-          model: 'gpt-5.2-codex',
-          planType: 'plus',
-          primaryPercent: 25,
-          primaryResetAt: null,
-          secondaryPercent: 10,
-          secondaryResetAt: null,
-        },
-        ctx
-      );
+    it('should keep positional labels when the API omits window durations', async () => {
+      // Back-compat: file-cache payloads written before windowSeconds existed
+      vi.spyOn(codexClient, 'isCodexInstalled').mockResolvedValue(true);
+      vi.spyOn(codexClient, 'fetchCodexUsage').mockResolvedValue({
+        model: 'gpt-5.2-codex',
+        planType: 'plus',
+        primary: { usedPercent: 25, resetAt: 1786843831 },
+        secondary: { usedPercent: 10, resetAt: 1786843831 },
+      });
 
+      const ctx = createContext();
+      const data = await codexUsageWidget.getData(ctx);
+      expect(data?.primaryWindowSeconds).toBeNull();
+      expect(data?.secondaryWindowSeconds).toBeNull();
+
+      const result = codexUsageWidget.render(data!, ctx);
       expect(result).toContain('5h:');
       expect(result).toContain('7d:');
     });
