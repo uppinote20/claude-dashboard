@@ -154,6 +154,41 @@ describe('parseCodexUsage', () => {
     expect(result.fiveHourReset).toBeNull();
     expect(result.sevenDayReset).toBeNull();
   });
+
+  it('should route a weekly primary window into the 7d bucket (Codex Pro)', () => {
+    const limits: CodexUsageLimits = {
+      model: 'gpt-5.2-codex',
+      planType: 'pro',
+      primary: {
+        usedPercent: 42,
+        resetAt: 1786843831,
+        windowSeconds: 604800,
+      },
+      secondary: null,
+    };
+
+    const result = parseCodexUsage(limits, true);
+    expect(result.sevenDayPercent).toBe(42);
+    expect(result.sevenDayReset).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/);
+    expect(result.fiveHourPercent).toBeNull();
+    expect(result.fiveHourReset).toBeNull();
+    // The only window the plan has is what the recommendation scores on
+    expect(result.primaryPercent).toBe(42);
+  });
+
+  it('should route windows by duration when both are reported', () => {
+    const limits: CodexUsageLimits = {
+      model: 'gpt-5.2-codex',
+      planType: 'plus',
+      primary: { usedPercent: 30, resetAt: 1705312800, windowSeconds: 5 * 3600 },
+      secondary: { usedPercent: 15, resetAt: 1705917600, windowSeconds: 7 * 86400 },
+    };
+
+    const result = parseCodexUsage(limits, true);
+    expect(result.fiveHourPercent).toBe(30);
+    expect(result.sevenDayPercent).toBe(15);
+    expect(result.primaryPercent).toBe(30);
+  });
 });
 
 describe('parseGeminiUsage', () => {

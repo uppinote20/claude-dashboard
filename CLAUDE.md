@@ -112,6 +112,7 @@ claude-dashboard/
 | Cross-process file cache | `scripts/utils/file-cache.ts` |
 | 포매팅 유틸리티 | `scripts/utils/formatters.ts` |
 | 외부 CLI 사용량 표시 (퍼센트 + 리셋) | `scripts/widgets/usage-format.ts` |
+| 응답 필드로 윈도우 라벨 결정 (위치 아님) | `scripts/utils/formatters.ts` (`formatWindowLabel`) |
 | 이모지 아이콘 (단일 출처) | `scripts/utils/emoji.ts` |
 | Registry invariant 테스트 | `scripts/__tests__/emoji.test.ts` |
 
@@ -153,7 +154,7 @@ interface Widget<T extends WidgetData> {
 | `burnRate` | stdin + session | Token consumption per minute |
 | `cacheHit` | stdin | Cache hit rate percentage |
 | `depletionTime` | API + session | Estimated time to rate limit |
-| `codexUsage` | Codex API | OpenAI Codex CLI usage (model, 5h, 7d) |
+| `codexUsage` | Codex API | OpenAI Codex CLI usage (model + rate-limit windows). Windows are labeled from `limit_window_seconds`, not response position — Plus returns 5h + 7d, Pro a single 7d |
 | `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |
 | `geminiUsageAll` | Gemini API | Google Gemini CLI usage (all model buckets) |
 | `antigravityUsage` | Antigravity API | Google Antigravity CLI weekly quota by model family (Gemini / Claude+GPT). Auto-hides without `~/.gemini/antigravity-cli/antigravity-oauth-token` |

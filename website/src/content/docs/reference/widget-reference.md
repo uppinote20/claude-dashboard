@@ -337,7 +337,7 @@ Agent: 3 done
 |----------|-------|
 | **Widget ID** | `codexUsage` |
 | **Data Source** | Codex API (ChatGPT backend) |
-| **Description** | Shows OpenAI Codex CLI usage including model name and rate limit percentages. Auto-hides if `~/.codex/auth.json` is not found. |
+| **Description** | Shows OpenAI Codex CLI usage including model name and rate limit percentages. Each window is labeled by its actual duration, which varies by plan — Plus returns 5h + 7d, Pro a single 7d. Auto-hides if `~/.codex/auth.json` is not found. |
 
 **Example output:**
 ```

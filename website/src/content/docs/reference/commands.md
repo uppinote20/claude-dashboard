@@ -64,7 +64,7 @@ Check usage limits for all installed AI CLIs and get a recommendation for which 
 Shows usage for each installed CLI:
 
 - **Claude**: 5h and 7d rate limits with reset times
-- **Codex**: 5h and 7d limits with plan info (if installed)
+- **Codex**: Rate limits with plan info, if installed — each window is labeled by its actual duration (5h + 7d on Plus, a single 7d on Pro)
 - **Gemini**: Usage percentage with model info (if installed)
 - **Antigravity**: Weekly quota per model family — Gemini vs Claude+GPT (if installed)
 - **z.ai**: Token and MCP usage with model info (if configured)

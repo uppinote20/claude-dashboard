@@ -13,7 +13,7 @@ import { fetchGeminiUsage, isGeminiInstalled } from './utils/gemini-client.js';
 import { fetchAntigravityUsage, isAntigravityInstalled } from './utils/antigravity-client.js';
 import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-api-client.js';
 import { isZaiProvider } from './utils/provider.js';
-import { formatTimeRemaining } from './utils/formatters.js';
+import { formatTimeRemaining, formatWindowLabel } from './utils/formatters.js';
 import { getColorForPercent, colorize, COLORS } from './utils/colors.js';
 import { ICON } from './utils/emoji.js';
 import { getTranslationsByLang, detectSystemLanguage } from './utils/i18n.js';
@@ -170,11 +170,13 @@ function renderCodexSection(
 
     if (codexData.primary) {
       const percent = Math.round(codexData.primary.usedPercent);
-      parts.push(formatUsageRow(t.labels['5h'], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+      const label = formatWindowLabel(codexData.primary.windowSeconds, t.labels['5h'], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
     }
     if (codexData.secondary) {
       const percent = Math.round(codexData.secondary.usedPercent);
-      parts.push(formatUsageRow(t.labels['7d'], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+      const label = formatWindowLabel(codexData.secondary.windowSeconds, t.labels['7d'], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
     }
     if (codexData.planType) {
       parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
@@ -256,8 +258,9 @@ export function calculateRecommendation(
   t: Translations
 ): { name: string | null; reason: string } {
   // Each CLI exposes its own primary metric via primaryPercent (5h window for
-  // Claude/Codex/Gemini, weekly family limit for Antigravity, token bucket for
-  // z.ai); pass null to exclude a CLI from scoring.
+  // Claude/Codex/Gemini, or the weekly window when the plan has no 5h bucket;
+  // weekly family limit for Antigravity, token bucket for z.ai); pass null to
+  // exclude a CLI from scoring.
   const candidates = usages
     .filter((u): u is CLIUsageInfo => u !== null && u.available && !u.error && u.primaryPercent !== null)
     .map((u) => ({ name: u.name.toLowerCase(), score: u.primaryPercent! }));
@@ -332,21 +335,61 @@ export function parseClaudeUsage(limits: UsageLimits | null): CLIUsageInfo {
 }
 
 /**
- * Parse Codex usage limits
+ * Decide whether a Codex window belongs in the weekly bucket. Falls back to the
+ * window's position in the response when the API (or a cached payload predating
+ * `limit_window_seconds`) does not report a duration.
+ */
+function isWeeklyWindow(
+  windowSeconds: number | null | undefined,
+  positionalDefault: boolean
+): boolean {
+  if (typeof windowSeconds !== 'number' || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return positionalDefault;
+  }
+  return windowSeconds >= 86400;
+}
+
+/**
+ * Parse Codex usage limits.
+ *
+ * Windows are routed into the 5h/7d buckets by their own duration, not by their
+ * position: a Pro account returns its weekly window in `primary` and nothing in
+ * `secondary`, which would otherwise publish weekly usage as `fiveHourPercent`.
  */
 export function parseCodexUsage(limits: CodexUsageLimits | null, installed: boolean): CLIUsageInfo {
   if (!installed) return createNotInstalledResult('Codex');
   if (!limits) return createErrorResult('Codex');
 
+  const primaryIsWeekly = limits.primary
+    ? isWeeklyWindow(limits.primary.windowSeconds, false)
+    : false;
+  const secondaryIsWeekly = limits.secondary
+    ? isWeeklyWindow(limits.secondary.windowSeconds, true)
+    : false;
+
+  const fiveHour = limits.primary && !primaryIsWeekly
+    ? limits.primary
+    : limits.secondary && !secondaryIsWeekly
+      ? limits.secondary
+      : null;
+  const sevenDay = limits.primary && primaryIsWeekly
+    ? limits.primary
+    : limits.secondary && secondaryIsWeekly
+      ? limits.secondary
+      : null;
+
+  // A plan without a short window (Pro) is scored on the only limit it has.
+  const primary = fiveHour ?? sevenDay;
+
   return {
     name: 'Codex',
     available: true,
     error: false,
-    primaryPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
-    fiveHourPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
-    sevenDayPercent: limits.secondary ? Math.round(limits.secondary.usedPercent) : null,
-    fiveHourReset: limits.primary ? new Date(limits.primary.resetAt * 1000).toISOString() : null,
-    sevenDayReset: limits.secondary ? new Date(limits.secondary.resetAt * 1000).toISOString() : null,
+    primaryPercent: primary ? Math.round(primary.usedPercent) : null,
+    fiveHourPercent: fiveHour ? Math.round(fiveHour.usedPercent) : null,
+    sevenDayPercent: sevenDay ? Math.round(sevenDay.usedPercent) : null,
+    fiveHourReset: fiveHour ? new Date(fiveHour.resetAt * 1000).toISOString() : null,
+    sevenDayReset: sevenDay ? new Date(sevenDay.resetAt * 1000).toISOString() : null,
     model: limits.model,
     plan: limits.planType,
   };

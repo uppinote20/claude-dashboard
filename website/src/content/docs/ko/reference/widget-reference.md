@@ -191,7 +191,7 @@ sidebar:
 
 - **ID**: `codexUsage`
 - **데이터 소스**: Codex API (ChatGPT 백엔드)
-- **표시 내용**: OpenAI Codex CLI의 모델명과 5시간/7일 사용률. `~/.codex/auth.json`이 없으면 자동 숨김됩니다.
+- **표시 내용**: OpenAI Codex CLI의 모델명과 사용률. 각 제한 윈도우는 실제 기간으로 표시되며 플랜에 따라 다릅니다 (Plus는 5시간/7일, Pro는 7일 하나). `~/.codex/auth.json`이 없으면 자동 숨김됩니다.
 - **출력 예시**: `🔷 codex o4-mini 5h:30% 7d:15%`
 
 ### geminiUsage

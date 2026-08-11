@@ -398,12 +398,14 @@ async function fetchFromCodexApi(
         ? {
             usedPercent: data.rate_limit.primary_window.used_percent,
             resetAt: data.rate_limit.primary_window.reset_at,
+            windowSeconds: data.rate_limit.primary_window.limit_window_seconds ?? null,
           }
         : null,
       secondary: data.rate_limit.secondary_window
         ? {
             usedPercent: data.rate_limit.secondary_window.used_percent,
             resetAt: data.rate_limit.secondary_window.reset_at,
+            windowSeconds: data.rate_limit.secondary_window.limit_window_seconds ?? null,
           }
         : null,
     };

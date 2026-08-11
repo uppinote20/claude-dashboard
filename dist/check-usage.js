@@ -635,11 +635,13 @@ async function fetchFromCodexApi(auth, tokenHash) {
       planType: data.plan_type,
       primary: data.rate_limit.primary_window ? {
         usedPercent: data.rate_limit.primary_window.used_percent,
-        resetAt: data.rate_limit.primary_window.reset_at
+        resetAt: data.rate_limit.primary_window.reset_at,
+        windowSeconds: data.rate_limit.primary_window.limit_window_seconds ?? null
       } : null,
       secondary: data.rate_limit.secondary_window ? {
         usedPercent: data.rate_limit.secondary_window.used_percent,
-        resetAt: data.rate_limit.secondary_window.reset_at
+        resetAt: data.rate_limit.secondary_window.reset_at,
+        windowSeconds: data.rate_limit.secondary_window.limit_window_seconds ?? null
       } : null
     };
     codexCacheMap.set(tokenHash, { data: limits, timestamp: Date.now() });
@@ -1103,6 +1105,23 @@ function formatTimeRemaining(resetAt, t) {
 }
 function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(value)));
+}
+function formatWindowLabel(windowSeconds, fallback, t) {
+  if (typeof windowSeconds !== "number" || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return fallback;
+  }
+  const MINUTE = 60;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+  if (windowSeconds === 5 * HOUR)
+    return t.labels["5h"];
+  if (windowSeconds === 7 * DAY)
+    return t.labels["7d"];
+  if (windowSeconds >= DAY)
+    return `${Math.round(windowSeconds / DAY)}${t.time.days}`;
+  if (windowSeconds >= HOUR)
+    return `${Math.round(windowSeconds / HOUR)}${t.time.hours}`;
+  return `${Math.max(1, Math.round(windowSeconds / MINUTE))}${t.time.minutes}`;
 }
 
 // scripts/utils/antigravity-client.ts
@@ -2318,11 +2337,13 @@ function renderCodexSection(usage, codexData, t) {
     const parts = [];
     if (codexData.primary) {
       const percent = Math.round(codexData.primary.usedPercent);
-      parts.push(formatUsageRow(t.labels["5h"], percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
+      const label = formatWindowLabel(codexData.primary.windowSeconds, t.labels["5h"], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.primary.resetAt, t)));
     }
     if (codexData.secondary) {
       const percent = Math.round(codexData.secondary.usedPercent);
-      parts.push(formatUsageRow(t.labels["7d"], percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
+      const label = formatWindowLabel(codexData.secondary.windowSeconds, t.labels["7d"], t);
+      parts.push(formatUsageRow(label, percent, formatTimeFromTimestamp(codexData.secondary.resetAt, t)));
     }
     if (codexData.planType) {
       parts.push(`Plan: ${colorize(codexData.planType, COLORS.pastelGray)}`);
@@ -2427,20 +2448,31 @@ function parseClaudeUsage(limits) {
     sevenDayReset: normalizeToISO(limits.seven_day?.resets_at ?? null)
   };
 }
+function isWeeklyWindow(windowSeconds, positionalDefault) {
+  if (typeof windowSeconds !== "number" || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return positionalDefault;
+  }
+  return windowSeconds >= 86400;
+}
 function parseCodexUsage(limits, installed) {
   if (!installed)
     return createNotInstalledResult("Codex");
   if (!limits)
     return createErrorResult("Codex");
+  const primaryIsWeekly = limits.primary ? isWeeklyWindow(limits.primary.windowSeconds, false) : false;
+  const secondaryIsWeekly = limits.secondary ? isWeeklyWindow(limits.secondary.windowSeconds, true) : false;
+  const fiveHour = limits.primary && !primaryIsWeekly ? limits.primary : limits.secondary && !secondaryIsWeekly ? limits.secondary : null;
+  const sevenDay = limits.primary && primaryIsWeekly ? limits.primary : limits.secondary && secondaryIsWeekly ? limits.secondary : null;
+  const primary = fiveHour ?? sevenDay;
   return {
     name: "Codex",
     available: true,
     error: false,
-    primaryPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
-    fiveHourPercent: limits.primary ? Math.round(limits.primary.usedPercent) : null,
-    sevenDayPercent: limits.secondary ? Math.round(limits.secondary.usedPercent) : null,
-    fiveHourReset: limits.primary ? new Date(limits.primary.resetAt * 1e3).toISOString() : null,
-    sevenDayReset: limits.secondary ? new Date(limits.secondary.resetAt * 1e3).toISOString() : null,
+    primaryPercent: primary ? Math.round(primary.usedPercent) : null,
+    fiveHourPercent: fiveHour ? Math.round(fiveHour.usedPercent) : null,
+    sevenDayPercent: sevenDay ? Math.round(sevenDay.usedPercent) : null,
+    fiveHourReset: fiveHour ? new Date(fiveHour.resetAt * 1e3).toISOString() : null,
+    sevenDayReset: sevenDay ? new Date(sevenDay.resetAt * 1e3).toISOString() : null,
     model: limits.model,
     plan: limits.planType
   };

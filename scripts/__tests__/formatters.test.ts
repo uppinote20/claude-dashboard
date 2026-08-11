@@ -10,7 +10,9 @@ import {
   shortenModelName,
   calculatePercent,
   formatDuration,
+  formatWindowLabel,
 } from '../utils/formatters.js';
+import type { Translations } from '../types.js';
 import { MOCK_TRANSLATIONS } from './fixtures.js';
 
 describe('formatters', () => {
@@ -146,6 +148,44 @@ describe('formatters', () => {
     it('should format hours and minutes', () => {
       expect(formatDuration(90 * 60 * 1000, timeLabels)).toBe('1h30m');
       expect(formatDuration(125 * 60 * 1000, timeLabels)).toBe('2h5m');
+    });
+  });
+
+  describe('formatWindowLabel', () => {
+    it('should use the localized label for known windows', () => {
+      expect(formatWindowLabel(5 * 3600, 'fallback', MOCK_TRANSLATIONS)).toBe('5h');
+      expect(formatWindowLabel(7 * 86400, 'fallback', MOCK_TRANSLATIONS)).toBe('7d');
+    });
+
+    it('should label a weekly primary window as 7d, not 5h', () => {
+      // Codex Pro returns a single 604800s primary window and a null secondary
+      expect(formatWindowLabel(604800, MOCK_TRANSLATIONS.labels['5h'], MOCK_TRANSLATIONS)).toBe('7d');
+    });
+
+    it('should derive a label for other durations', () => {
+      expect(formatWindowLabel(3600, 'fallback', MOCK_TRANSLATIONS)).toBe('1h');
+      expect(formatWindowLabel(30 * 86400, 'fallback', MOCK_TRANSLATIONS)).toBe('30d');
+      expect(formatWindowLabel(30 * 60, 'fallback', MOCK_TRANSLATIONS)).toBe('30m');
+    });
+
+    it('should localize derived labels with the translated time units', () => {
+      const ko: Translations = {
+        ...MOCK_TRANSLATIONS,
+        labels: { ...MOCK_TRANSLATIONS.labels, '5h': '5시간', '7d': '7일' },
+        time: { days: '일', hours: '시간', minutes: '분', seconds: '초' },
+      };
+
+      expect(formatWindowLabel(5 * 3600, 'fallback', ko)).toBe('5시간');
+      expect(formatWindowLabel(30 * 86400, 'fallback', ko)).toBe('30일');
+      expect(formatWindowLabel(3 * 3600, 'fallback', ko)).toBe('3시간');
+    });
+
+    it('should fall back when the duration is unknown or invalid', () => {
+      expect(formatWindowLabel(null, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
+      expect(formatWindowLabel(undefined, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
+      expect(formatWindowLabel(0, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
+      expect(formatWindowLabel(-1, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
+      expect(formatWindowLabel(NaN, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
     });
   });
 });

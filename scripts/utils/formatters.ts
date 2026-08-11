@@ -120,6 +120,38 @@ export function clampPercent(value: number): number {
 }
 
 /**
+ * Label a rate-limit window from its own duration rather than its position in the
+ * API response. Providers do not guarantee that the primary window is the short one:
+ * a Codex Pro account returns a single 604800s (7d) primary window and a null
+ * secondary, which a position-based label renders as "5h".
+ *
+ * Falls back to the caller's positional label when the duration is unknown, so
+ * responses (or caches) predating the field keep their previous rendering.
+ * Any other duration is derived from the localized `time` units, so it reads the
+ * same way as the two known windows in every locale.
+ */
+export function formatWindowLabel(
+  windowSeconds: number | null | undefined,
+  fallback: string,
+  t: Translations
+): string {
+  if (typeof windowSeconds !== 'number' || !Number.isFinite(windowSeconds) || windowSeconds <= 0) {
+    return fallback;
+  }
+
+  const MINUTE = 60;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
+
+  if (windowSeconds === 5 * HOUR) return t.labels['5h'];
+  if (windowSeconds === 7 * DAY) return t.labels['7d'];
+
+  if (windowSeconds >= DAY) return `${Math.round(windowSeconds / DAY)}${t.time.days}`;
+  if (windowSeconds >= HOUR) return `${Math.round(windowSeconds / HOUR)}${t.time.hours}`;
+  return `${Math.max(1, Math.round(windowSeconds / MINUTE))}${t.time.minutes}`;
+}
+
+/**
  * Wrap text in OSC8 hyperlink escape sequence.
  * Terminals that don't support OSC8 simply display the text without the link.
  * @see https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda

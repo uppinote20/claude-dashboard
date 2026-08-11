@@ -1,6 +1,7 @@
 /**
  * Codex usage widget - displays OpenAI Codex CLI usage limits
- * Shows model, 5h and 7d usage in a single line
+ * Shows model and each rate-limit window in a single line, labeled by the
+ * window's own duration (Plus returns 5h + 7d, Pro a single 7d)
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
  */
@@ -10,7 +11,7 @@ import type { WidgetContext, CodexUsageData } from '../types.js';
 import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import { isCodexInstalled, fetchCodexUsage } from '../utils/codex-client.js';
-import { formatTimeRemaining } from '../utils/formatters.js';
+import { formatTimeRemaining, formatWindowLabel } from '../utils/formatters.js';
 import { debugLog } from '../utils/debug.js';
 
 /**
@@ -66,8 +67,10 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
       planType: limits.planType,
       primaryPercent: limits.primary?.usedPercent ?? null,
       primaryResetAt: limits.primary?.resetAt ?? null,
+      primaryWindowSeconds: limits.primary?.windowSeconds ?? null,
       secondaryPercent: limits.secondary?.usedPercent ?? null,
       secondaryResetAt: limits.secondary?.resetAt ?? null,
+      secondaryWindowSeconds: limits.secondary?.windowSeconds ?? null,
     };
   },
 
@@ -82,10 +85,12 @@ export const codexUsageWidget: Widget<CodexUsageData> = {
       parts.push(colorize(ICON.warning, theme.warning));
     } else {
       if (data.primaryPercent !== null) {
-        parts.push(formatRateLimit(t.labels['5h'], data.primaryPercent, data.primaryResetAt, ctx));
+        const label = formatWindowLabel(data.primaryWindowSeconds, t.labels['5h'], t);
+        parts.push(formatRateLimit(label, data.primaryPercent, data.primaryResetAt, ctx));
       }
       if (data.secondaryPercent !== null) {
-        parts.push(formatRateLimit(t.labels['7d'], data.secondaryPercent, data.secondaryResetAt, ctx));
+        const label = formatWindowLabel(data.secondaryWindowSeconds, t.labels['7d'], t);
+        parts.push(formatRateLimit(label, data.secondaryPercent, data.secondaryResetAt, ctx));
       }
     }
 
