@@ -1,6 +1,7 @@
 /**
  * Codex usage widget - displays OpenAI Codex CLI usage limits
- * Shows model, 5h and 7d usage in a single line
+ * Shows model and each rate-limit window in a single line, labeled by the
+ * window's own duration (Plus returns 5h + 7d, Pro a single 7d)
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
  */
