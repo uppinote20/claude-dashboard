@@ -127,6 +127,8 @@ export function clampPercent(value: number): number {
  *
  * Falls back to the caller's positional label when the duration is unknown, so
  * responses (or caches) predating the field keep their previous rendering.
+ * Any other duration is derived from the localized `time` units, so it reads the
+ * same way as the two known windows in every locale.
  */
 export function formatWindowLabel(
   windowSeconds: number | null | undefined,
@@ -137,15 +139,16 @@ export function formatWindowLabel(
     return fallback;
   }
 
-  const HOUR = 3600;
-  const DAY = 86400;
+  const MINUTE = 60;
+  const HOUR = 60 * MINUTE;
+  const DAY = 24 * HOUR;
 
   if (windowSeconds === 5 * HOUR) return t.labels['5h'];
   if (windowSeconds === 7 * DAY) return t.labels['7d'];
 
-  return windowSeconds >= DAY
-    ? `${Math.round(windowSeconds / DAY)}d`
-    : `${Math.round(windowSeconds / HOUR)}h`;
+  if (windowSeconds >= DAY) return `${Math.round(windowSeconds / DAY)}${t.time.days}`;
+  if (windowSeconds >= HOUR) return `${Math.round(windowSeconds / HOUR)}${t.time.hours}`;
+  return `${Math.max(1, Math.round(windowSeconds / MINUTE))}${t.time.minutes}`;
 }
 
 /**

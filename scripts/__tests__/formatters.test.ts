@@ -12,6 +12,7 @@ import {
   formatDuration,
   formatWindowLabel,
 } from '../utils/formatters.js';
+import type { Translations } from '../types.js';
 import { MOCK_TRANSLATIONS } from './fixtures.js';
 
 describe('formatters', () => {
@@ -164,6 +165,19 @@ describe('formatters', () => {
     it('should derive a label for other durations', () => {
       expect(formatWindowLabel(3600, 'fallback', MOCK_TRANSLATIONS)).toBe('1h');
       expect(formatWindowLabel(30 * 86400, 'fallback', MOCK_TRANSLATIONS)).toBe('30d');
+      expect(formatWindowLabel(30 * 60, 'fallback', MOCK_TRANSLATIONS)).toBe('30m');
+    });
+
+    it('should localize derived labels with the translated time units', () => {
+      const ko: Translations = {
+        ...MOCK_TRANSLATIONS,
+        labels: { ...MOCK_TRANSLATIONS.labels, '5h': '5시간', '7d': '7일' },
+        time: { days: '일', hours: '시간', minutes: '분', seconds: '초' },
+      };
+
+      expect(formatWindowLabel(5 * 3600, 'fallback', ko)).toBe('5시간');
+      expect(formatWindowLabel(30 * 86400, 'fallback', ko)).toBe('30일');
+      expect(formatWindowLabel(3 * 3600, 'fallback', ko)).toBe('3시간');
     });
 
     it('should fall back when the duration is unknown or invalid', () => {
