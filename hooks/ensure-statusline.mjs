@@ -15,6 +15,7 @@ import {
   realpathSync,
   statSync,
   unlinkSync,
+  chmodSync,
 } from 'fs';
 import path from 'path';
 import { homedir } from 'os';
@@ -91,22 +92,37 @@ export function migrateStatusLine(settingsPath, shimPath) {
   // dotfiles-managed ~/.claude/settings.json), and the backup + rewrite must land on the
   // file the symlink actually points at, not replace the symlink with a plain copy.
   const target = existsSync(settingsPath) ? realpathSync(settingsPath) : settingsPath;
+  // The mode is preserved explicitly so a deliberately-restricted settings.json (env
+  // secrets, apiKeyHelper) doesn't widen on migration, and the .bak copy stays exactly as
+  // private as the source it was copied from. writeFileSync's `mode` option is
+  // umask-filtered, so it only approximates the source mode — chmodSync afterward makes it
+  // exact. Best-effort: a chmod failure must not abort the migration.
+  const mode = statSync(target).mode;
 
   const backup = `${target}.bak`;
-  if (!existsSync(backup)) writeFileSync(backup, raw);
+  if (!existsSync(backup)) {
+    writeFileSync(backup, raw, { mode });
+    try {
+      chmodSync(backup, mode);
+    } catch {
+      // Best-effort; see comment above.
+    }
+  }
 
   const quoted = shimPath.includes(' ') ? `"${shimPath}"` : shimPath;
   settings.statusLine.command = `node ${quoted}`;
 
   // Temp file + rename: a crashed write must not leave a truncated settings.json. A
   // per-process temp name keeps concurrent SessionStart hooks (several sessions launching
-  // at once, e.g. after a restart) from interleaving writes to a shared temp file. The
-  // mode is preserved explicitly so a deliberately-restricted settings.json (env secrets,
-  // apiKeyHelper) doesn't widen on migration.
-  const mode = statSync(target).mode;
+  // at once, e.g. after a restart) from interleaving writes to a shared temp file.
   const tmp = `${target}.${process.pid}.tmp`;
   try {
     writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, { mode });
+    try {
+      chmodSync(tmp, mode);
+    } catch {
+      // Best-effort; see comment above.
+    }
     renameSync(tmp, target);
   } catch (err) {
     try {

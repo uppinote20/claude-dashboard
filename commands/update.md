@@ -1,6 +1,6 @@
 ---
 description: Repair or verify the statusLine shim (usually automatic)
-allowed-tools: Read, Bash(node:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*)
+allowed-tools: Read, Bash(node:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), Bash(grep:*)
 ---
 
 # Claude Dashboard Update
