@@ -8,6 +8,8 @@
  */
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import path from 'path';
+import { homedir } from 'os';
+import { fileURLToPath } from 'url';
 
 export const SHIM_FILENAME = 'statusline.mjs';
 
@@ -73,4 +75,26 @@ export function migrateStatusLine(settingsPath, shimPath) {
   writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`);
   renameSync(tmp, settingsPath);
   return 'migrated';
+}
+
+// Guarded so the test suite can import the functions without running the hook.
+const invokedDirectly =
+  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) {
+  try {
+    const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+    const pluginData = process.env.CLAUDE_PLUGIN_DATA;
+    if (pluginRoot && pluginData) {
+      const shim = syncShim(pluginRoot, pluginData);
+      if (shim) {
+        const configDir =
+          process.env.CLAUDE_CONFIG_DIR || path.join(homedir(), '.claude');
+        migrateStatusLine(path.join(configDir, 'settings.json'), shim);
+      }
+    }
+  } catch {
+    // Never block session start.
+  }
+  process.exit(0);
 }
