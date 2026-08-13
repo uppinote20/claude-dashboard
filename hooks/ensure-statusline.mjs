@@ -6,7 +6,7 @@
  * @handbook 4.8-version-agnostic-statusline
  * @tested scripts/__tests__/ensure-statusline.test.ts
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
 import path from 'path';
 
 export const SHIM_FILENAME = 'statusline.mjs';
@@ -27,4 +27,45 @@ export function syncShim(pluginRoot, pluginData) {
   mkdirSync(pluginData, { recursive: true });
   writeFileSync(dest, content);
   return dest;
+}
+
+/**
+ * Matches only this plugin's version-pinned command. Quotes are optional because a path
+ * containing a space (a Windows user profile, say) is written quoted — an unquoted-only
+ * pattern would skip exactly those users.
+ */
+const PINNED_COMMAND =
+  /^\s*node\s+["']?.*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js["']?\s*$/;
+
+/**
+ * Point statusLine.command at the stable shim, but only when it currently holds this
+ * plugin's pinned path. Anything else — a user-authored line, another tool, an
+ * already-migrated path — is left alone.
+ */
+export function migrateStatusLine(settingsPath, shimPath) {
+  if (!existsSync(settingsPath)) return 'no-settings';
+
+  let raw;
+  let settings;
+  try {
+    raw = readFileSync(settingsPath, 'utf8');
+    settings = JSON.parse(raw);
+  } catch {
+    return 'unparsable';
+  }
+
+  const current = settings?.statusLine?.command;
+  if (typeof current !== 'string' || !PINNED_COMMAND.test(current)) return 'skipped';
+
+  const backup = `${settingsPath}.bak`;
+  if (!existsSync(backup)) writeFileSync(backup, raw);
+
+  const quoted = shimPath.includes(' ') ? `"${shimPath}"` : shimPath;
+  settings.statusLine.command = `node ${quoted}`;
+
+  // Temp file + rename: a crashed write must not leave a truncated settings.json.
+  const tmp = `${settingsPath}.tmp`;
+  writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`);
+  renameSync(tmp, settingsPath);
+  return 'migrated';
 }

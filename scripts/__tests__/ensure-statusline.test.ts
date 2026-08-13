@@ -7,7 +7,7 @@ import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync
 import os from 'os';
 import path from 'path';
 // @ts-expect-error - dependency-free .mjs hook, no type declarations by design
-import { syncShim } from '../../hooks/ensure-statusline.mjs';
+import { syncShim, migrateStatusLine } from '../../hooks/ensure-statusline.mjs';
 
 describe('ensure-statusline / syncShim', () => {
   let tmpDir: string;
@@ -71,5 +71,106 @@ describe('ensure-statusline / syncShim', () => {
 
     expect(syncShim(pluginRoot, pluginData)).toBeNull();
     expect(existsSync(path.join(pluginData, 'statusline.mjs'))).toBe(false);
+  });
+});
+
+describe('ensure-statusline / migrateStatusLine', () => {
+  let tmpDir: string;
+  let settingsPath: string;
+  const SHIM = '/home/u/.claude/plugins/data/claude-dashboard-claude-dashboard/statusline.mjs';
+
+  const PINNED =
+    'node /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js';
+
+  function writeSettings(value: unknown): void {
+    writeFileSync(settingsPath, JSON.stringify(value, null, 2));
+  }
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), 'migrate-test-'));
+    settingsPath = path.join(tmpDir, 'settings.json');
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('rewrites this plugin\'s version-pinned command', () => {
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${SHIM}`);
+  });
+
+  it('rewrites a quoted pinned command', () => {
+    writeSettings({
+      statusLine: {
+        type: 'command',
+        command: 'node "C:/Users/A B/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js"',
+      },
+    });
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
+  });
+
+  it('quotes the replacement when the shim path contains a space', () => {
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+    const spaced = '/home/a b/.claude/plugins/data/claude-dashboard-claude-dashboard/statusline.mjs';
+
+    migrateStatusLine(settingsPath, spaced);
+
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node "${spaced}"`);
+  });
+
+  it('preserves unrelated settings keys', () => {
+    writeSettings({ model: 'opus', statusLine: { type: 'command', command: PINNED } });
+
+    migrateStatusLine(settingsPath, SHIM);
+
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).model).toBe('opus');
+  });
+
+  it('leaves a user-authored status line untouched', () => {
+    writeSettings({ statusLine: { type: 'command', command: 'node ~/.claude/my-statusline.js' } });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('does not rewrite an already-migrated shim path', () => {
+    writeSettings({ statusLine: { type: 'command', command: `node ${SHIM}` } });
+    const pastSec = new Date(2000, 0, 1).getTime() / 1000;
+    utimesSync(settingsPath, pastSec, pastSec);
+    const before = statSync(settingsPath).mtimeMs;
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(statSync(settingsPath).mtimeMs).toBe(before);
+  });
+
+  it('does nothing when settings.json is malformed', () => {
+    writeFileSync(settingsPath, '{ this is not json');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('unparsable');
+    expect(readFileSync(settingsPath, 'utf8')).toBe('{ this is not json');
+  });
+
+  it('reports missing settings without creating one', () => {
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('no-settings');
+    expect(existsSync(settingsPath)).toBe(false);
+  });
+
+  it('backs up settings.json once and never overwrites the backup', () => {
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+    const original = readFileSync(settingsPath, 'utf8');
+
+    migrateStatusLine(settingsPath, SHIM);
+    expect(readFileSync(`${settingsPath}.bak`, 'utf8')).toBe(original);
+
+    // A second pinned value must not clobber the first backup.
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+    migrateStatusLine(settingsPath, SHIM);
+
+    expect(readFileSync(`${settingsPath}.bak`, 'utf8')).toBe(original);
   });
 });
