@@ -216,7 +216,9 @@ check-ai --json   # JSON output for scripting
 
 ### `/claude-dashboard:update`
 
-Update the plugin and refresh the statusLine path in settings. Run after updating via git pull or marketplace.
+Repair or verify the statusLine shim. Usually unnecessary — after `/plugin update`, the
+status line picks up the new version on its own. Use this if you have hooks disabled or the
+status line stops updating.
 
 ```bash
 /claude-dashboard:update
@@ -228,7 +230,8 @@ Update the plugin and refresh the statusLine path in settings. Run after updatin
 <summary><strong>Status line not showing</strong></summary>
 
 1. Check if plugin is installed: `/plugin list`
-2. Verify settings.json has statusLine config
+2. Verify `settings.json` has a `statusLine` entry pointing at
+   `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`
 3. Restart Claude Code
 
 </details>

@@ -13,14 +13,18 @@ claude-dashboard 사용 중 발생할 수 있는 문제와 해결 방법을 안�
 
 1. **플러그인 설치 확인**: Claude Code에서 `/plugin list`를 실행하여 claude-dashboard가 설치되어 있는지 확인합니다.
 
-2. **settings.json 확인**: `~/.claude/settings.json` 파일에 `statusLine` 설정이 있는지 확인합니다. 없다면 setup 커맨드를 다시 실행하세요:
+2. **settings.json 확인**: `~/.claude/settings.json` 파일의 `statusLine` 항목이
+   `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs` 경로를 가리키는지 확인합니다.
+   없다면 setup 커맨드를 다시 실행하세요:
    ```
    /claude-dashboard:setup
    ```
 
-3. **Claude Code 재시작**: 설정 변경 후에는 Claude Code를 재시작해야 합니다.
+3. **Claude Code 재시작**: 그래도 표시되지 않는다면 Claude Code를 재시작해 보세요.
 
-4. **경로 업데이트**: 플러그인 업데이트 후 경로가 변경되었을 수 있습니다. 다음 커맨드를 실행하세요:
+4. **자동 갱신 확인**: 플러그인을 업데이트해도 보통 별도 조치가 필요 없습니다 — `SessionStart` 훅이
+   매번 최신 설치 버전을 가리키도록 statusLine 경로를 자동으로 갱신합니다. 훅을 비활성화했거나
+   재시작 후에도 갱신되지 않는다면 다음 커맨드로 직접 복구하세요:
    ```
    /claude-dashboard:update
    ```
@@ -88,18 +92,22 @@ Codex, Gemini, Antigravity, z.ai 위젯은 해당 CLI가 설치되어 있을 때
 }
 ```
 
-## 플러그인 업데이트 후 문제
+## 플러그인 업데이트 후 상태줄이 갱신되지 않는 경우
 
-플러그인을 업데이트한 후 상태줄이 동작하지 않으면:
+일반적으로는 아무 조치도 필요 없습니다. `statusLine`은 매 렌더링마다 최신 설치 버전을 자동으로
+찾아내는 고정 shim 경로(`plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`)를
+가리키므로, `/plugin update`만으로 충분합니다.
 
-1. statusLine 경로를 업데이트합니다:
-   ```
-   /claude-dashboard:update
-   ```
+그래도 이전 버전이 표시된다면 Claude Code를 한 번 재시작하세요 — `SessionStart` 훅이 shim을
+설치하고 `settings.json`을 자동으로 마이그레이션하며, 이 과정은 한 번만 실행되면 됩니다.
+재시작 후에도 문제가 지속되면 다음 커맨드로 직접 복구합니다 (훅을 비활성화한 경우에도 이
+방법을 사용하세요):
 
-2. Claude Code를 재시작합니다.
+```
+/claude-dashboard:update
+```
 
-3. 여전히 문제가 있으면 setup을 다시 실행합니다:
-   ```
-   /claude-dashboard:setup
-   ```
+여전히 문제가 있으면 setup을 다시 실행합니다:
+```
+/claude-dashboard:setup
+```

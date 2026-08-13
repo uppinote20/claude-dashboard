@@ -21,7 +21,11 @@ claude-dashboard/
 ├── commands/
 │   ├── setup.md             # /claude-dashboard:setup command
 │   └── check-usage.md       # /claude-dashboard:check-usage command
+├── hooks/
+│   ├── hooks.json           # SessionStart hook registration
+│   └── ensure-statusline.mjs # Shim sync + settings migration
 ├── scripts/
+│   ├── statusline-shim.mjs  # Version-agnostic entry point (copied to PLUGIN_DATA)
 │   ├── statusline.ts        # Main entry point (status line)
 │   ├── check-usage.ts       # CLI usage dashboard entry point
 │   ├── types.ts             # TypeScript interfaces
@@ -108,6 +112,7 @@ claude-dashboard/
 | 위젯 구현 (transcript) | `scripts/widgets/tool-activity.ts` |
 | 위젯 구현 (파생/공유 getData) | `scripts/widgets/context.ts`, `scripts/widgets/session-id.ts` |
 | 위젯 구현 (git + 모듈 캐시) | `scripts/widgets/tag-status.ts` |
+| 버전 무관 statusLine 진입점 | `scripts/statusline-shim.mjs`, `hooks/ensure-statusline.mjs` |
 | API 클라이언트 | `scripts/utils/api-client.ts` |
 | Cross-process file cache | `scripts/utils/file-cache.ts` |
 | 포매팅 유틸리티 | `scripts/utils/formatters.ts` |

@@ -103,7 +103,7 @@ check-ai --json   # JSON output for scripting
 
 ## /claude-dashboard:update
 
-Update the statusLine path in settings.json to point to the latest cached plugin version.
+Repair or verify the statusLine shim (usually automatic).
 
 ### Usage
 
@@ -113,12 +113,17 @@ Update the statusLine path in settings.json to point to the latest cached plugin
 
 ### When to Use
 
-Run this command after updating the plugin via `/plugin update claude-dashboard`. It ensures that the `statusLine` path in your settings points to the latest installed version.
+Normally unnecessary — `statusLine` points at a permanent shim path
+(`plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`) that resolves the newest
+installed build on every render, so a `SessionStart` hook keeps it current automatically after
+`/plugin update claude-dashboard`. Run this command only if you have hooks disabled or the
+status line is not updating.
 
 ### What It Does
 
-1. Finds the latest version in the plugin cache directory
-2. Updates the `statusLine.command` path in `~/.claude/settings.json`
-3. Shows the previous and new version paths
+1. Installs or refreshes the shim at the permanent data-directory path and points
+   `statusLine` in `~/.claude/settings.json` at it
+2. Reports which build the shim currently resolves to
 
-After running this command, restart Claude Code for the changes to take effect.
+If `settings.json` changed, it takes effect at your next interaction with Claude Code — no
+restart is needed.
