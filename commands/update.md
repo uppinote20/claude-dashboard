@@ -11,18 +11,22 @@ diagnose a status line that is not updating.
 
 ## Task
 
-1. Install or refresh the shim, then point settings.json at it:
+1. Before making any changes, read the current `statusLine.command` value from
+   `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json` (if the file exists), so step 4 can
+   report an actual before/after instead of guessing.
+
+2. Install or refresh the shim, then point settings.json at it:
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;s.statusLine={type:"command",command:"node "+q};fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;const sl=(s.statusLine&&typeof s.statusLine==="object")?s.statusLine:{};sl.type="command";sl.command="node "+q;s.statusLine=sl;fs.writeFileSync(p,JSON.stringify(s,null,2));'
 ```
 
-2. Report which build the shim resolves to:
+3. Report which build the shim resolves to:
 ```bash
-ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1
+ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | grep -E '/[0-9]+\.[0-9]+\.[0-9]+/dist/index\.js$' | sort -V | tail -1
 ```
 
-3. Tell the user:
-   - Whether settings.json changed or was already correct
+4. Tell the user:
+   - Whether `statusLine.command` changed from the value read in step 1, or was already correct
    - Which build the shim currently resolves to
    - That no restart is needed — settings.json changes take effect at the next interaction
 

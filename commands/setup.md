@@ -238,7 +238,7 @@ Add or update the statusLine configuration in the session's Claude config dir â€
 
 **Find the plugin path and update settings.json** (copy-paste one-liner):
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;s.statusLine={type:"command",command:"node "+q};fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;const sl=(s.statusLine&&typeof s.statusLine==="object")?s.statusLine:{};sl.type="command";sl.command="node "+q;s.statusLine=sl;fs.writeFileSync(p,JSON.stringify(s,null,2));'
 ```
 
 This command:
