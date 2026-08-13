@@ -3,7 +3,8 @@
  * @covers scripts/statusline-shim.mjs
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, copyFileSync } from 'fs';
+import { execFileSync } from 'child_process';
 import os from 'os';
 import path from 'path';
 import { pathToFileURL } from 'url';
@@ -77,6 +78,53 @@ describe('statusline-shim', () => {
       );
 
       expect(deriveCacheRoot(pathToFileURL(shim).href)).toBe(cacheRoot);
+    });
+  });
+
+  describe('CLI entry point', () => {
+    let shimPath: string;
+
+    beforeEach(() => {
+      shimPath = path.join(
+        tmpDir, 'plugins', 'data', 'claude-dashboard-claude-dashboard', 'statusline.mjs'
+      );
+      mkdirSync(path.dirname(shimPath), { recursive: true });
+      copyFileSync('scripts/statusline-shim.mjs', shimPath);
+    });
+
+    it('exits 0 with no output when cache directory does not exist', () => {
+      const result = execFileSync('node', [shimPath], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      expect(result).toBe('');
+    });
+
+    it('exits 0 silently when resolved dist/index.js throws on evaluation', () => {
+      makeVersion(cacheRoot, '1.0.0');
+      const distPath = path.join(cacheRoot, '1.0.0', 'dist', 'index.js');
+      writeFileSync(distPath, "throw new Error('boom');");
+
+      const result = execFileSync('node', [shimPath], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      expect(result).toBe('');
+    });
+
+    it('runs and outputs when resolved dist/index.js is valid', () => {
+      makeVersion(cacheRoot, '1.0.0');
+      const distPath = path.join(cacheRoot, '1.0.0', 'dist', 'index.js');
+      writeFileSync(distPath, "console.log('valid');");
+
+      const result = execFileSync('node', [shimPath], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      expect(result).toBe('valid\n');
     });
   });
 });

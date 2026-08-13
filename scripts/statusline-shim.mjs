@@ -73,5 +73,11 @@ const invokedDirectly =
 if (invokedDirectly) {
   const target = resolveLatestDist(deriveCacheRoot(import.meta.url));
   // Silent exit: a warning here would print on every single render.
-  if (target) await import(pathToFileURL(target).href);
+  if (target) {
+    try {
+      await import(pathToFileURL(target).href);
+    } catch {
+      // Module evaluation failed or threw. Silent exit to prevent render spam.
+    }
+  }
 }
