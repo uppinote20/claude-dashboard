@@ -6,7 +6,16 @@
  * @handbook 4.8-version-agnostic-statusline
  * @tested scripts/__tests__/ensure-statusline.test.ts
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'fs';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  realpathSync,
+  statSync,
+  unlinkSync,
+} from 'fs';
 import path from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
@@ -27,7 +36,21 @@ export function syncShim(pluginRoot, pluginData) {
   if (existsSync(dest) && readFileSync(dest, 'utf8') === content) return dest;
 
   mkdirSync(pluginData, { recursive: true });
-  writeFileSync(dest, content);
+
+  // Temp file + rename: a status line render firing in another session at this instant
+  // must never load a truncated shim mid-write.
+  const tmp = `${dest}.${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, content);
+    renameSync(tmp, dest);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      // Best-effort cleanup; the original error is what matters.
+    }
+    throw err;
+  }
   return dest;
 }
 
@@ -64,22 +87,53 @@ export function migrateStatusLine(settingsPath, shimPath) {
   const current = settings?.statusLine?.command;
   if (typeof current !== 'string' || !PINNED_COMMAND.test(current)) return 'skipped';
 
-  const backup = `${settingsPath}.bak`;
+  // Resolve the real file before writing: settingsPath may traverse a symlink (a
+  // dotfiles-managed ~/.claude/settings.json), and the backup + rewrite must land on the
+  // file the symlink actually points at, not replace the symlink with a plain copy.
+  const target = existsSync(settingsPath) ? realpathSync(settingsPath) : settingsPath;
+
+  const backup = `${target}.bak`;
   if (!existsSync(backup)) writeFileSync(backup, raw);
 
   const quoted = shimPath.includes(' ') ? `"${shimPath}"` : shimPath;
   settings.statusLine.command = `node ${quoted}`;
 
-  // Temp file + rename: a crashed write must not leave a truncated settings.json.
-  const tmp = `${settingsPath}.tmp`;
-  writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`);
-  renameSync(tmp, settingsPath);
+  // Temp file + rename: a crashed write must not leave a truncated settings.json. A
+  // per-process temp name keeps concurrent SessionStart hooks (several sessions launching
+  // at once, e.g. after a restart) from interleaving writes to a shared temp file. The
+  // mode is preserved explicitly so a deliberately-restricted settings.json (env secrets,
+  // apiKeyHelper) doesn't widen on migration.
+  const mode = statSync(target).mode;
+  const tmp = `${target}.${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, { mode });
+    renameSync(tmp, target);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      // Best-effort cleanup; the original error is what matters.
+    }
+    throw err;
+  }
   return 'migrated';
 }
 
 // Guarded so the test suite can import the functions without running the hook.
-const invokedDirectly =
-  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// Realpath comparison: settingsPath.command may traverse a symlinked config dir
+// (`~/.claude` -> dotfiles repo), which Node's ESM loader resolves for import.meta.url
+// while argv keeps the literal path. Never throws: a missing/unreadable argv path must
+// not crash a hook that must never block session start.
+function isInvokedDirectly() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(path.resolve(process.argv[1])) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+const invokedDirectly = isInvokedDirectly();
 
 if (invokedDirectly) {
   try {

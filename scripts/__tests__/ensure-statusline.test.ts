@@ -155,6 +155,30 @@ describe('ensure-statusline / migrateStatusLine', () => {
     expect(readFileSync(settingsPath, 'utf8')).toBe('{ this is not json');
   });
 
+  it('skips when statusLine is a string instead of an object', () => {
+    writeSettings({ statusLine: 'node ~/.claude/my-statusline.js' });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('skips when statusLine is null', () => {
+    writeSettings({ statusLine: null });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('skips when the whole settings file is null', () => {
+    writeSettings(null);
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
   it('reports missing settings without creating one', () => {
     expect(migrateStatusLine(settingsPath, SHIM)).toBe('no-settings');
     expect(existsSync(settingsPath)).toBe(false);

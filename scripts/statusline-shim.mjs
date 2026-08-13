@@ -11,7 +11,7 @@
  * @handbook 4.8-version-agnostic-statusline
  * @tested scripts/__tests__/statusline-shim.test.ts
  */
-import { readdirSync, existsSync } from 'fs';
+import { readdirSync, existsSync, realpathSync } from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 
@@ -67,8 +67,24 @@ export function resolveLatestDist(cacheRoot) {
   return candidates[0].dist;
 }
 
-const invokedDirectly =
-  process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+/**
+ * True when this file was invoked directly as the process entry point (not merely
+ * imported by a test). Guarded against symlinks: settings.json can hold a path that
+ * traverses a symlinked config dir (`~/.claude` -> dotfiles repo), which Node's ESM
+ * loader resolves via realpath while argv keeps the literal path — compare realpaths on
+ * both sides rather than the literal one. Never throws: a missing or unreadable argv
+ * path must not crash a script whose whole contract is to fail silently.
+ */
+function isInvokedDirectly() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(path.resolve(process.argv[1])) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+const invokedDirectly = isInvokedDirectly();
 
 if (invokedDirectly) {
   const target = resolveLatestDist(deriveCacheRoot(import.meta.url));
