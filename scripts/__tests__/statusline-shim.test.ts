@@ -3,7 +3,7 @@
  * @covers scripts/statusline-shim.mjs
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, copyFileSync } from 'fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, copyFileSync, symlinkSync } from 'fs';
 import { execFileSync } from 'child_process';
 import os from 'os';
 import path from 'path';
@@ -125,6 +125,60 @@ describe('statusline-shim', () => {
       });
 
       expect(result).toBe('valid\n');
+    });
+
+    it('runs and outputs when invoked through a symlinked config root (dotfiles layout)', () => {
+      // Mirrors `ln -s ~/dotfiles/claude ~/.claude`: the shim's real files live under
+      // <real>/plugins/..., and a symlink stands in for the config root that is actually
+      // on the invoking path. Node's ESM loader resolves import.meta.url to the realpath,
+      // while process.argv[1] keeps the literal (symlinked) path the shim was invoked with.
+      const realRoot = path.join(tmpDir, 'dotfiles-claude');
+      const realShimPath = path.join(
+        realRoot, 'plugins', 'data', 'claude-dashboard-claude-dashboard', 'statusline.mjs'
+      );
+      mkdirSync(path.dirname(realShimPath), { recursive: true });
+      copyFileSync('scripts/statusline-shim.mjs', realShimPath);
+
+      const realCacheRoot = path.join(realRoot, 'plugins', 'cache', 'claude-dashboard', 'claude-dashboard');
+      makeVersion(realCacheRoot, '1.0.0');
+      writeFileSync(path.join(realCacheRoot, '1.0.0', 'dist', 'index.js'), "console.log('via-symlink');");
+
+      const linkedRoot = path.join(tmpDir, 'claude-config');
+      symlinkSync(realRoot, linkedRoot, 'dir');
+      const linkedShimPath = path.join(
+        linkedRoot, 'plugins', 'data', 'claude-dashboard-claude-dashboard', 'statusline.mjs'
+      );
+
+      const result = execFileSync('node', [linkedShimPath], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      expect(result).toBe('via-symlink\n');
+    });
+
+    it('exits 0 with no output when argv[1] does not exist on disk (realpathSync throws)', () => {
+      // Reproduces the isInvokedDirectly() catch branch: realpathSync on a nonexistent
+      // argv[1] must degrade to false, not crash. A runner script overrides argv[1] to a
+      // bogus path before importing the real shim, so `node` itself never has to resolve
+      // that bogus path as its entry file.
+      makeVersion(cacheRoot, '1.0.0');
+      writeFileSync(path.join(cacheRoot, '1.0.0', 'dist', 'index.js'), "console.log('should-not-run');");
+
+      const runnerPath = path.join(tmpDir, 'runner.mjs');
+      const shimUrl = pathToFileURL(shimPath).href;
+      writeFileSync(
+        runnerPath,
+        `process.argv[1] = '/definitely/does/not/exist/statusline.mjs';\n` +
+          `await import(${JSON.stringify(shimUrl)});\n`
+      );
+
+      const result = execFileSync('node', [runnerPath], {
+        encoding: 'utf-8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      expect(result).toBe('');
     });
   });
 });

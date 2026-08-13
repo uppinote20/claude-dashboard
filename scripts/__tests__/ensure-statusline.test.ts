@@ -3,7 +3,19 @@
  * @covers hooks/ensure-statusline.mjs
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, utimesSync } from 'fs';
+import {
+  mkdtempSync,
+  rmSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  statSync,
+  utimesSync,
+  symlinkSync,
+  copyFileSync,
+} from 'fs';
+import { execFileSync } from 'child_process';
 import os from 'os';
 import path from 'path';
 // @ts-expect-error - dependency-free .mjs hook, no type declarations by design
@@ -227,5 +239,59 @@ describe('ensure-statusline / migrateStatusLine', () => {
 
     expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
     expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${SHIM}`);
+  });
+});
+
+describe('ensure-statusline / CLI entry point', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = mkdtempSync(path.join(os.tmpdir(), 'ensure-sl-cli-test-'));
+  });
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('migrates the pinned statusLine command when invoked through a symlinked config root', () => {
+    // Mirrors `ln -s ~/dotfiles/claude ~/.claude`: the hook's real file lives under
+    // <real>/hooks/..., and a symlink stands in for the config root that is actually on
+    // the invoking path. Before the realpath fix, this silently no-op'd the migration.
+    const realRoot = path.join(tmpDir, 'dotfiles-claude');
+    const realHookPath = path.join(realRoot, 'hooks', 'ensure-statusline.mjs');
+    mkdirSync(path.dirname(realHookPath), { recursive: true });
+    copyFileSync('hooks/ensure-statusline.mjs', realHookPath);
+
+    const linkedRoot = path.join(tmpDir, 'claude-config');
+    symlinkSync(realRoot, linkedRoot, 'dir');
+    const linkedHookPath = path.join(linkedRoot, 'hooks', 'ensure-statusline.mjs');
+
+    const pluginRoot = path.join(tmpDir, 'plugin-root');
+    mkdirSync(path.join(pluginRoot, 'scripts'), { recursive: true });
+    writeFileSync(path.join(pluginRoot, 'scripts', 'statusline-shim.mjs'), 'export const v = 1;');
+    const pluginData = path.join(tmpDir, 'plugin-data');
+
+    const configDir = path.join(tmpDir, 'settings-dir');
+    mkdirSync(configDir, { recursive: true });
+    const settingsPath = path.join(configDir, 'settings.json');
+    const PINNED =
+      'node /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js';
+    writeFileSync(settingsPath, JSON.stringify({ statusLine: { type: 'command', command: PINNED } }, null, 2));
+
+    const result = execFileSync('node', [linkedHookPath], {
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        CLAUDE_PLUGIN_ROOT: pluginRoot,
+        CLAUDE_PLUGIN_DATA: pluginData,
+        CLAUDE_CONFIG_DIR: configDir,
+      },
+    });
+
+    expect(result).toBe('');
+    const expectedShim = path.join(pluginData, 'statusline.mjs');
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${expectedShim}`);
+    expect(existsSync(expectedShim)).toBe(true);
   });
 });
