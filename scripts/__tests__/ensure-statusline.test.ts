@@ -173,4 +173,35 @@ describe('ensure-statusline / migrateStatusLine', () => {
 
     expect(readFileSync(`${settingsPath}.bak`, 'utf8')).toBe(original);
   });
+
+  it('skips commands with flags (e.g. --inspect)', () => {
+    writeSettings({ statusLine: { type: 'command', command: 'node --inspect /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js' } });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('skips commands with wrapper scripts', () => {
+    writeSettings({ statusLine: { type: 'command', command: 'node /home/u/my-wrapper.js /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js' } });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('skips mismatched-quote commands', () => {
+    writeSettings({ statusLine: { type: 'command', command: 'node "/home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js' } });
+    const before = readFileSync(settingsPath, 'utf8');
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('skipped');
+    expect(readFileSync(settingsPath, 'utf8')).toBe(before);
+  });
+
+  it('rewrites Windows backslash paths', () => {
+    writeSettings({ statusLine: { type: 'command', command: 'node C:\\Users\\u\\.claude\\plugins\\cache\\claude-dashboard\\claude-dashboard\\1.31.0\\dist\\index.js' } });
+
+    expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${SHIM}`);
+  });
 });
