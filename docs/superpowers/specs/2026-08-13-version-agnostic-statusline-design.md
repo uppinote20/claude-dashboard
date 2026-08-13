@@ -182,18 +182,34 @@ It is no longer "re-pin to the newest version" — after migration, re-running i
 For an existing user, with zero commands run:
 
 ```
-/plugin update  →  restart  →  hook migrates settings.json  →  restart  →  shim renders
+/plugin update  →  restart  →  hook migrates settings.json  →  shim renders (same session, next status line update)
 ```
 
-Because a `statusLine` change requires a restart to take effect, migration costs **one
-additional restart**. The claim is "no command to run", not "instant". After this, version
-bumps need neither a command nor a restart — the shim resolves the newest build on the next
-render.
+One restart is needed only because the hook is a `SessionStart` hook and requires a session
+start to run at all — the same restart already needed to pick up the new plugin version's
+cache directory. **No second restart is required** for the `statusLine.command` rewrite
+itself to take effect: after the hook migrates `settings.json` during that session's start,
+the new shim path is live for that same session's very next status line render trigger. The
+claim is "no command to run, and only the one restart that was already needed." After this,
+version bumps need neither a command nor a restart — the shim resolves the newest build on
+the next render.
 
-**To confirm during implementation**: whether Claude Code re-reads `statusLine.command`
-mid-session. The current `commands/update.md` tells users to restart, so the design assumes
-a restart is required; if it is re-read live, the second restart disappears and only the
-docs need adjusting.
+**Confirmed during implementation (2026-08-13)** from the official docs alone — no live
+experiment was run against a real session or a real `~/.claude/settings.json`:
+
+- `code.claude.com/docs/en/statusline`, "Build a status line step by step": *"Settings
+  reload automatically, but changes won't appear until your next interaction with Claude
+  Code."*
+- `code.claude.com/docs/en/settings`: *"Claude Code watches your settings files and reloads
+  them when they change, so edits to most keys apply to the running session without a
+  restart."* The doc lists exactly two keys that are read once at session start and require
+  a restart — `model` and `outputStyle`. `statusLine` is not among them.
+
+Together these confirm live reload: the hook's rewrite of `settings.json` is picked up
+without a restart, and the new command takes effect on the next status line update trigger
+(a new assistant message, `/compact`, a permission-mode change, a vim-mode toggle, or a
+`refreshInterval` tick) in the same session. `commands/update.md` (Task 6) should say the
+shim takes effect on the next status line update, not "restart Claude Code".
 
 ## 10. Testing
 
