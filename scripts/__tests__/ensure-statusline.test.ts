@@ -111,7 +111,7 @@ describe('ensure-statusline / migrateStatusLine', () => {
     writeSettings({ statusLine: { type: 'command', command: PINNED } });
 
     expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
-    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${SHIM}`);
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${JSON.stringify(SHIM)}`);
   });
 
   it('rewrites a quoted pinned command', () => {
@@ -132,6 +132,17 @@ describe('ensure-statusline / migrateStatusLine', () => {
     migrateStatusLine(settingsPath, spaced);
 
     expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node "${spaced}"`);
+  });
+
+  it('quotes the replacement when the shim path has a shell metacharacter but no space', () => {
+    // Regression guard: a space-only quoting check misses this case entirely, and since
+    // statusLine.command is shell-evaluated, an unquoted `(` is a syntax error to `sh`.
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+    const meta = '/home/user(a)/.claude/plugins/data/claude-dashboard-claude-dashboard/statusline.mjs';
+
+    migrateStatusLine(settingsPath, meta);
+
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${JSON.stringify(meta)}`);
   });
 
   it('preserves unrelated settings keys', () => {
@@ -238,7 +249,7 @@ describe('ensure-statusline / migrateStatusLine', () => {
     writeSettings({ statusLine: { type: 'command', command: 'node C:\\Users\\u\\.claude\\plugins\\cache\\claude-dashboard\\claude-dashboard\\1.31.0\\dist\\index.js' } });
 
     expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
-    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${SHIM}`);
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${JSON.stringify(SHIM)}`);
   });
 });
 
@@ -291,7 +302,7 @@ describe('ensure-statusline / CLI entry point', () => {
 
     expect(result).toBe('');
     const expectedShim = path.join(pluginData, 'statusline.mjs');
-    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${expectedShim}`);
+    expect(JSON.parse(readFileSync(settingsPath, 'utf8')).statusLine.command).toBe(`node ${JSON.stringify(expectedShim)}`);
     expect(existsSync(expectedShim)).toBe(true);
   });
 });
