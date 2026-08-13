@@ -91,7 +91,9 @@ export function migrateStatusLine(settingsPath, shimPath) {
   // Resolve the real file before writing: settingsPath may traverse a symlink (a
   // dotfiles-managed ~/.claude/settings.json), and the backup + rewrite must land on the
   // file the symlink actually points at, not replace the symlink with a plain copy.
-  const target = existsSync(settingsPath) ? realpathSync(settingsPath) : settingsPath;
+  // (The existsSync check above already returned for a missing file, so settingsPath is
+  // known to exist here.)
+  const target = realpathSync(settingsPath);
   // The mode is preserved explicitly so a deliberately-restricted settings.json (env
   // secrets, apiKeyHelper) doesn't widen on migration, and the .bak copy stays exactly as
   // private as the source it was copied from. writeFileSync's `mode` option is
@@ -109,14 +111,20 @@ export function migrateStatusLine(settingsPath, shimPath) {
     }
   }
 
-  const quoted = shimPath.includes(' ') ? `"${shimPath}"` : shimPath;
-  settings.statusLine.command = `node ${quoted}`;
+  // Quote unconditionally: a space-only check misses shell metacharacters (e.g. a config
+  // dir at `/home/user(a)/.claude`), which `sh` then fails to parse since statusLine.command
+  // is shell-evaluated. JSON.stringify always quotes and correctly escapes embedded quotes
+  // and backslashes too.
+  settings.statusLine.command = `node ${JSON.stringify(shimPath)}`;
 
   // Temp file + rename: a crashed write must not leave a truncated settings.json. A
   // per-process temp name keeps concurrent SessionStart hooks (several sessions launching
   // at once, e.g. after a restart) from interleaving writes to a shared temp file.
   const tmp = `${target}.${process.pid}.tmp`;
   try {
+    // JSON.stringify(settings, null, 2) reformats the whole file to 2-space indentation —
+    // a hand-maintained settings.json with different spacing gets rewritten to match. This
+    // is an accepted trade-off; the `.bak` above preserves the original exactly.
     writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, { mode });
     try {
       chmodSync(tmp, mode);
