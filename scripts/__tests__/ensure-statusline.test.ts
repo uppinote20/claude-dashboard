@@ -3,7 +3,7 @@
  * @covers hooks/ensure-statusline.mjs
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync } from 'fs';
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync, statSync, utimesSync } from 'fs';
 import os from 'os';
 import path from 'path';
 // @ts-expect-error - dependency-free .mjs hook, no type declarations by design
@@ -44,11 +44,26 @@ describe('ensure-statusline / syncShim', () => {
 
   it('does not rewrite an identical shim', () => {
     const dest = syncShim(pluginRoot, pluginData);
+    const pastSec = new Date(2000, 0, 1).getTime() / 1000;
+    utimesSync(dest, pastSec, pastSec);
     const before = statSync(dest).mtimeMs;
 
     syncShim(pluginRoot, pluginData);
 
     expect(statSync(dest).mtimeMs).toBe(before);
+  });
+
+  it('rewrites the shim when content changes', () => {
+    const dest = syncShim(pluginRoot, pluginData);
+    const pastSec = new Date(2000, 0, 1).getTime() / 1000;
+    utimesSync(dest, pastSec, pastSec);
+    const before = statSync(dest).mtimeMs;
+
+    writeFileSync(path.join(pluginRoot, 'scripts', 'statusline-shim.mjs'), 'export const v = 2;');
+    syncShim(pluginRoot, pluginData);
+
+    expect(statSync(dest).mtimeMs).toBeGreaterThan(before);
+    expect(readFileSync(dest, 'utf8')).toBe('export const v = 2;');
   });
 
   it('returns null when the bundled template is missing', () => {
