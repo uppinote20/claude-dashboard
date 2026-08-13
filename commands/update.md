@@ -1,39 +1,37 @@
 ---
-description: Update statusLine path to latest plugin version
-allowed-tools: Read, Bash(node:*), Bash(ls:*), Bash(grep:*), Bash(sort:*), Bash(tail:*), Bash(xargs:*), Bash(basename:*)
+description: Repair or verify the statusLine shim (usually automatic)
+allowed-tools: Read, Bash(node:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*)
 ---
 
 # Claude Dashboard Update
 
-Update the statusLine path in settings.json to point to the latest cached plugin version.
-
-Run this command after updating the plugin via `/plugin update claude-dashboard`.
+Ensure `statusLine` points at the version-agnostic shim. Normally unnecessary — a
+`SessionStart` hook does this automatically. Use it when hooks are disabled, or to
+diagnose a status line that is not updating.
 
 ## Task
 
-1. Find the latest version in the plugin cache:
+1. Install or refresh the shim, then point settings.json at it:
 ```bash
-ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/ 2>/dev/null | grep -E '/[0-9]+\.[0-9]+\.[0-9]+/$' | sort -V | tail -1
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;s.statusLine={type:"command",command:"node "+q};fs.writeFileSync(p,JSON.stringify(s,null,2));'
 ```
 
-2. Update settings.json with the latest version path:
+2. Report which build the shim resolves to:
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-LATEST_VERSION=$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/ 2>/dev/null | grep -E '/[0-9]+\.[0-9]+\.[0-9]+/$' | sort -V | tail -1 | xargs basename)
-NEWCMD="node $CFGDIR/plugins/cache/claude-dashboard/claude-dashboard/${LATEST_VERSION}/dist/index.js" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=JSON.parse(fs.readFileSync(p,"utf8"));s.statusLine=s.statusLine||{type:"command"};s.statusLine.command=process.env.NEWCMD;fs.writeFileSync(p,JSON.stringify(s,null,2));'
+ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1
 ```
 
-3. Show the user what was updated:
-   - Previous version (if changed)
-   - New version path
-   - Remind them to restart Claude Code for changes to take effect
+3. Tell the user:
+   - Whether settings.json changed or was already correct
+   - Which build the shim currently resolves to
+   - That no restart is needed — settings.json changes take effect at the next interaction
 
 ## Example Output
 
 ```
-Updated statusLine to version 1.7.0
-Path: ~/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.7.0/dist/index.js
-(with CLAUDE_CONFIG_DIR set, the path is under that directory instead)
+statusLine already points at the shim — no change needed.
+Shim: ~/.claude/plugins/data/claude-dashboard-claude-dashboard/statusline.mjs
+Resolves to: 1.31.1
 
-Restart Claude Code for changes to take effect.
+Future plugin updates apply automatically.
 ```

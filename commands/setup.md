@@ -1,7 +1,7 @@
 ---
 description: Configure claude-dashboard status line settings
 argument-hint: "[displayMode] [language] [plan] | custom \"widgets\""
-allowed-tools: Read, Write, Bash(node:*), Bash(cat:*), Bash(mkdir:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), AskUserQuestion
+allowed-tools: Read, Write, Bash(node:*), Bash(cat:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), AskUserQuestion
 ---
 
 # Claude Dashboard Setup
@@ -238,14 +238,18 @@ Add or update the statusLine configuration in the session's Claude config dir �
 
 **Find the plugin path and update settings.json** (copy-paste one-liner):
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SLPATH="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};s.statusLine={type:"command",command:"node "+process.env.SLPATH};fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;s.statusLine={type:"command",command:"node "+q};fs.writeFileSync(p,JSON.stringify(s,null,2));'
 ```
 
 This command:
-1. Finds the latest plugin version dynamically (in `$CLAUDE_CONFIG_DIR` when set, `~/.claude` otherwise)
-2. Updates `statusLine` in that config dir's settings.json with the correct path
+1. Copies the status line shim into the plugin's persistent data directory
+   (`plugins/data/claude-dashboard-claude-dashboard/`), which survives plugin updates
+2. Points `statusLine` at that fixed path — it resolves the newest installed build on
+   every render, so plugin updates need no further settings change
 
-**IMPORTANT**: After updating the plugin via `/plugin update claude-dashboard`, run `/claude-dashboard:update` to update the statusLine path to the latest version.
+**Note**: After `/plugin update claude-dashboard`, the status line picks up the new version
+automatically — no follow-up command is needed. Run `/claude-dashboard:update` only if you
+have hooks disabled or the status line is not updating.
 
 ## Examples
 
