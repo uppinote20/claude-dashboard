@@ -10,7 +10,7 @@ sidebar:
 1. Check if the plugin is installed by running `/plugin list` in Claude Code.
 2. Verify that `~/.claude/settings.json` contains a `statusLine` entry pointing at
    `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`.
-3. Restart Claude Code.
+3. If it's still not showing, try restarting Claude Code.
 
 If the status line still does not appear after restarting, try running `/claude-dashboard:setup` again to regenerate the configuration.
 

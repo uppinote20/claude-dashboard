@@ -232,7 +232,7 @@ status line stops updating.
 1. Check if plugin is installed: `/plugin list`
 2. Verify `settings.json` has a `statusLine` entry pointing at
    `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`
-3. Restart Claude Code
+3. If it's still not showing, try restarting Claude Code
 
 </details>
 
