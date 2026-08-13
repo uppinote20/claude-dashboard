@@ -1,6 +1,6 @@
 ---
 description: Repair or verify the statusLine shim (usually automatic)
-allowed-tools: Read, Bash(node:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), Bash(grep:*)
+allowed-tools: Read, Bash(node:*)
 ---
 
 # Claude Dashboard Update
@@ -15,14 +15,73 @@ diagnose a status line that is not updating.
    `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json` (if the file exists), so step 4 can
    report an actual before/after instead of guessing.
 
-2. Install or refresh the shim, then point settings.json at it:
+2. Install or refresh the shim, then point settings.json at it. Resolves the newest
+   installed version in `node` rather than shelling out to `sort -V`, which is a GNU/BSD
+   extension, not POSIX:
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SRC="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/scripts/statusline-shim.mjs 2>/dev/null | sort -V | tail -1)"; DATADIR="$CFGDIR/plugins/data/claude-dashboard-claude-dashboard"; mkdir -p "$DATADIR" && cp "$SRC" "$DATADIR/statusline.mjs" && SLPATH="$DATADIR/statusline.mjs" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};const q=process.env.SLPATH.includes(" ")?`"${process.env.SLPATH}"`:process.env.SLPATH;const sl=(s.statusLine&&typeof s.statusLine==="object")?s.statusLine:{};sl.type="command";sl.command="node "+q;s.statusLine=sl;fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; CFGDIR="$CFGDIR" node -e '
+const fs = require("fs");
+const path = require("path");
+const cfgDir = process.env.CFGDIR;
+const cacheRoot = path.join(cfgDir, "plugins/cache/claude-dashboard/claude-dashboard");
+let entries = [];
+try {
+  entries = fs.readdirSync(cacheRoot, { withFileTypes: true });
+} catch {}
+const versions = entries
+  .filter((e) => e.isDirectory() && /^\d+\.\d+\.\d+$/.test(e.name))
+  .map((e) => e.name)
+  .filter((v) => fs.existsSync(path.join(cacheRoot, v, "scripts/statusline-shim.mjs")))
+  .sort((a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+  });
+if (versions.length === 0) {
+  console.error("claude-dashboard is not installed in " + cfgDir);
+  process.exit(1);
+}
+const src = path.join(cacheRoot, versions[versions.length - 1], "scripts/statusline-shim.mjs");
+const dataDir = path.join(cfgDir, "plugins/data/claude-dashboard-claude-dashboard");
+fs.mkdirSync(dataDir, { recursive: true });
+const dest = path.join(dataDir, "statusline.mjs");
+fs.copyFileSync(src, dest);
+const settingsPath = path.join(cfgDir, "settings.json");
+const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
+const statusLine = settings.statusLine && typeof settings.statusLine === "object" ? settings.statusLine : {};
+statusLine.type = "command";
+statusLine.command = "node " + JSON.stringify(dest);
+settings.statusLine = statusLine;
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+'
 ```
 
 3. Report which build the shim resolves to:
 ```bash
-ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | grep -E '/[0-9]+\.[0-9]+\.[0-9]+/dist/index\.js$' | sort -V | tail -1
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}" node -e '
+const fs = require("fs");
+const path = require("path");
+const cfgDir = process.env.CFGDIR;
+const cacheRoot = path.join(cfgDir, "plugins/cache/claude-dashboard/claude-dashboard");
+let entries = [];
+try {
+  entries = fs.readdirSync(cacheRoot, { withFileTypes: true });
+} catch {}
+const versions = entries
+  .filter((e) => e.isDirectory() && /^\d+\.\d+\.\d+$/.test(e.name))
+  .map((e) => e.name)
+  .filter((v) => fs.existsSync(path.join(cacheRoot, v, "dist/index.js")))
+  .sort((a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+  });
+if (versions.length === 0) {
+  console.error("claude-dashboard is not installed in " + cfgDir);
+  process.exit(1);
+}
+console.log(path.join(cacheRoot, versions[versions.length - 1], "dist/index.js"));
+'
 ```
 
 4. Tell the user:
