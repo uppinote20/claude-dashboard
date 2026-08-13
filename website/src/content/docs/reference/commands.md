@@ -122,7 +122,8 @@ status line is not updating.
 ### What It Does
 
 1. Installs or refreshes the shim at the permanent data-directory path and points
-   `statusLine` in `~/.claude/settings.json` at it
+   `statusLine` in `settings.json` at it — `$CLAUDE_CONFIG_DIR/settings.json` if that
+   variable is set, `~/.claude/settings.json` otherwise
 2. Reports which build the shim currently resolves to
 
 If `settings.json` changed, it takes effect at your next interaction with Claude Code — no

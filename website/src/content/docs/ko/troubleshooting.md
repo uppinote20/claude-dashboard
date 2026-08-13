@@ -107,6 +107,13 @@ Codex, Gemini, Antigravity, z.ai 위젯은 해당 CLI가 설치되어 있을 때
 /claude-dashboard:update
 ```
 
+이 마이그레이션이 처음 실행될 때 `settings.json` 옆에 `settings.json.bak` 백업 파일을 한 번
+생성합니다. 마이그레이션 이전 값으로 되돌려야 할 때 이 파일을 사용할 수 있습니다.
+
+shim은 항상 설치된 것 중 최신 버전을 사용하므로, 최신 버전의 캐시 디렉터리가 남아 있으면 이전
+버전을 설치해도 효과가 없습니다. 이전 빌드를 일부러 테스트하려면
+`plugins/cache/claude-dashboard/claude-dashboard/` 아래의 최신 버전 디렉터리를 삭제하세요.
+
 여전히 문제가 있으면 setup을 다시 실행합니다:
 ```
 /claude-dashboard:setup

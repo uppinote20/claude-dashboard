@@ -28,6 +28,13 @@ git clone https://github.com/uppinote20/claude-dashboard.git "${CLAUDE_CONFIG_DI
 /claude-dashboard:setup
 ```
 
+> `/claude-dashboard:setup` looks for the plugin under `plugins/cache/claude-dashboard/claude-dashboard/`,
+> which a manual clone into `plugins/claude-dashboard/` does not match — the setup command's shim lookup
+> will find nothing to copy. Point `statusLine.command` in `settings.json` directly at your clone's
+> `dist/index.js` instead (e.g. `node "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/claude-dashboard/dist/index.js"`),
+> and note that manual installs do not get automatic version pickup — `git pull` and update the path
+> yourself after each release.
+
 ## Display Modes
 
 **Compact (1 line) - Default:**

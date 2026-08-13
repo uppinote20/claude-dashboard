@@ -119,7 +119,8 @@ statusLine shim을 복구하거나 상태를 확인합니다 (보통은 자동�
 
 ### 동작 방식
 
-1. 고정된 데이터 디렉터리 경로에 shim을 설치하거나 최신화하고, `~/.claude/settings.json`의
+1. 고정된 데이터 디렉터리 경로에 shim을 설치하거나 최신화하고, `settings.json`(`CLAUDE_CONFIG_DIR`가
+   설정되어 있으면 `$CLAUDE_CONFIG_DIR/settings.json`, 아니면 `~/.claude/settings.json`)의
    `statusLine`이 그 경로를 가리키도록 설정합니다
 2. shim이 현재 어떤 빌드를 가리키는지 보고합니다
 

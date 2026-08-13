@@ -58,6 +58,13 @@ once. If it persists after restarting, run `/claude-dashboard:update` to repair 
 /claude-dashboard:update
 ```
 
+The first time this migration runs, it writes a one-time `settings.json.bak` backup next to
+`settings.json`, which you can use to restore the pre-migration value if you ever need to.
+
+Because the shim always resolves the newest installed build, installing an older version has
+no effect while a newer version's cache directory still exists. To deliberately test an older
+build, remove the newer version's directory under `plugins/cache/claude-dashboard/claude-dashboard/`.
+
 ## Multi-CLI widgets not appearing
 
 The multi-CLI widgets (`codexUsage`, `geminiUsage`, `antigravityUsage`, `zaiUsage`) auto-hide when their respective CLIs are not detected:
