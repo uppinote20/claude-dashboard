@@ -142,12 +142,10 @@ future plugin versions, so the indirection layer does not become its own frozen 
 plugin's version-pinned shape:
 
 ```
-^\s*node\s+["']?.*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js["']?\s*$
+^\s*node\s+(?:"[^"]*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js"|'[^']*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js'|(?!["'])\S*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js)\s*$
 ```
 
-The optional quotes matter: a path containing spaces (a Windows user profile, for example)
-is written quoted, and an unquoted-only pattern would skip exactly those users. The written
-replacement is an **absolute** path, matching what `setup` writes today — `~` is documented
+Three branches prevent the pattern from swallowing flags (`--inspect`) or wrapper arguments (`my-wrapper.js`): double-quoted paths (can contain spaces, typical Windows), single-quoted paths, and unquoted paths (non-whitespace only, rejected if starting with a quote). Anything else — extra arguments, flags, wrappers — is left untouched. The written replacement is an **absolute** path, matching what `setup` writes today — `~` is documented
 to work but absolute keeps the two writers producing identical strings.
 
 ### Safety rules (this code edits a file it does not own)

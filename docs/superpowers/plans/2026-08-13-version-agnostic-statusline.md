@@ -17,7 +17,8 @@
 - **Command shape stays `node <path>`.** Windows runs status line commands through Git Bash *or* PowerShell, so no bash-only syntax in `settings.json`.
 - **Absolute paths only** when writing `statusLine.command`; wrap in double quotes if the path contains a space.
 - **Never touch a non-matching `statusLine`.** Only this exact pattern is rewritten:
-  `^\s*node\s+["']?.*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js["']?\s*$`
+  `^\s*node\s+(?:"[^"]*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js"|'[^']*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js'|(?!["'])\S*[/\\]plugins[/\\]cache[/\\]claude-dashboard[/\\]claude-dashboard[/\\]\d+\.\d+\.\d+[/\\]dist[/\\]index\.js)\s*$`
+  Three branches prevent swallowing flags or wrapper arguments: double-quoted paths (spaces allowed), single-quoted paths, and unquoted paths (non-whitespace only, rejected if starting with a quote).
 - **Every failure path exits 0.** The hook must never block session start; the shim must never spam the status line.
 - **Semver ordering is numeric per component.** `1.9.0 < 1.31.1`. String sort is wrong.
 - **Tests** go in `scripts/__tests__/**/*.test.ts` (the only path vitest includes) and carry `@handbook` / `@covers` markers like existing tests.
