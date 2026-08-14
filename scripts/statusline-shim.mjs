@@ -48,15 +48,11 @@ export function resolveLatestDist(cacheRoot) {
     if (!entry.isDirectory()) continue;
     const match = SEMVER.exec(entry.name);
     if (!match) continue;
-    const dist = path.join(cacheRoot, entry.name, 'dist', 'index.js');
-    if (!existsSync(dist)) continue;
     candidates.push({
       version: [Number(match[1]), Number(match[2]), Number(match[3])],
-      dist,
+      name: entry.name,
     });
   }
-
-  if (candidates.length === 0) return null;
 
   candidates.sort(
     (a, b) =>
@@ -64,7 +60,16 @@ export function resolveLatestDist(cacheRoot) {
       b.version[1] - a.version[1] ||
       b.version[2] - a.version[2]
   );
-  return candidates[0].dist;
+
+  // Sort first, then probe newest-first and stop at the first hit. Sorting is in-memory
+  // while existsSync is a syscall, and this runs on every render — filtering before
+  // sorting would stat every version dir, and Claude Code never prunes old ones, so that
+  // cost would grow with each release installed rather than staying at one.
+  for (const { name } of candidates) {
+    const dist = path.join(cacheRoot, name, 'dist', 'index.js');
+    if (existsSync(dist)) return dist;
+  }
+  return null;
 }
 
 /**
@@ -84,9 +89,7 @@ function isInvokedDirectly() {
   }
 }
 
-const invokedDirectly = isInvokedDirectly();
-
-if (invokedDirectly) {
+if (isInvokedDirectly()) {
   const target = resolveLatestDist(deriveCacheRoot(import.meta.url));
   // Silent exit: a warning here would print on every single render.
   if (target) {
