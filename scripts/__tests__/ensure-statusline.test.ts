@@ -11,6 +11,7 @@ import {
   readFileSync,
   existsSync,
   statSync,
+  chmodSync,
   utimesSync,
   symlinkSync,
   copyFileSync,
@@ -218,6 +219,41 @@ describe('ensure-statusline / migrateStatusLine', () => {
     writeSettings({ statusLine: { type: 'command', command: PINNED } });
     migrateStatusLine(settingsPath, SHIM);
 
+    expect(readFileSync(`${settingsPath}.bak`, 'utf8')).toBe(original);
+  });
+
+  // Windows has no POSIX permission bits; chmod there only toggles the read-only flag.
+  it.skipIf(process.platform === 'win32')(
+    'keeps a restricted settings.json restricted, backup included',
+    () => {
+      // settings.json can hold `env` secrets or an apiKeyHelper, so a user who chmod'd it
+      // to 0600 must not have it widened by a migration they never asked for — and the
+      // .bak must not leak the same content at a looser mode.
+      writeSettings({ statusLine: { type: 'command', command: PINNED } });
+      chmodSync(settingsPath, 0o600);
+
+      expect(migrateStatusLine(settingsPath, SHIM)).toBe('migrated');
+
+      // Mask off the file-type bits; only the permission bits are under test.
+      expect(statSync(settingsPath).mode & 0o777).toBe(0o600);
+      expect(statSync(`${settingsPath}.bak`).mode & 0o777).toBe(0o600);
+    }
+  );
+
+  it('rethrows a failed write, leaving the original and its backup intact', () => {
+    writeSettings({ statusLine: { type: 'command', command: PINNED } });
+    const original = readFileSync(settingsPath, 'utf8');
+    // Squat on the exact temp path the settings rewrite will use. A directory there makes
+    // writeFileSync fail with EISDIR, so the failure branch runs against the real fs
+    // rather than a mock. The backup is written first, so it still lands.
+    mkdirSync(`${settingsPath}.${process.pid}.tmp`);
+
+    expect(() => migrateStatusLine(settingsPath, SHIM)).toThrow();
+
+    // The point of writing through a temp file: a failed migration is a no-op on the real
+    // file, not a truncation. And the error surfaces instead of being swallowed by the
+    // best-effort cleanup — which here cannot unlink a directory and must stay silent.
+    expect(readFileSync(settingsPath, 'utf8')).toBe(original);
     expect(readFileSync(`${settingsPath}.bak`, 'utf8')).toBe(original);
   });
 
