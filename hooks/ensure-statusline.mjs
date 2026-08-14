@@ -24,6 +24,40 @@ import { fileURLToPath } from 'url';
 export const SHIM_FILENAME = 'statusline.mjs';
 
 /**
+ * Write to a temp file and rename, so a reader never sees a half-written file: a status
+ * line render in another session may load the shim at this instant, and a crashed write
+ * must not truncate settings.json. The temp name carries the pid so concurrent
+ * SessionStart hooks — several sessions launching at once, e.g. after a restart — don't
+ * interleave writes to one shared temp path.
+ *
+ * When `mode` is given it is applied twice on purpose: writeFileSync's option is
+ * umask-filtered and only approximates the requested mode, so chmodSync afterward makes
+ * it exact. That chmod is best-effort — failing to restore permissions must not abort the
+ * write it was decorating.
+ */
+function atomicWrite(target, content, mode) {
+  const tmp = `${target}.${process.pid}.tmp`;
+  try {
+    writeFileSync(tmp, content, mode === undefined ? {} : { mode });
+    if (mode !== undefined) {
+      try {
+        chmodSync(tmp, mode);
+      } catch {
+        // Best-effort; see above.
+      }
+    }
+    renameSync(tmp, target);
+  } catch (err) {
+    try {
+      unlinkSync(tmp);
+    } catch {
+      // Best-effort cleanup; the original error is what matters.
+    }
+    throw err;
+  }
+}
+
+/**
  * Copy the bundled shim template into the plugin's persistent data directory.
  * Writing only on difference keeps the hook a no-op in the common case, and lets a
  * future plugin version upgrade the shim itself.
@@ -37,21 +71,7 @@ export function syncShim(pluginRoot, pluginData) {
   if (existsSync(dest) && readFileSync(dest, 'utf8') === content) return dest;
 
   mkdirSync(pluginData, { recursive: true });
-
-  // Temp file + rename: a status line render firing in another session at this instant
-  // must never load a truncated shim mid-write.
-  const tmp = `${dest}.${process.pid}.tmp`;
-  try {
-    writeFileSync(tmp, content);
-    renameSync(tmp, dest);
-  } catch (err) {
-    try {
-      unlinkSync(tmp);
-    } catch {
-      // Best-effort cleanup; the original error is what matters.
-    }
-    throw err;
-  }
+  atomicWrite(dest, content);
   return dest;
 }
 
@@ -96,20 +116,15 @@ export function migrateStatusLine(settingsPath, shimPath) {
   const target = realpathSync(settingsPath);
   // The mode is preserved explicitly so a deliberately-restricted settings.json (env
   // secrets, apiKeyHelper) doesn't widen on migration, and the .bak copy stays exactly as
-  // private as the source it was copied from. writeFileSync's `mode` option is
-  // umask-filtered, so it only approximates the source mode — chmodSync afterward makes it
-  // exact. Best-effort: a chmod failure must not abort the migration.
+  // private as the source it was copied from. atomicWrite applies it; see there for why
+  // that takes both a writeFileSync option and a follow-up chmod.
   const mode = statSync(target).mode;
 
+  // Atomic here too, not just tidiness: the `!existsSync` guard means a backup truncated
+  // by a crashed write would be mistaken for a good one and never rewritten, losing the
+  // original for good.
   const backup = `${target}.bak`;
-  if (!existsSync(backup)) {
-    writeFileSync(backup, raw, { mode });
-    try {
-      chmodSync(backup, mode);
-    } catch {
-      // Best-effort; see comment above.
-    }
-  }
+  if (!existsSync(backup)) atomicWrite(backup, raw, mode);
 
   // Quote unconditionally: a space-only check misses shell metacharacters (e.g. a config
   // dir at `/home/user(a)/.claude`), which `sh` then fails to parse since statusLine.command
@@ -117,29 +132,10 @@ export function migrateStatusLine(settingsPath, shimPath) {
   // and backslashes too.
   settings.statusLine.command = `node ${JSON.stringify(shimPath)}`;
 
-  // Temp file + rename: a crashed write must not leave a truncated settings.json. A
-  // per-process temp name keeps concurrent SessionStart hooks (several sessions launching
-  // at once, e.g. after a restart) from interleaving writes to a shared temp file.
-  const tmp = `${target}.${process.pid}.tmp`;
-  try {
-    // JSON.stringify(settings, null, 2) reformats the whole file to 2-space indentation —
-    // a hand-maintained settings.json with different spacing gets rewritten to match. This
-    // is an accepted trade-off; the `.bak` above preserves the original exactly.
-    writeFileSync(tmp, `${JSON.stringify(settings, null, 2)}\n`, { mode });
-    try {
-      chmodSync(tmp, mode);
-    } catch {
-      // Best-effort; see comment above.
-    }
-    renameSync(tmp, target);
-  } catch (err) {
-    try {
-      unlinkSync(tmp);
-    } catch {
-      // Best-effort cleanup; the original error is what matters.
-    }
-    throw err;
-  }
+  // JSON.stringify(settings, null, 2) reformats the whole file to 2-space indentation —
+  // a hand-maintained settings.json with different spacing gets rewritten to match. This
+  // is an accepted trade-off; the `.bak` above preserves the original exactly.
+  atomicWrite(target, `${JSON.stringify(settings, null, 2)}\n`, mode);
   return 'migrated';
 }
 
@@ -157,9 +153,7 @@ function isInvokedDirectly() {
   }
 }
 
-const invokedDirectly = isInvokedDirectly();
-
-if (invokedDirectly) {
+if (isInvokedDirectly()) {
   try {
     const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
     const pluginData = process.env.CLAUDE_PLUGIN_DATA;
