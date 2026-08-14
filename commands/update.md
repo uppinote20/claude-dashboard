@@ -56,7 +56,11 @@ fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 '
 ```
 
-3. Report which build the shim resolves to:
+3. Report which build the shim resolves to. The filter here is `dist/index.js`, not step 2's
+   `scripts/statusline-shim.mjs`, and the divergence is deliberate: step 2 picks a version to
+   copy the shim *from*, while this step mirrors what the shim resolves *to* at render time —
+   and `resolveLatestDist` skips any version without a `dist/index.js`. A half-installed
+   version rightly shows up in one and not the other:
 ```bash
 CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}" node -e '
 const fs = require("fs");

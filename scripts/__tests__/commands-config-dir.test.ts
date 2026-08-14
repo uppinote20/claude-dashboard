@@ -139,6 +139,13 @@ describe.skipIf(process.platform === 'win32')('commands/*.md CLAUDE_CONFIG_DIR s
       `CFGDIR="\${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SCRIPT="$(CFGDIR="$CFGDIR" node -e '`
     ).replace(/ \$ARGUMENTS$/, '');
 
+  it('setup and update step 2 stay byte-identical', () => {
+    // Markdown has no include, so the block is necessarily re-embedded rather than shared.
+    // Assert the invariant the duplication rests on instead of only asserting it in a
+    // comment: a fix applied to one file and not the other is caught here.
+    expect(UPDATE()).toBe(SETUP());
+  });
+
   it('setup writes the default config dir when CLAUDE_CONFIG_DIR is unset', () => {
     run(SETUP());
     const cfgDir = path.join(HOME, '.claude');
