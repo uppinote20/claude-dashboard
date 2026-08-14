@@ -21,7 +21,11 @@ import path from 'path';
 import { homedir } from 'os';
 import { fileURLToPath } from 'url';
 
-export const SHIM_FILENAME = 'statusline.mjs';
+// Deliberately not exported: the tests pin this filename as a literal instead, because it
+// is a published contract — commands/setup.md writes the same string by hand and users'
+// settings.json points at it. A test importing this constant would keep passing if the
+// value changed while the doc snippet did not.
+const SHIM_FILENAME = 'statusline.mjs';
 
 /**
  * Write to a temp file and rename, so a reader never sees a half-written file: a status

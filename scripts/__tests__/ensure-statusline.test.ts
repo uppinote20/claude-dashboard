@@ -22,6 +22,11 @@ import path from 'path';
 // @ts-expect-error - dependency-free .mjs hook, no type declarations by design
 import { syncShim, migrateStatusLine } from '../../hooks/ensure-statusline.mjs';
 
+// The version-pinned command shape the migration exists to replace. Shared by the
+// in-process migrateStatusLine tests and the CLI entry-point test.
+const PINNED =
+  'node /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js';
+
 describe('ensure-statusline / syncShim', () => {
   let tmpDir: string;
   let pluginRoot: string;
@@ -91,9 +96,6 @@ describe('ensure-statusline / migrateStatusLine', () => {
   let tmpDir: string;
   let settingsPath: string;
   const SHIM = '/home/u/.claude/plugins/data/claude-dashboard-claude-dashboard/statusline.mjs';
-
-  const PINNED =
-    'node /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js';
 
   function writeSettings(value: unknown): void {
     writeFileSync(settingsPath, JSON.stringify(value, null, 2));
@@ -321,8 +323,6 @@ describe('ensure-statusline / CLI entry point', () => {
     const configDir = path.join(tmpDir, 'settings-dir');
     mkdirSync(configDir, { recursive: true });
     const settingsPath = path.join(configDir, 'settings.json');
-    const PINNED =
-      'node /home/u/.claude/plugins/cache/claude-dashboard/claude-dashboard/1.31.0/dist/index.js';
     writeFileSync(settingsPath, JSON.stringify({ statusLine: { type: 'command', command: PINNED } }, null, 2));
 
     const result = execFileSync('node', [linkedHookPath], {
