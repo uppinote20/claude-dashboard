@@ -28,6 +28,13 @@ git clone https://github.com/uppinote20/claude-dashboard.git "${CLAUDE_CONFIG_DI
 /claude-dashboard:setup
 ```
 
+> `/claude-dashboard:setup` looks for the plugin under `plugins/cache/claude-dashboard/claude-dashboard/`,
+> which a manual clone into `plugins/claude-dashboard/` does not match — the setup command's shim lookup
+> will find nothing to copy. Point `statusLine.command` in `settings.json` directly at your clone's
+> `dist/index.js` instead (e.g. `node "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/plugins/claude-dashboard/dist/index.js"`),
+> and note that manual installs do not get automatic version pickup — `git pull` and update the path
+> yourself after each release.
+
 ## Display Modes
 
 **Compact (1 line) - Default:**
@@ -216,7 +223,9 @@ check-ai --json   # JSON output for scripting
 
 ### `/claude-dashboard:update`
 
-Update the plugin and refresh the statusLine path in settings. Run after updating via git pull or marketplace.
+Repair or verify the statusLine shim. Usually unnecessary — after `/plugin update`, the
+status line picks up the new version on its own. Use this if you have hooks disabled or the
+status line stops updating.
 
 ```bash
 /claude-dashboard:update
@@ -228,8 +237,9 @@ Update the plugin and refresh the statusLine path in settings. Run after updatin
 <summary><strong>Status line not showing</strong></summary>
 
 1. Check if plugin is installed: `/plugin list`
-2. Verify settings.json has statusLine config
-3. Restart Claude Code
+2. Verify `settings.json` has a `statusLine` entry pointing at
+   `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`
+3. If it's still not showing, try restarting Claude Code
 
 </details>
 

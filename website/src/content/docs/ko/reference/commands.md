@@ -102,7 +102,7 @@ check-ai --json   # 스크립팅용 JSON 출력
 
 ## /claude-dashboard:update
 
-플러그인 업데이트 후 `settings.json`의 `statusLine` 경로를 최신 버전으로 갱신합니다.
+statusLine shim을 복구하거나 상태를 확인합니다 (보통은 자동으로 처리됩니다).
 
 ### 사용 예시
 
@@ -112,15 +112,16 @@ check-ai --json   # 스크립팅용 JSON 출력
 
 ### 사용 시점
 
-플러그인을 업데이트한 후 실행합니다:
+일반적으로는 실행할 필요가 없습니다. `statusLine`은 매 렌더링마다 최신 설치 버전을 자동으로
+찾아내는 고정 shim 경로(`plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`)를
+가리키므로, `SessionStart` 훅이 `/plugin update claude-dashboard` 이후에도 계속 최신 상태를
+유지해 줍니다. 훅을 비활성화했거나 상태줄이 갱신되지 않을 때만 이 커맨드를 실행하세요.
 
-```bash
-# 마켓플레이스를 통해 업데이트 후
-/plugin update claude-dashboard
-/claude-dashboard:update
+### 동작 방식
 
-# git pull로 수동 업데이트 후
-/claude-dashboard:update
-```
+1. 고정된 데이터 디렉터리 경로에 shim을 설치하거나 최신화하고, `settings.json`(`CLAUDE_CONFIG_DIR`가
+   설정되어 있으면 `$CLAUDE_CONFIG_DIR/settings.json`, 아니면 `~/.claude/settings.json`)의
+   `statusLine`이 그 경로를 가리키도록 설정합니다
+2. shim이 현재 어떤 빌드를 가리키는지 보고합니다
 
-업데이트 후 변경 사항을 적용하려면 Claude Code를 재시작해야 합니다.
+`settings.json`이 변경된 경우 다음 상호작용부터 바로 적용됩니다 — 재시작은 필요하지 않습니다.

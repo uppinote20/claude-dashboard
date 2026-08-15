@@ -1,0 +1,15 @@
+{
+  "description": "Keeps statusLine pointed at the version-agnostic shim. Each SessionStart array element is a matcher group whose own 'hooks' array holds the commands, so the inner nesting is required by the schema rather than redundant.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/ensure-statusline.mjs\""
+          }
+        ]
+      }
+    ]
+  }
+}

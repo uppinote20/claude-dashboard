@@ -1,7 +1,7 @@
 ---
 description: Configure claude-dashboard status line settings
 argument-hint: "[displayMode] [language] [plan] | custom \"widgets\""
-allowed-tools: Read, Write, Bash(node:*), Bash(cat:*), Bash(mkdir:*), Bash(ls:*), Bash(sort:*), Bash(tail:*), AskUserQuestion
+allowed-tools: Read, Write, Bash(node:*), AskUserQuestion
 ---
 
 # Claude Dashboard Setup
@@ -236,16 +236,58 @@ Preset characters: `M`=model, `C`=context, `b`=contextBar, `%`=contextPercentage
 
 Add or update the statusLine configuration in the session's Claude config dir — `$CLAUDE_CONFIG_DIR` if set, `~/.claude` otherwise. Multi-account setups run this once per account:
 
-**Find the plugin path and update settings.json** (copy-paste one-liner):
+**Find the plugin path and update settings.json** (copy-paste block — resolves the newest
+installed version in `node` rather than shelling out to `sort -V`, which is a GNU/BSD
+extension, not POSIX):
 ```bash
-CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; SLPATH="$(ls -d "$CFGDIR"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/index.js 2>/dev/null | sort -V | tail -1)" CFGDIR="$CFGDIR" node -e 'const fs=require("fs"),p=process.env.CFGDIR+"/settings.json";const s=fs.existsSync(p)?JSON.parse(fs.readFileSync(p,"utf8")):{};s.statusLine={type:"command",command:"node "+process.env.SLPATH};fs.writeFileSync(p,JSON.stringify(s,null,2));'
+CFGDIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"; CFGDIR="$CFGDIR" node -e '
+const fs = require("fs");
+const path = require("path");
+const cfgDir = process.env.CFGDIR;
+const cacheRoot = path.join(cfgDir, "plugins/cache/claude-dashboard/claude-dashboard");
+let entries = [];
+try {
+  entries = fs.readdirSync(cacheRoot, { withFileTypes: true });
+} catch {}
+const versions = entries
+  .filter((e) => e.isDirectory() && /^\d+\.\d+\.\d+$/.test(e.name))
+  .map((e) => e.name)
+  .filter((v) => fs.existsSync(path.join(cacheRoot, v, "scripts/statusline-shim.mjs")))
+  .sort((a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+  });
+if (versions.length === 0) {
+  console.error("claude-dashboard is not installed in " + cfgDir);
+  process.exit(1);
+}
+const src = path.join(cacheRoot, versions[versions.length - 1], "scripts/statusline-shim.mjs");
+const dataDir = path.join(cfgDir, "plugins/data/claude-dashboard-claude-dashboard");
+fs.mkdirSync(dataDir, { recursive: true });
+const dest = path.join(dataDir, "statusline.mjs");
+fs.copyFileSync(src, dest);
+const settingsPath = path.join(cfgDir, "settings.json");
+const settings = fs.existsSync(settingsPath) ? JSON.parse(fs.readFileSync(settingsPath, "utf8")) : {};
+const statusLine = settings.statusLine && typeof settings.statusLine === "object" ? settings.statusLine : {};
+statusLine.type = "command";
+statusLine.command = "node " + JSON.stringify(dest);
+settings.statusLine = statusLine;
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+'
 ```
 
 This command:
-1. Finds the latest plugin version dynamically (in `$CLAUDE_CONFIG_DIR` when set, `~/.claude` otherwise)
-2. Updates `statusLine` in that config dir's settings.json with the correct path
+1. Copies the status line shim into the plugin's persistent data directory
+   (`plugins/data/claude-dashboard-claude-dashboard/`), which survives plugin updates
+2. Points `statusLine` at that fixed path — it resolves the newest installed build on
+   every render, so plugin updates need no further settings change
+3. Prints `claude-dashboard is not installed in <configdir>` and exits non-zero if no
+   version is installed there yet
 
-**IMPORTANT**: After updating the plugin via `/plugin update claude-dashboard`, run `/claude-dashboard:update` to update the statusLine path to the latest version.
+**Note**: After `/plugin update claude-dashboard`, the status line picks up the new version
+automatically — no follow-up command is needed. Run `/claude-dashboard:update` only if you
+have hooks disabled or the status line is not updating.
 
 ## Examples
 

@@ -8,8 +8,9 @@ sidebar:
 ## Status line not showing
 
 1. Check if the plugin is installed by running `/plugin list` in Claude Code.
-2. Verify that `~/.claude/settings.json` contains a `statusLine` configuration entry.
-3. Restart Claude Code.
+2. Verify that `~/.claude/settings.json` contains a `statusLine` entry pointing at
+   `plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`.
+3. If it's still not showing, try restarting Claude Code.
 
 If the status line still does not appear after restarting, try running `/claude-dashboard:setup` again to regenerate the configuration.
 
@@ -42,15 +43,27 @@ rm -rf ~/.cache/claude-dashboard/
 
 Cache files are automatically cleaned up after 1 hour, so this is typically only needed when debugging issues.
 
-## Plugin not found after update
+## Status line not updating after a plugin update
 
-If the status line stops working after a plugin update, the path in settings.json may be pointing to an old version. Run:
+Normally nothing to do here: `statusLine` points at a permanent shim path
+(`plugins/data/claude-dashboard-claude-dashboard/statusline.mjs`) that resolves the newest
+installed build on every render, so `/plugin update` alone is enough.
+
+If the status line still shows the old version, restart Claude Code once — a `SessionStart`
+hook installs the shim and migrates `settings.json` automatically, and it only needs to run
+once. If it persists after restarting, run `/claude-dashboard:update` to repair it manually
+(this is also the fix if you have hooks disabled):
 
 ```bash
 /claude-dashboard:update
 ```
 
-This updates the `statusLine` path to the latest cached version. Restart Claude Code afterward.
+The first time this migration runs, it writes a one-time `settings.json.bak` backup next to
+`settings.json`, which you can use to restore the pre-migration value if you ever need to.
+
+Because the shim always resolves the newest installed build, installing an older version has
+no effect while a newer version's cache directory still exists. To deliberately test an older
+build, remove the newer version's directory under `plugins/cache/claude-dashboard/claude-dashboard/`.
 
 ## Multi-CLI widgets not appearing
 

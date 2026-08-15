@@ -46,11 +46,39 @@ echo $SHELL
 grep -q "^check-ai()" ~/.zshrc 2>/dev/null && echo "exists" || echo "not found"
 ```
 
-**Function to add:**
+**Function to add** (resolves the newest installed version in `node` rather than shelling
+out to `sort -V`, which is a GNU/BSD extension, not POSIX; re-reads `CLAUDE_CONFIG_DIR` on
+every call, so it follows account switches instead of freezing the path at definition time):
 ```bash
 # Claude Dashboard - check-ai alias
 check-ai() {
-  node "$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
+  local cfgdir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  local script
+  script="$(CFGDIR="$cfgdir" node -e '
+const fs = require("fs");
+const path = require("path");
+const cfgDir = process.env.CFGDIR;
+const cacheRoot = path.join(cfgDir, "plugins/cache/claude-dashboard/claude-dashboard");
+let entries = [];
+try {
+  entries = fs.readdirSync(cacheRoot, { withFileTypes: true });
+} catch {}
+const versions = entries
+  .filter((e) => e.isDirectory() && /^\d+\.\d+\.\d+$/.test(e.name))
+  .map((e) => e.name)
+  .filter((v) => fs.existsSync(path.join(cacheRoot, v, "dist/check-usage.js")))
+  .sort((a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+  });
+if (versions.length === 0) {
+  console.error("claude-dashboard is not installed in " + cfgDir);
+  process.exit(1);
+}
+console.log(path.join(cacheRoot, versions[versions.length - 1], "dist/check-usage.js"));
+')" || return 1
+  node "$script" "$@"
 }
 ```
 
@@ -60,7 +88,33 @@ cat >> ~/.zshrc << 'EOF'
 
 # Claude Dashboard - check-ai alias
 check-ai() {
-  node "$(ls -d "${CLAUDE_CONFIG_DIR:-$HOME/.claude}"/plugins/cache/claude-dashboard/claude-dashboard/*/dist/check-usage.js 2>/dev/null | sort -V | tail -1)" "$@"
+  local cfgdir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  local script
+  script="$(CFGDIR="$cfgdir" node -e '
+const fs = require("fs");
+const path = require("path");
+const cfgDir = process.env.CFGDIR;
+const cacheRoot = path.join(cfgDir, "plugins/cache/claude-dashboard/claude-dashboard");
+let entries = [];
+try {
+  entries = fs.readdirSync(cacheRoot, { withFileTypes: true });
+} catch {}
+const versions = entries
+  .filter((e) => e.isDirectory() && /^\d+\.\d+\.\d+$/.test(e.name))
+  .map((e) => e.name)
+  .filter((v) => fs.existsSync(path.join(cacheRoot, v, "dist/check-usage.js")))
+  .sort((a, b) => {
+    const pa = a.split(".").map(Number);
+    const pb = b.split(".").map(Number);
+    return pa[0] - pb[0] || pa[1] - pb[1] || pa[2] - pb[2];
+  });
+if (versions.length === 0) {
+  console.error("claude-dashboard is not installed in " + cfgDir);
+  process.exit(1);
+}
+console.log(path.join(cacheRoot, versions[versions.length - 1], "dist/check-usage.js"));
+')" || return 1
+  node "$script" "$@"
 }
 EOF
 ```
