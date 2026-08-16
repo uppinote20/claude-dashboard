@@ -6,22 +6,26 @@ name: Claude Code Review (fork)
 # here checks out or executes the contributor's code — see the checkout step.
 #
 # Applying the label is the approval: only users with write access can label a pull
-# request, so an outside contributor cannot start this run on their own PR.
+# request, so an outside contributor cannot start this run on their own PR. The approval
+# then stays in effect — later pushes re-review on their own. Revoke by removing the label.
 on:
   pull_request_target:
-    types: [labeled]
+    types: [labeled, synchronize]
 
-# Re-labelling while a review is still in flight replaces it instead of piling up.
+# A new push while a review is still in flight replaces it instead of piling up.
 concurrency:
   group: claude-review-fork-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   claude-review-fork:
-    # Forks only — same-repo pull requests are already covered by claude-code-review.yml,
+    # Gate on the label being *present*, not on this event having just applied it — that is
+    # what lets a `synchronize` push re-review without re-labelling. Checking
+    # `github.event.label.name` instead would silently drop every push event.
+    # Forks only: same-repo pull requests are already covered by claude-code-review.yml,
     # and running both would post two reviews.
     if: >-
-      github.event.label.name == 'safe-to-review' &&
+      contains(github.event.pull_request.labels.*.name, 'safe-to-review') &&
       github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     permissions:
