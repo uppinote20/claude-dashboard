@@ -2,30 +2,62 @@ name: Claude Code Review (fork)
 
 # Fork pull requests get no secrets on `pull_request`, so the normal review workflow skips
 # them. This one runs on `pull_request_target`, which executes in the base repository's
-# context and therefore does have secrets. That privilege is only safe because nothing
-# here checks out or executes the contributor's code — see the checkout step.
+# context and therefore does have secrets.
 #
-# Applying the label is the approval: only users with write access can label a pull
-# request, so an outside contributor cannot start this run on their own PR. The approval
-# then stays in effect — later pushes re-review on their own. Revoke by removing the label.
+# Two things keep that privilege contained:
+#
+# 1. The contributor's *code* never runs. The checkout step sets no `ref:` (base branch
+#    only) and nothing here builds, installs, or executes anything from the pull request.
+#
+# 2. The contributor's *diff* still reaches the model as content, and the agent can write
+#    to the PR (`gh pr comment`). A prompt injection planted in the diff could therefore
+#    try to get something from the runner echoed into a public comment. The label is what
+#    bounds this: it means a maintainer read that exact diff. So the review may only run
+#    on the `labeled` event — the artifact that was approved is the artifact that gets
+#    processed.
+#
+# That is why `synchronize` does NOT re-review. It revokes instead: a push drops the
+# label, and a maintainer must read the new head and re-apply it. Auto-reviewing on push
+# would let a contributor get a benign diff approved and then push an injected one.
 on:
   pull_request_target:
     types: [labeled, synchronize]
 
-# A new push while a review is still in flight replaces it instead of piling up.
+# A re-label while a review is still in flight replaces it instead of piling up.
 concurrency:
   group: claude-review-fork-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
+  # A push invalidates the approval. Removing the label makes that visible on the PR
+  # instead of leaving a stale "approved" badge above unreviewed commits.
+  revoke-approval-on-push:
+    if: >-
+      github.event.action == 'synchronize' &&
+      contains(github.event.pull_request.labels.*.name, 'safe-to-review')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      # No checkout: this job touches nothing from the pull request. PR_NUMBER goes
+      # through env rather than direct interpolation, and is an integer either way.
+      - name: Drop the review approval
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --remove-label safe-to-review
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" \
+            --body 'New commits arrived, so `safe-to-review` was removed. A maintainer can re-apply it after reading the updated diff to run the review again.'
+
   claude-review-fork:
-    # Gate on the label being *present*, not on this event having just applied it — that is
-    # what lets a `synchronize` push re-review without re-labelling. Checking
-    # `github.event.label.name` instead would silently drop every push event.
+    # `labeled` only. Gating on mere label presence would also fire on `synchronize`,
+    # which is exactly the approval bypass this workflow is built to avoid.
     # Forks only: same-repo pull requests are already covered by claude-code-review.yml,
     # and running both would post two reviews.
     if: >-
-      contains(github.event.pull_request.labels.*.name, 'safe-to-review') &&
+      github.event.action == 'labeled' &&
+      github.event.label.name == 'safe-to-review' &&
       github.event.pull_request.head.repo.fork
     runs-on: ubuntu-latest
     permissions:
