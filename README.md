@@ -307,7 +307,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=uppinote20/claude-dashboard&type=Date)](https://star-history.com/#uppinote20/claude-dashboard&Date)
+[![Star History Chart](https://star-history.dera.page/svg?repos=uppinote20/claude-dashboard&type=Date)](https://star-history.dera.page/#uppinote20/claude-dashboard&Date)
 
 ## ☕ Support
 
