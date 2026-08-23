@@ -19,6 +19,13 @@ name: Claude Code Review (fork)
 # That is why `synchronize` does NOT re-review. It revokes instead: a push drops the
 # label, and a maintainer must read the new head and re-apply it. Auto-reviewing on push
 # would let a contributor get a benign diff approved and then push an injected one.
+#
+# Authentication: by default the action exchanges the job's OIDC token for a Claude GitHub
+# App token, and Anthropic's exchange endpoint rejects tokens minted under
+# `pull_request_target` (401 "Invalid OIDC token" on every labeled run). Passing
+# `github_token` skips that exchange, so the review is posted by `github-actions[bot]`
+# rather than `claude[bot]`, and the job does not grant `id-token: write` because nothing
+# in it requests an OIDC token any more.
 on:
   pull_request_target:
     types: [labeled, synchronize]
@@ -71,7 +78,6 @@ jobs:
       contents: read
       pull-requests: write
       issues: read
-      id-token: write
 
     steps:
       # No `ref:` here, on purpose. Under pull_request_target the default is the base
@@ -87,6 +93,7 @@ jobs:
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           track_progress: true
           prompt: |
