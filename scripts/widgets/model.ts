@@ -46,8 +46,9 @@ interface ModelSettings {
 }
 
 /**
- * Fallback effort used only when the user has never set one — no `effortLevel`
- * in settings.json and no `CLAUDE_CODE_EFFORT_LEVEL` override. Claude Code's
+ * Fallback effort used only when the user has never set one — no per-model
+ * `modelSettings[<id>].effortLevel` or top-level `effortLevel` in settings.json
+ * and no `CLAUDE_CODE_EFFORT_LEVEL` override. Claude Code's
  * unset default is 'high' for every model the `/model` picker exposes (Opus 4.8,
  * Sonnet 5, Fable 5; Haiku has no effort tier, so render() hides its badge), so
  * this returns 'high'.
@@ -69,10 +70,56 @@ export function getDefaultEffort(_modelId: string): EffortLevel {
  */
 let settingsCache: {
   rawEffort: unknown;
+  rawModelSettings: unknown;
   fastMode: boolean;
   path: string;
   mtime: number;
 } | null = null;
+
+/**
+ * Claude Code keys `modelSettings` by the model id with the `[1m]` context-window
+ * suffix stripped (and compares case-insensitively), while the status line's
+ * `model.id` keeps that suffix for 1M-context sessions — so both sides are
+ * normalized the same way before they're compared.
+ */
+function normalizeModelId(modelId: string): string {
+  return modelId.replace(/\[1m\]$/i, '').toLowerCase();
+}
+
+/** The validated `effortLevel` of one `modelSettings` entry, if it has one. */
+function effortOf(perModel: unknown): EffortLevel | undefined {
+  if (!perModel || typeof perModel !== 'object') return undefined;
+  const candidate = (perModel as Record<string, unknown>).effortLevel;
+  return isEffortLevel(candidate) ? candidate : undefined;
+}
+
+/**
+ * Resolve the effort tier for `modelId` from a parsed settings.json.
+ * `/effort` writes per-model values to `modelSettings[<model id>].effortLevel`
+ * (the top-level `effortLevel` is the legacy global key and may hold a stale
+ * value once per-model settings exist), so per-model wins, then top-level,
+ * then the default. Within `modelSettings` an exact key wins over a
+ * suffix-normalized match, mirroring Claude Code's own lookup order.
+ */
+function resolveEffort(
+  rawModelSettings: unknown,
+  rawEffort: unknown,
+  modelId: string,
+  defaultEffort: EffortLevel
+): EffortLevel {
+  if (rawModelSettings && typeof rawModelSettings === 'object' && modelId) {
+    const entries = rawModelSettings as Record<string, unknown>;
+    const exact = effortOf(entries[modelId]);
+    if (exact) return exact;
+    const wanted = normalizeModelId(modelId);
+    for (const [key, perModel] of Object.entries(entries)) {
+      if (normalizeModelId(key) !== wanted) continue;
+      const candidate = effortOf(perModel);
+      if (candidate) return candidate;
+    }
+  }
+  return isEffortLevel(rawEffort) ? rawEffort : defaultEffort;
+}
 
 async function getModelSettings(modelId: string): Promise<ModelSettings> {
   const defaultEffort = getDefaultEffort(modelId);
@@ -86,17 +133,29 @@ async function getModelSettings(modelId: string): Promise<ModelSettings> {
       settingsCache.mtime === fileStat.mtimeMs
     ) {
       return {
-        effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
+        effortLevel: resolveEffort(
+          settingsCache.rawModelSettings,
+          settingsCache.rawEffort,
+          modelId,
+          defaultEffort
+        ),
         fastMode: settingsCache.fastMode,
       };
     }
     const content = await readFile(settingsPath, 'utf-8');
     const settings = JSON.parse(content);
     const rawEffort = settings.effortLevel;
+    const rawModelSettings = settings.modelSettings;
     const fastMode = settings.fastMode === true;
-    settingsCache = { path: settingsPath, mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    settingsCache = {
+      path: settingsPath,
+      mtime: fileStat.mtimeMs,
+      rawEffort,
+      rawModelSettings,
+      fastMode,
+    };
     return {
-      effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
+      effortLevel: resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
       fastMode,
     };
   } catch {

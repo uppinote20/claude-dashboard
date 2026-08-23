@@ -71,4 +71,76 @@ describe('model settings (getData)', () => {
     process.env.CLAUDE_CONFIG_DIR = ALT_CONFIG_DIR;
     expect((await modelWidget.getData(ctx))?.effortLevel).toBe('max');
   });
+
+  it('should prefer the per-model effortLevel in modelSettings over the top-level key', async () => {
+    // `/effort` writes per-model settings; the legacy top-level key may hold a stale value
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'high',
+      modelSettings: {
+        'claude-opus-4-8': { effortLevel: 'high' },
+        'claude-fable-5': { effortLevel: 'medium' },
+      },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const data = await modelWidget.getData(ctx);
+
+    expect(data?.effortLevel).toBe('medium');
+  });
+
+  it('should fall back to the top-level effortLevel when modelSettings has no entry for the model', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'low',
+      modelSettings: { 'claude-opus-4-8': { effortLevel: 'max' } },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const data = await modelWidget.getData(ctx);
+
+    expect(data?.effortLevel).toBe('low');
+  });
+
+  it('should resolve per-model effort for a different model id without a stale cache hit', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      modelSettings: {
+        'claude-opus-4-8': { effortLevel: 'max' },
+        'claude-fable-5': { effortLevel: 'medium' },
+      },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('medium');
+
+    const opusCtx = { stdin: { model: { id: 'claude-opus-4-8' } } } as unknown as WidgetContext;
+    expect((await modelWidget.getData(opusCtx))?.effortLevel).toBe('max');
+  });
+
+  it('should match the per-model entry when stdin carries the [1m] context suffix', async () => {
+    // `/effort` strips `[1m]` before keying modelSettings, but the status line's
+    // `model.id` keeps it for 1M-context sessions
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'high',
+      modelSettings: { 'claude-fable-5': { effortLevel: 'medium' } },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const oneMCtx = { stdin: { model: { id: 'claude-fable-5[1m]' } } } as unknown as WidgetContext;
+
+    expect((await modelWidget.getData(oneMCtx))?.effortLevel).toBe('medium');
+  });
+
+  it('should prefer an exact modelSettings key over a suffix-normalized match', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      modelSettings: {
+        'claude-fable-5': { effortLevel: 'medium' },
+        'claude-fable-5[1m]': { effortLevel: 'low' },
+      },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const oneMCtx = { stdin: { model: { id: 'claude-fable-5[1m]' } } } as unknown as WidgetContext;
+
+    expect((await modelWidget.getData(oneMCtx))?.effortLevel).toBe('low');
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('medium');
+  });
 });
