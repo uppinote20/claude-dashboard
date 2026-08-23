@@ -71,4 +71,46 @@ describe('model settings (getData)', () => {
     process.env.CLAUDE_CONFIG_DIR = ALT_CONFIG_DIR;
     expect((await modelWidget.getData(ctx))?.effortLevel).toBe('max');
   });
+  it('should prefer the per-model effortLevel in modelSettings over the top-level key', async () => {
+    // `/effort` writes per-model settings; the legacy top-level key may hold a stale value
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'high',
+      modelSettings: {
+        'claude-opus-4-8': { effortLevel: 'high' },
+        'claude-fable-5': { effortLevel: 'medium' },
+      },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const data = await modelWidget.getData(ctx);
+
+    expect(data?.effortLevel).toBe('medium');
+  });
+
+  it('should fall back to the top-level effortLevel when modelSettings has no entry for the model', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'low',
+      modelSettings: { 'claude-opus-4-8': { effortLevel: 'max' } },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const data = await modelWidget.getData(ctx);
+
+    expect(data?.effortLevel).toBe('low');
+  });
+
+  it('should resolve per-model effort for a different model id without a stale cache hit', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      modelSettings: {
+        'claude-opus-4-8': { effortLevel: 'max' },
+        'claude-fable-5': { effortLevel: 'medium' },
+      },
+    }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('medium');
+
+    const opusCtx = { stdin: { model: { id: 'claude-opus-4-8' } } } as unknown as WidgetContext;
+    expect((await modelWidget.getData(opusCtx))?.effortLevel).toBe('max');
+  });
 });

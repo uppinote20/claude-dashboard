@@ -1182,6 +1182,17 @@ function getDefaultEffort(_modelId) {
   return "high";
 }
 var settingsCache = null;
+function resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort) {
+  if (rawModelSettings && typeof rawModelSettings === "object" && modelId) {
+    const perModel = rawModelSettings[modelId];
+    if (perModel && typeof perModel === "object") {
+      const candidate = perModel.effortLevel;
+      if (isEffortLevel(candidate))
+        return candidate;
+    }
+  }
+  return isEffortLevel(rawEffort) ? rawEffort : defaultEffort;
+}
 async function getModelSettings(modelId) {
   const defaultEffort = getDefaultEffort(modelId);
   const settingsPath = join3(getClaudeConfigDir(), "settings.json");
@@ -1189,17 +1200,29 @@ async function getModelSettings(modelId) {
     const fileStat = await stat3(settingsPath);
     if (settingsCache && settingsCache.path === settingsPath && settingsCache.mtime === fileStat.mtimeMs) {
       return {
-        effortLevel: isEffortLevel(settingsCache.rawEffort) ? settingsCache.rawEffort : defaultEffort,
+        effortLevel: resolveEffort(
+          settingsCache.rawModelSettings,
+          settingsCache.rawEffort,
+          modelId,
+          defaultEffort
+        ),
         fastMode: settingsCache.fastMode
       };
     }
     const content = await readFile3(settingsPath, "utf-8");
     const settings = JSON.parse(content);
     const rawEffort = settings.effortLevel;
+    const rawModelSettings = settings.modelSettings;
     const fastMode = settings.fastMode === true;
-    settingsCache = { path: settingsPath, mtime: fileStat.mtimeMs, rawEffort, fastMode };
+    settingsCache = {
+      path: settingsPath,
+      mtime: fileStat.mtimeMs,
+      rawEffort,
+      rawModelSettings,
+      fastMode
+    };
     return {
-      effortLevel: isEffortLevel(rawEffort) ? rawEffort : defaultEffort,
+      effortLevel: resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
       fastMode
     };
   } catch {
