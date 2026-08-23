@@ -123,6 +123,9 @@ function resolveEffort(
 
 async function getModelSettings(modelId: string): Promise<ModelSettings> {
   const defaultEffort = getDefaultEffort(modelId);
+  // Same precedence as Claude Code: a valid env override beats settings.json
+  const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
+  const envOverride = isEffortLevel(envEffort) ? envEffort : undefined;
   const settingsPath = join(getClaudeConfigDir(), 'settings.json');
 
   try {
@@ -133,7 +136,7 @@ async function getModelSettings(modelId: string): Promise<ModelSettings> {
       settingsCache.mtime === fileStat.mtimeMs
     ) {
       return {
-        effortLevel: resolveEffort(
+        effortLevel: envOverride ?? resolveEffort(
           settingsCache.rawModelSettings,
           settingsCache.rawEffort,
           modelId,
@@ -155,19 +158,14 @@ async function getModelSettings(modelId: string): Promise<ModelSettings> {
       fastMode,
     };
     return {
-      effortLevel: resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
+      effortLevel: envOverride ?? resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
       fastMode,
     };
   } catch {
     settingsCache = null;
   }
 
-  const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
-  if (isEffortLevel(envEffort)) {
-    return { effortLevel: envEffort, fastMode: false };
-  }
-
-  return { effortLevel: defaultEffort, fastMode: false };
+  return { effortLevel: envOverride ?? defaultEffort, fastMode: false };
 }
 
 export const modelWidget: Widget<ModelData> = {

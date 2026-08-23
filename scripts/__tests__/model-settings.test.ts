@@ -143,4 +143,35 @@ describe('model settings (getData)', () => {
     expect((await modelWidget.getData(oneMCtx))?.effortLevel).toBe('low');
     expect((await modelWidget.getData(ctx))?.effortLevel).toBe('medium');
   });
+
+  it('should let CLAUDE_CODE_EFFORT_LEVEL override settings.json like Claude Code does', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'high',
+      modelSettings: { 'claude-fable-5': { effortLevel: 'medium' } },
+    }));
+    process.env.CLAUDE_CODE_EFFORT_LEVEL = 'low';
+
+    const { modelWidget } = await import('../widgets/model.js');
+
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('low');
+  });
+
+  it('should ignore an invalid CLAUDE_CODE_EFFORT_LEVEL and fall through to settings.json', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'high' }));
+    process.env.CLAUDE_CODE_EFFORT_LEVEL = 'turbo';
+
+    const { modelWidget } = await import('../widgets/model.js');
+
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('high');
+  });
+
+  it('should apply CLAUDE_CODE_EFFORT_LEVEL on a settings cache hit too', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'high' }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('high'); // fills the cache
+
+    process.env.CLAUDE_CODE_EFFORT_LEVEL = 'low';
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('low'); // same mtime → cache hit
+  });
 });

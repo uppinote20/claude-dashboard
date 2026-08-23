@@ -1210,12 +1210,14 @@ function resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort) {
 }
 async function getModelSettings(modelId) {
   const defaultEffort = getDefaultEffort(modelId);
+  const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
+  const envOverride = isEffortLevel(envEffort) ? envEffort : void 0;
   const settingsPath = join3(getClaudeConfigDir(), "settings.json");
   try {
     const fileStat = await stat3(settingsPath);
     if (settingsCache && settingsCache.path === settingsPath && settingsCache.mtime === fileStat.mtimeMs) {
       return {
-        effortLevel: resolveEffort(
+        effortLevel: envOverride ?? resolveEffort(
           settingsCache.rawModelSettings,
           settingsCache.rawEffort,
           modelId,
@@ -1237,17 +1239,13 @@ async function getModelSettings(modelId) {
       fastMode
     };
     return {
-      effortLevel: resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
+      effortLevel: envOverride ?? resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort),
       fastMode
     };
   } catch {
     settingsCache = null;
   }
-  const envEffort = process.env.CLAUDE_CODE_EFFORT_LEVEL;
-  if (isEffortLevel(envEffort)) {
-    return { effortLevel: envEffort, fastMode: false };
-  }
-  return { effortLevel: defaultEffort, fastMode: false };
+  return { effortLevel: envOverride ?? defaultEffort, fastMode: false };
 }
 var modelWidget = {
   id: "model",
