@@ -1182,12 +1182,27 @@ function getDefaultEffort(_modelId) {
   return "high";
 }
 var settingsCache = null;
+function normalizeModelId(modelId) {
+  return modelId.replace(/\[1m\]$/i, "").toLowerCase();
+}
+function effortOf(perModel) {
+  if (!perModel || typeof perModel !== "object")
+    return void 0;
+  const candidate = perModel.effortLevel;
+  return isEffortLevel(candidate) ? candidate : void 0;
+}
 function resolveEffort(rawModelSettings, rawEffort, modelId, defaultEffort) {
   if (rawModelSettings && typeof rawModelSettings === "object" && modelId) {
-    const perModel = rawModelSettings[modelId];
-    if (perModel && typeof perModel === "object") {
-      const candidate = perModel.effortLevel;
-      if (isEffortLevel(candidate))
+    const entries = rawModelSettings;
+    const exact = effortOf(entries[modelId]);
+    if (exact)
+      return exact;
+    const wanted = normalizeModelId(modelId);
+    for (const [key, perModel] of Object.entries(entries)) {
+      if (normalizeModelId(key) !== wanted)
+        continue;
+      const candidate = effortOf(perModel);
+      if (candidate)
         return candidate;
     }
   }
