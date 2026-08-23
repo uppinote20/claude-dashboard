@@ -71,6 +71,7 @@ describe('model settings (getData)', () => {
     process.env.CLAUDE_CONFIG_DIR = ALT_CONFIG_DIR;
     expect((await modelWidget.getData(ctx))?.effortLevel).toBe('max');
   });
+
   it('should prefer the per-model effortLevel in modelSettings over the top-level key', async () => {
     // `/effort` writes per-model settings; the legacy top-level key may hold a stale value
     await writeFile(SETTINGS_FILE, JSON.stringify({
