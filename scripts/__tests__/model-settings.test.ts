@@ -164,4 +164,14 @@ describe('model settings (getData)', () => {
 
     expect((await modelWidget.getData(ctx))?.effortLevel).toBe('high');
   });
+
+  it('should apply CLAUDE_CODE_EFFORT_LEVEL on a settings cache hit too', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'high' }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('high'); // fills the cache
+
+    process.env.CLAUDE_CODE_EFFORT_LEVEL = 'low';
+    expect((await modelWidget.getData(ctx))?.effortLevel).toBe('low'); // same mtime → cache hit
+  });
 });
