@@ -36,6 +36,7 @@
     "hooks": "훅",
     "burnRate": "소모율",
     "cache": "캐시",
+    "cacheMiss": "미스",
     "toLimit": "후",
     "forecast": "예측",
     "budget": "예산",

@@ -36,6 +36,7 @@
     "hooks": "Hooks",
     "burnRate": "Rate",
     "cache": "Cache",
+    "cacheMiss": "miss",
     "toLimit": "to",
     "forecast": "Forecast",
     "budget": "Budget",
