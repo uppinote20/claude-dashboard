@@ -719,6 +719,94 @@ describe('transcript-parser', () => {
       expect(status.completed).toBe(0);
       expect(status.active).toHaveLength(0);
     });
+
+    it('should track the renamed `Agent` tool and pass through its model parameter', async () => {
+      await writeTranscript([
+        {
+          type: 'assistant',
+          message: {
+            content: [
+              {
+                type: 'tool_use',
+                id: 'agent-1',
+                name: 'Agent',
+                input: { subagent_type: 'Explore', description: 'Searching', model: 'sonnet' },
+              },
+              {
+                type: 'tool_use',
+                id: 'agent-2',
+                name: 'Agent',
+                input: { subagent_type: 'Plan', description: 'Planning' },
+              },
+            ],
+          },
+        },
+        {
+          type: 'user',
+          message: { content: [{ type: 'tool_result', tool_use_id: 'agent-2' }] },
+        },
+      ]);
+
+      const { parseTranscript, extractAgentStatus } = await import('../utils/transcript-parser.js');
+      const transcript = await parseTranscript(TEST_FILE);
+      const status = extractAgentStatus(transcript!);
+
+      expect(status.completed).toBe(1);
+      expect(status.active).toEqual([
+        { name: 'Explore', description: 'Searching', model: 'sonnet' },
+      ]);
+    });
+  });
+
+  describe('resolveSubagentModel', () => {
+    const noEnv = {} as NodeJS.ProcessEnv;
+
+    it('should use the per-invocation model when given', async () => {
+      const { resolveSubagentModel } = await import('../utils/transcript-parser.js');
+      expect(resolveSubagentModel('Explore', 'sonnet', noEnv)).toBe('sonnet');
+      expect(resolveSubagentModel('code-reviewer', 'claude-opus-5', noEnv)).toBe('claude-opus-5');
+    });
+
+    it('should return undefined when nothing pins the model (inherits main model)', async () => {
+      const { resolveSubagentModel } = await import('../utils/transcript-parser.js');
+      expect(resolveSubagentModel('Explore', undefined, noEnv)).toBeUndefined();
+      expect(resolveSubagentModel('general-purpose', undefined, noEnv)).toBeUndefined();
+      expect(resolveSubagentModel(undefined, undefined, noEnv)).toBeUndefined();
+    });
+
+    it('should apply CLAUDE_CODE_SUBAGENT_MODEL only to built-in types without frontmatter', async () => {
+      const { resolveSubagentModel } = await import('../utils/transcript-parser.js');
+      const env = { CLAUDE_CODE_SUBAGENT_MODEL: 'opus' } as NodeJS.ProcessEnv;
+
+      expect(resolveSubagentModel('general-purpose', undefined, env)).toBe('opus');
+      expect(resolveSubagentModel('claude', undefined, env)).toBe('opus');
+      // Explore/Plan inherit; custom agents may carry their own frontmatter model
+      expect(resolveSubagentModel('Explore', undefined, env)).toBeUndefined();
+      expect(resolveSubagentModel('Plan', undefined, env)).toBeUndefined();
+      expect(resolveSubagentModel('code-reviewer', undefined, env)).toBeUndefined();
+      // Per-invocation parameter still beats the env default
+      expect(resolveSubagentModel('general-purpose', 'haiku', env)).toBe('haiku');
+    });
+
+    it('should let CLAUDE_CODE_SUBAGENT_MODEL_FORCE override everything except fork and Explore', async () => {
+      const { resolveSubagentModel } = await import('../utils/transcript-parser.js');
+      const env = {
+        CLAUDE_CODE_SUBAGENT_MODEL: 'haiku',
+        CLAUDE_CODE_SUBAGENT_MODEL_FORCE: '1',
+      } as NodeJS.ProcessEnv;
+
+      expect(resolveSubagentModel('code-reviewer', 'opus', env)).toBe('haiku');
+      expect(resolveSubagentModel('general-purpose', undefined, env)).toBe('haiku');
+      expect(resolveSubagentModel('Explore', undefined, env)).toBeUndefined();
+      expect(resolveSubagentModel('fork', 'opus', env)).toBeUndefined();
+    });
+
+    it('should treat fork as always inheriting the parent model', async () => {
+      const { resolveSubagentModel } = await import('../utils/transcript-parser.js');
+      const env = { CLAUDE_CODE_SUBAGENT_MODEL: 'opus' } as NodeJS.ProcessEnv;
+      expect(resolveSubagentModel('fork', undefined, env)).toBeUndefined();
+      expect(resolveSubagentModel('fork', 'sonnet', noEnv)).toBeUndefined();
+    });
   });
 
   describe('extractToolTarget', () => {

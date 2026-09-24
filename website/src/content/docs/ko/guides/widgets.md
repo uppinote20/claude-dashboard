@@ -44,7 +44,7 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 | 위젯 | ID | 설명 |
 |------|-----|------|
 | 도구 활동 | `toolActivity` | 실행 중/완료된 도구 및 대상 표시 (예: `Read(app.ts)`, `Bash(npm test)`) |
-| 에이전트 상태 | `agentStatus` | 서브에이전트 진행 상황 |
+| 에이전트 상태 | `agentStatus` | 서브에이전트 진행 상황 + 확인 가능한 경우 모델 표시 (예: `Explore(Opus)`) |
 | TODO 진행률 | `todoProgress` | TODO 완료율 |
 
 ## Analytics
@@ -53,7 +53,8 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 |------|-----|------|
 | 번 레이트 | `burnRate` | 분당 토큰 소비량 |
 | 토큰 속도 | `tokenSpeed` | 출력 토큰 생성 속도 |
-| 캐시 히트율 | `cacheHit` | 캐시 히트율 백분율 |
+| 캐시 히트율 | `cacheHit` | 캐시 히트율 백분율 (마지막 요청 기준) |
+| 프롬프트 캐시 | `promptCache` | 세션 프롬프트 캐시 상태: ♨️ warm / ❄️ cold, 히트율, 미스 횟수 (Claude Code 2.1.251 이상) |
 | 고갈 시간 | `depletionTime` | 속도 제한 도달 예상 시간 (근사치)[1] |
 
 ## Multi-CLI

@@ -51,7 +51,7 @@ Compact의 모든 위젯에 프로젝트 정보와 세션 관련 위젯을 추�
 
 **1줄:** model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, rateLimit7dFable, zaiUsage<br/>
 **2줄:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
-**3줄:** configCounts, toolActivity, agentStatus, cacheHit, performance<br/>
+**3줄:** configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance<br/>
 **4줄:** tokenBreakdown, forecast, budget, todayCost<br/>
 **5줄:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours<br/>
 **6줄:** lastPrompt, vimMode, apiDuration, tagStatus

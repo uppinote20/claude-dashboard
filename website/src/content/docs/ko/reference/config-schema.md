@@ -84,7 +84,7 @@ type WidgetId =
   | 'projectInfo' | 'configCounts'
   | 'sessionDuration' | 'sessionId' | 'sessionIdFull' | 'sessionName'
   | 'toolActivity' | 'agentStatus' | 'todoProgress'
-  | 'burnRate' | 'tokenSpeed' | 'depletionTime' | 'cacheHit'
+  | 'burnRate' | 'tokenSpeed' | 'depletionTime' | 'cacheHit' | 'promptCache'
   | 'codexUsage' | 'geminiUsage' | 'geminiUsageAll'
   | 'antigravityUsage' | 'antigravityUsageAll' | 'zaiUsage'
   | 'tokenBreakdown' | 'performance' | 'forecast' | 'budget' | 'todayCost'

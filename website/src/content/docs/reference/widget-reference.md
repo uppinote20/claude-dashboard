@@ -14,14 +14,14 @@ This page provides detailed information about each widget, including its data so
 | Property | Value |
 |----------|-------|
 | **Widget ID** | `model` |
-| **Data Source** | stdin (model info) + settings (effort/fast mode) |
-| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet/Fable (MAX/X/H/M/L) and fast mode indicator for Opus (↯). |
+| **Data Source** | stdin (model info, live `effort.level` / `fast_mode`) + settings.json fallback |
+| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet/Fable (MAX/X/H/M/L) and fast mode indicator for Opus (↯). The live `effort.level` / `fast_mode` fields Claude Code sends on stdin win, so mid-session `/effort` changes and session-only picks are reflected; older Claude Code versions without them fall back to `settings.json`. |
 
 **Example output:**
 ```
 Opus(X)
 Sonnet(M)
-Opus(X↯)
+Opus(X) ↯
 ```
 
 ### context
@@ -248,12 +248,13 @@ CLAUDE.md: 2 | AGENTS.md: 1 | rules: 3 | MCPs: 1 | hooks: 0 | +Dirs: 2
 | Property | Value |
 |----------|-------|
 | **Widget ID** | `agentStatus` |
-| **Data Source** | transcript (JSONL) |
-| **Description** | Shows the number of active and completed subagents. |
+| **Data Source** | transcript (JSONL) + environment |
+| **Description** | Shows the running subagent (type, task description) and the number of completed subagents. When the subagent's model can be determined — from the Agent tool's per-invocation `model` parameter, or from `CLAUDE_CODE_SUBAGENT_MODEL` for the built-in `general-purpose`/`claude` types (with `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1`, every type except `fork` and `Explore`) — it appears as a suffix, e.g. `Explore(Sonnet)`. No suffix means the subagent inherits the main conversation's model or the model isn't knowable from the transcript. |
 
 **Example output:**
 ```
-Agent: 1 active, 2 done
+🤖 Agent: Explore(Sonnet): Searching codebase +1
+🤖 Agent: general-purpose(Opus): Research auth flow
 Agent: 3 done
 ```
 
@@ -307,12 +308,28 @@ Agent: 3 done
 |----------|-------|
 | **Widget ID** | `cacheHit` |
 | **Data Source** | stdin (context_window.current_usage) |
-| **Description** | Shows the percentage of input tokens served from cache. Higher values indicate better cache utilization. |
+| **Description** | Shows the percentage of input tokens served from cache on the most recent API request. Higher values indicate better cache utilization. For the session-wide view, see `promptCache`. |
 
 **Example output:**
 ```
 85%
 42%
+```
+
+### promptCache
+
+| Property | Value |
+|----------|-------|
+| **Widget ID** | `promptCache` |
+| **Preset char** | `c` |
+| **Data Source** | stdin (`prompt_cache`, Claude Code ≥ 2.1.251) |
+| **Description** | Session-wide prompt cache health for the main conversation — the same numbers as the `Prompt cache (main)` line in `/cost`. ♨️ means the cached prefix is still within its TTL (warm), ❄️ means it has gone cold and the next request re-caches the conversation. The percentage is `hit_ratio` (cache reads over all input tokens this session), and `✗N` counts requests that missed the cache. Hidden until the first API response and when the provider or gateway reports no cache tokens (`caching_observed: false`). Subagent requests are not counted. |
+
+**Example output:**
+```
+♨️ 91%
+❄️ 91% ✗2
+♨️
 ```
 
 ### depletionTime

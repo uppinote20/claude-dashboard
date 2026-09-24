@@ -36,6 +36,7 @@
  * @covers scripts/widgets/tag-status.ts
  * @covers scripts/widgets/slash-command.ts
  * @covers scripts/widgets/agent-mode.ts
+ * @covers scripts/widgets/prompt-cache.ts
  * @covers scripts/utils/transcript-parser.ts
  * @covers scripts/utils/session.ts
  * @covers scripts/utils/budget.ts
@@ -57,6 +58,7 @@ import { toolActivityWidget } from '../widgets/tool-activity.js';
 import { projectInfoWidget, clearGitCacheForTest } from '../widgets/project-info.js';
 import { burnRateWidget } from '../widgets/burn-rate.js';
 import { cacheHitWidget } from '../widgets/cache-hit.js';
+import { promptCacheWidget } from '../widgets/prompt-cache.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
 import { codexUsageWidget } from '../widgets/codex-usage.js';
 import { geminiUsageWidget } from '../widgets/gemini-usage.js';
@@ -753,6 +755,34 @@ describe('widgets', () => {
       expect(result).toContain('…');
     });
 
+    it('should show the resolved subagent model as a shortened suffix', () => {
+      const ctx = createContext();
+      const result = agentStatusWidget.render(
+        {
+          active: [
+            { name: 'general-purpose', description: 'Research', model: 'claude-opus-5' },
+            { name: 'Explore', model: 'sonnet' },
+          ],
+          completed: 0,
+        },
+        ctx,
+      );
+
+      expect(result).toContain('general-purpose(Opus): Research');
+      expect(result).toContain('+1');
+    });
+
+    it('should omit the model suffix when the subagent inherits the main model', () => {
+      const ctx = createContext();
+      const result = agentStatusWidget.render(
+        { active: [{ name: 'fork', description: 'Review PR' }], completed: 0 },
+        ctx,
+      );
+
+      expect(result).toContain('fork: Review PR');
+      expect(result).not.toContain('(');
+    });
+
     it('should show completed count when no active agents', () => {
       const ctx = createContext();
       const data = { active: [], completed: 5 };
@@ -974,6 +1004,90 @@ describe('widgets', () => {
 
       expect(result).toContain(ICON.package);
       expect(result).toContain('67%');
+    });
+  });
+
+  describe('promptCacheWidget', () => {
+    const warmCache = {
+      warm: true,
+      caching_observed: true,
+      ttl: '1h',
+      expires_at: 1738429200,
+      requests: 14,
+      misses: 2,
+      expected_rebuilds: 1,
+      hit_ratio: 0.91,
+    };
+
+    it('should have correct id and name', () => {
+      expect(promptCacheWidget.id).toBe('promptCache');
+      expect(promptCacheWidget.name).toBe('Prompt Cache');
+    });
+
+    it('should be registered and reachable via the `c` preset char', () => {
+      expect(getWidget('promptCache')).toBe(promptCacheWidget);
+      expect(PRESET_CHAR_MAP.c).toBe('promptCache');
+    });
+
+    it('should return null before the first API response (field absent)', async () => {
+      const ctx = createContext();
+      expect(await promptCacheWidget.getData(ctx)).toBeNull();
+    });
+
+    it('should return null when the provider reports no prompt caching', async () => {
+      const ctx = createContext({
+        prompt_cache: { ...warmCache, warm: false, caching_observed: false, hit_ratio: null },
+      });
+      expect(await promptCacheWidget.getData(ctx)).toBeNull();
+    });
+
+    it('should map hit_ratio to a rounded, clamped percentage', async () => {
+      const ctx = createContext({ prompt_cache: warmCache });
+      expect(await promptCacheWidget.getData(ctx)).toEqual({
+        warm: true,
+        hitPercentage: 91,
+        misses: 2,
+      });
+
+      const over = createContext({ prompt_cache: { ...warmCache, hit_ratio: 1.2, misses: 0 } });
+      expect((await promptCacheWidget.getData(over))?.hitPercentage).toBe(100);
+    });
+
+    it('should leave hitPercentage undefined while hit_ratio is null', async () => {
+      const ctx = createContext({ prompt_cache: { ...warmCache, hit_ratio: null, misses: 0 } });
+      expect(await promptCacheWidget.getData(ctx)).toEqual({
+        warm: true,
+        hitPercentage: undefined,
+        misses: 0,
+      });
+    });
+
+    it('should render a hot-springs icon with the hit percentage while warm', () => {
+      const ctx = createContext();
+      const result = promptCacheWidget.render({ warm: true, hitPercentage: 91, misses: 0 }, ctx);
+
+      expect(result).toContain(ICON.hotSprings);
+      // burnRate owns the fire icon; both sit in the detailed preset
+      expect(result).not.toContain(ICON.fire);
+      expect(result).toContain('91%');
+      expect(result).not.toContain('✗');
+    });
+
+    it('should render a snowflake and the miss count when cold with misses', () => {
+      const ctx = createContext();
+      const result = promptCacheWidget.render({ warm: false, hitPercentage: 64, misses: 3 }, ctx);
+
+      expect(result).toContain(ICON.snowflake);
+      expect(result).toContain('64%');
+      expect(result).toContain('✗3');
+    });
+
+    it('should render only the state icon when the ratio is unknown', () => {
+      const ctx = createContext();
+      const result = promptCacheWidget.render({ warm: true, misses: 0 }, ctx);
+
+      expect(result).toContain(ICON.hotSprings);
+      expect(result).not.toContain('%');
     });
   });
 

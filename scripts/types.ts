@@ -63,6 +63,21 @@ export interface StdinInput {
   version?: string;
   /** Whether total tokens from most recent API response exceeds 200k (fixed threshold) */
   exceeds_200k_tokens?: boolean;
+  /** Whether fast mode is enabled for the session (live value, since v2.1.25x) */
+  fast_mode?: boolean;
+  /**
+   * Live reasoning effort for the session, including mid-session `/effort` changes
+   * and the model's default-effort hold. Absent when the model has no effort tier.
+   * Ultracode reports as `xhigh`.
+   */
+  effort?: { level: string };
+  /** Whether extended thinking is enabled for the session */
+  thinking?: { enabled: boolean };
+  /**
+   * Main-conversation prompt cache statistics (since v2.1.251).
+   * Absent until the first API response; subagent requests are not counted.
+   */
+  prompt_cache?: PromptCacheStdin;
   /**
    * Rate limits from Claude Code stdin (Pro/Max subscribers, after first API response).
    * Each window may be independently absent.
@@ -98,6 +113,31 @@ export interface StdinInput {
 }
 
 /**
+ * `prompt_cache` object from Claude Code stdin. Timestamps are Unix epoch seconds.
+ * Only the fields the dashboard reads are typed; the object carries more.
+ */
+export interface PromptCacheStdin {
+  /** Whether the cached prefix is still within its TTL */
+  warm: boolean;
+  /** Whether any response this session reported cache tokens (false = caching off / not reported) */
+  caching_observed: boolean;
+  /** Cache lifetime of the current prefix: "5m" or "1h" */
+  ttl?: string;
+  /** When the cached prefix goes cold; null when the last response reported no cache tokens */
+  expires_at?: number | null;
+  /** API requests recorded for the main conversation */
+  requests?: number;
+  /** Requests that re-processed content the cache already held */
+  misses?: number;
+  /** Cache rebuilds that followed compaction or tool-result clearing */
+  expected_rebuilds?: number;
+  /** Cache read tokens / all input tokens, 0..1; null while all counts are zero */
+  hit_ratio?: number | null;
+  /** Likely cause of the last miss (since v2.1.260); null until the first miss */
+  last_miss_cause?: { causes?: string[] } | null;
+}
+
+/**
  * Widget identifiers
  */
 export type WidgetId =
@@ -122,6 +162,7 @@ export type WidgetId =
   | 'burnRate'
   | 'depletionTime'
   | 'cacheHit'
+  | 'promptCache'
   | 'codexUsage'
   | 'geminiUsage'
   | 'geminiUsageAll'
@@ -169,7 +210,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'rateLimit7dFable', 'zaiUsage'],
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
-    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
+    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'promptCache', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
     ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
@@ -245,6 +286,7 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   B: 'burnRate',
   E: 'depletionTime',
   H: 'cacheHit',
+  c: 'promptCache',
   X: 'codexUsage',
   G: 'geminiUsage',
   '^': 'antigravityUsage',
@@ -482,7 +524,16 @@ export interface ToolActivityData {
 }
 
 export interface AgentStatusData {
-  active: Array<{ name: string; description?: string }>;
+  active: Array<{
+    name: string;
+    description?: string;
+    /**
+     * Model the subagent runs on, when it can be determined from the Agent
+     * tool's `model` parameter or `CLAUDE_CODE_SUBAGENT_MODEL`. Undefined when
+     * it inherits the main conversation's model or can't be resolved.
+     */
+    model?: string;
+  }>;
   completed: number;
 }
 
@@ -520,6 +571,19 @@ export interface DepletionTimeData {
 export interface CacheHitData {
   /** Cache hit percentage (0-100). Higher is better (more cache reuse). */
   hitPercentage: number;
+}
+
+/**
+ * Prompt cache data - session-wide main-conversation cache health from stdin.prompt_cache
+ * @invariant hitPercentage is in range [0, 100] when defined (enforced in widget)
+ */
+export interface PromptCacheData {
+  /** Whether the cached prefix is still within its TTL */
+  warm: boolean;
+  /** Session-wide share of input tokens served from cache (0-100); undefined while unknown */
+  hitPercentage?: number;
+  /** Requests counted as cache misses this session */
+  misses: number;
 }
 
 /**
@@ -848,6 +912,7 @@ export type WidgetData =
   | BurnRateData
   | DepletionTimeData
   | CacheHitData
+  | PromptCacheData
   | CodexUsageData
   | GeminiUsageData
   | GeminiUsageAllData

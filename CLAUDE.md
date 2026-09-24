@@ -44,6 +44,7 @@ claude-dashboard/
 │   │   ├── todo-progress.ts # Todo progress widget
 │   │   ├── burn-rate.ts     # Burn rate widget
 │   │   ├── cache-hit.ts     # Cache hit rate widget
+│   │   ├── prompt-cache.ts  # Prompt cache health widget (stdin.prompt_cache)
 │   │   ├── depletion-time.ts # Depletion time widget
 │   │   ├── codex-usage.ts   # Codex CLI usage widget
 │   │   ├── gemini-usage.ts  # Gemini CLI usage widget
@@ -140,7 +141,7 @@ interface Widget<T extends WidgetData> {
 
 | Widget ID | Data Source | Description |
 |-----------|-------------|-------------|
-| `model` | stdin + settings | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯) |
+| `model` | stdin + settings | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯). Live `stdin.effort.level` / `stdin.fast_mode` win; `settings.json` (`modelSettings[<id>].effortLevel`, `effortLevel`, `fastMode`) is the fallback for older Claude Code |
 | `context` | stdin | Progress bar, %, tokens |
 | `contextBar` | stdin | Progress bar only (sub-widget of `context`) |
 | `contextPercentage` | stdin | Percentage only (sub-widget of `context`) |
@@ -154,10 +155,11 @@ interface Widget<T extends WidgetData> {
 | `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | `sessionDuration` | file | Session duration |
 | `toolActivity` | transcript | Tool tracking with target display (e.g., `Read(app.ts)`, `Bash(npm test)`) |
-| `agentStatus` | transcript | Agent tracking |
+| `agentStatus` | transcript + env | Agent tracking (`Agent`/legacy `Task` tool). Shows the subagent's model when resolvable: per-invocation `model` param, or `CLAUDE_CODE_SUBAGENT_MODEL` for built-in `general-purpose`/`claude` (FORCE pins all but `fork`/`Explore`). Hidden suffix when it inherits |
 | `todoProgress` | transcript | Todo completion |
 | `burnRate` | stdin + session | Token consumption per minute |
-| `cacheHit` | stdin | Cache hit rate percentage |
+| `cacheHit` | stdin | Cache hit rate percentage (last request, from `context_window.current_usage`) |
+| `promptCache` | stdin | Session-wide prompt cache health from `prompt_cache` (≥ 2.1.251): ♨️ warm / ❄️ cold, `hit_ratio` %, `✗N` misses. Hidden until first API response or when `caching_observed` is false |
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model + rate-limit windows). Windows are labeled from `limit_window_seconds`, not response position — Plus returns 5h + 7d, Pro a single 7d |
 | `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |
@@ -200,7 +202,7 @@ const DISPLAY_PRESETS = {
   detailed: [
     ['model', 'context', 'cost', 'rateLimit5h', 'rateLimit7d', 'rateLimit7dSonnet', 'rateLimit7dFable', 'zaiUsage'],
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
-    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'performance'],
+    ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'promptCache', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
     ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
@@ -238,7 +240,7 @@ Quick widget layout via single-character shorthand. Set `"preset"` in config, us
 | `b` | contextBar | `%` | contextPercentage |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
-| `^` | antigravityUsage | | |
+| `^` | antigravityUsage | `c` | promptCache |
 
 ### Theme System
 

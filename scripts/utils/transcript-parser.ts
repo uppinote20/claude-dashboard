@@ -10,7 +10,14 @@
 
 import { open, stat } from 'fs/promises';
 import { basename } from 'path';
-import type { TranscriptEntry, ParsedTranscript, TodoProgressData, WidgetContext, SlashCommandData } from '../types.js';
+import type {
+  TranscriptEntry,
+  ParsedTranscript,
+  TodoProgressData,
+  WidgetContext,
+  SlashCommandData,
+  AgentStatusData,
+} from '../types.js';
 import { truncate } from './formatters.js';
 
 /**
@@ -95,8 +102,9 @@ function processEntries(
           });
           existing.runningToolIds.add(block.id);
 
-          // Track agent (Task) dispatches
-          if (block.name === 'Task') {
+          // Track subagent dispatches. The tool is `Agent` in current Claude Code;
+          // `Task` is the pre-rename name still found in older transcripts.
+          if (block.name === 'Agent' || block.name === 'Task') {
             existing.activeAgentIds.add(block.id);
           }
 
@@ -449,11 +457,8 @@ export async function getTranscript(ctx: WidgetContext): Promise<ParsedTranscrip
  */
 export function extractAgentStatus(
   transcript: ParsedTranscript
-): {
-  active: Array<{ name: string; description?: string }>;
-  completed: number;
-} {
-  const active: Array<{ name: string; description?: string }> = [];
+): AgentStatusData {
+  const active: AgentStatusData['active'] = [];
 
   for (const id of transcript.activeAgentIds) {
     const tool = transcript.toolUses.get(id);
@@ -461,14 +466,52 @@ export function extractAgentStatus(
     const input = tool.input as {
       description?: string;
       subagent_type?: string;
+      /** Per-invocation model override passed to the Agent tool */
+      model?: string;
     } | undefined;
+    const subagentType = input?.subagent_type;
     active.push({
-      name: input?.subagent_type || 'Agent',
+      name: subagentType || 'Agent',
       description: input?.description,
+      model: resolveSubagentModel(subagentType, input?.model),
     });
   }
 
   return { active, completed: transcript.completedAgentCount };
+}
+
+/** Built-in subagent types whose model follows the standard resolution order. */
+const ENV_DEFAULT_SUBAGENT_TYPES = new Set(['general-purpose', 'claude']);
+
+/**
+ * Best-effort resolution of the model a subagent runs on, following Claude Code's
+ * order (per-invocation `model` → definition frontmatter → CLAUDE_CODE_SUBAGENT_MODEL
+ * → main model). Frontmatter isn't visible from the transcript, so the env default
+ * is only applied to built-in types known to have no frontmatter override
+ * (general-purpose, claude). Returns undefined when the subagent inherits the
+ * main conversation's model or the answer can't be known — never a guess.
+ *
+ * - `fork` always inherits the parent model (even under FORCE).
+ * - `CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1` pins every non-fork subagent to
+ *   CLAUDE_CODE_SUBAGENT_MODEL; Explore keeps its own cap so it is excluded.
+ */
+export function resolveSubagentModel(
+  subagentType: string | undefined,
+  explicitModel: string | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): string | undefined {
+  if (subagentType === 'fork') return undefined;
+
+  const envModel = env.CLAUDE_CODE_SUBAGENT_MODEL?.trim() || undefined;
+  const force = env.CLAUDE_CODE_SUBAGENT_MODEL_FORCE;
+  const forced = force === '1' || force === 'true';
+
+  if (forced && envModel && subagentType !== 'Explore') return envModel;
+  if (explicitModel?.trim()) return explicitModel.trim();
+  if (envModel && subagentType && ENV_DEFAULT_SUBAGENT_TYPES.has(subagentType)) {
+    return envModel;
+  }
+  return undefined;
 }
 
 /**

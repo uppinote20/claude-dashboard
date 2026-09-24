@@ -62,7 +62,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected whe
 
 | Category | Widget | Description |
 |----------|--------|-------------|
-| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯) |
+| **Core** | `model` | Model name with emoji, effort level for Opus/Sonnet/Fable (MAX/X/H/M/L), fast mode for Opus (↯). Reads the live `effort.level` / `fast_mode` from stdin, falling back to `settings.json` on older Claude Code |
 | | `context` | Progress bar, percentage, tokens (🟢 0-50% / 🟡 51-80% / 🔴 81-100%) |
 | | `contextBar` | Progress bar only (sub-widget of `context`) |
 | | `contextPercentage` | Percentage only (sub-widget of `context`) |
@@ -80,10 +80,11 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected whe
 | | `lastPrompt` | Last user prompt with timestamp |
 | | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | **Activity** | `toolActivity` | Running/completed tools with targets (e.g., `Read(app.ts)`) |
-| | `agentStatus` | Subagent progress |
+| | `agentStatus` | Subagent progress with resolved model, e.g. `Explore(Opus)` (from the Agent tool's `model` param or `CLAUDE_CODE_SUBAGENT_MODEL`) |
 | | `todoProgress` | Todo completion rate |
 | **Analytics** | `burnRate` | Token consumption per minute |
-| | `cacheHit` | Cache hit rate percentage |
+| | `cacheHit` | Cache hit rate percentage (last request) |
+| | `promptCache` | Session prompt-cache health: ♨️ warm / ❄️ cold, hit ratio, miss count (from `prompt_cache`, Claude Code ≥ 2.1.251) |
 | | `depletionTime` | Estimated time to rate limit (approx)¹ |
 | **Multi-CLI** | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed)² |
 | | `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed)³ |
@@ -143,7 +144,7 @@ i18n: English and Korean supported (auto-detect or set via setup).
 |------|-------|---------|
 | `compact` | 1 | model, context, cost, rateLimit5h/7d/7dSonnet, zaiUsage |
 | `normal` | 2 | + projectInfo, sessionId, sessionDuration, burnRate, todoProgress |
-| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus |
+| `detailed` | 6 | + depletionTime, configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance, tokenBreakdown, forecast, budget, codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus |
 
 **Configuration file** (`~/.claude/claude-dashboard.local.json`):
 

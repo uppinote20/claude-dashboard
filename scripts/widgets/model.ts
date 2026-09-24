@@ -3,7 +3,12 @@
  * @handbook 2.1-naming-conventions
  *
  * Effort level: Shown for Opus, Sonnet, and Fable (MAX/X/H/M/L), hidden for Haiku
- * Fast mode: Opus 4.7/4.8 exclusive feature, indicated by ↯ symbol
+ * Fast mode: Opus-only feature (Opus 5 / 4.8), indicated by ↯ symbol
+ *
+ * Data sources, in order: the live `effort.level` / `fast_mode` fields on stdin
+ * (Claude Code ≥ 2.1.25x — reflect mid-session `/effort`, `--effort`, session-only
+ * picks, and the default-effort hold on Fable 5 / Opus 4.8), then settings.json
+ * for older Claude Code versions that don't send them.
  * @handbook 3.3-widget-data-sources
  * @tested scripts/__tests__/widgets.test.ts
  * @tested scripts/__tests__/model-settings.test.ts
@@ -173,15 +178,30 @@ export const modelWidget: Widget<ModelData> = {
   name: 'Model',
 
   async getData(ctx: WidgetContext): Promise<ModelData | null> {
-    const { model } = ctx.stdin;
+    const { model, effort, fast_mode } = ctx.stdin;
     const modelId = model?.id || '';
-    const { effortLevel, fastMode } = await getModelSettings(modelId);
 
+    // Live session values win: Claude Code sends what the session is actually
+    // using, which settings.json can't know (session-only /effort picks,
+    // --effort, CLAUDE_CODE_EFFORT_LEVEL applied upstream, default-effort hold).
+    const liveEffort = isEffortLevel(effort?.level) ? effort.level : undefined;
+    const liveFastMode = typeof fast_mode === 'boolean' ? fast_mode : undefined;
+
+    if (liveEffort !== undefined && liveFastMode !== undefined) {
+      return {
+        id: modelId,
+        displayName: model?.display_name || '-',
+        effortLevel: liveEffort,
+        fastMode: liveFastMode,
+      };
+    }
+
+    const settings = await getModelSettings(modelId);
     return {
       id: modelId,
       displayName: model?.display_name || '-',
-      effortLevel,
-      fastMode,
+      effortLevel: liveEffort ?? settings.effortLevel,
+      fastMode: liveFastMode ?? settings.fastMode,
     };
   },
 
@@ -194,7 +214,7 @@ export const modelWidget: Widget<ModelData> = {
       shortName === 'Opus' || shortName === 'Sonnet' || shortName === 'Fable';
     const effortSuffix = supportsEffort ? `(${EFFORT_BADGE[data.effortLevel]})` : '';
 
-    // Fast mode indicator (Opus 4.7/4.8 exclusive)
+    // Fast mode indicator (Opus-only: Opus 5 / 4.8)
     const fastIndicator = shortName === 'Opus' && data.fastMode ? ' ↯' : '';
 
     return `${getTheme().model}${icon} ${shortName}${effortSuffix}${fastIndicator}${RESET}`;

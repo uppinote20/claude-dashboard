@@ -55,6 +55,61 @@ describe('model settings (getData)', () => {
     expect(data?.effortLevel).toBe('low');
   });
 
+  it('should prefer the live stdin effort.level over settings.json and env', async () => {
+    // settings.json holds a saved default; the session was switched with /effort
+    // without saving (or via --effort), which only stdin reflects
+    await writeFile(SETTINGS_FILE, JSON.stringify({
+      effortLevel: 'low',
+      modelSettings: { 'claude-fable-5': { effortLevel: 'max' } },
+    }));
+    process.env.CLAUDE_CODE_EFFORT_LEVEL = 'xhigh';
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const liveCtx = {
+      stdin: { model: { id: 'claude-fable-5' }, effort: { level: 'medium' }, fast_mode: false },
+    } as unknown as WidgetContext;
+
+    expect((await modelWidget.getData(liveCtx))?.effortLevel).toBe('medium');
+  });
+
+  it('should prefer the live stdin fast_mode over settings.json fastMode', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({ fastMode: false, effortLevel: 'high' }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const liveCtx = {
+      stdin: { model: { id: 'claude-opus-5' }, fast_mode: true, effort: { level: 'high' } },
+    } as unknown as WidgetContext;
+
+    expect((await modelWidget.getData(liveCtx))?.fastMode).toBe(true);
+  });
+
+  it('should fall back to settings.json for whichever live field stdin omits', async () => {
+    // Older Claude Code sends neither field; a model without an effort tier
+    // omits `effort` but still sends `fast_mode`
+    await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'low', fastMode: true }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+
+    const noLive = { stdin: { model: { id: 'claude-opus-5' } } } as unknown as WidgetContext;
+    expect(await modelWidget.getData(noLive)).toMatchObject({ effortLevel: 'low', fastMode: true });
+
+    const onlyFast = {
+      stdin: { model: { id: 'claude-opus-5' }, fast_mode: false },
+    } as unknown as WidgetContext;
+    expect(await modelWidget.getData(onlyFast)).toMatchObject({ effortLevel: 'low', fastMode: false });
+  });
+
+  it('should ignore an unrecognized stdin effort.level and fall back to settings.json', async () => {
+    await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'low' }));
+
+    const { modelWidget } = await import('../widgets/model.js');
+    const badCtx = {
+      stdin: { model: { id: 'claude-fable-5' }, effort: { level: 'ultracode' } },
+    } as unknown as WidgetContext;
+
+    expect((await modelWidget.getData(badCtx))?.effortLevel).toBe('low');
+  });
+
   it('should not serve one account\'s cached effort for the other when mtimes collide', async () => {
     await writeFile(SETTINGS_FILE, JSON.stringify({ effortLevel: 'low' }));
     await writeFile(ALT_SETTINGS_FILE, JSON.stringify({ effortLevel: 'max' }));

@@ -43,6 +43,7 @@ This creates a 2-line layout:
 | `m` | vimMode | `a` | apiDuration |
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
+| `c` | promptCache | | |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
 | `^` | antigravityUsage | | |
@@ -71,12 +72,12 @@ Result: model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet -- all
 ### Full monitoring
 
 ```json
-{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XG^LYV" }
+{ "preset": "MC$R7|PIDBO|KTAHcF|NWU|XG^LYV" }
 ```
 
 - **Line 1:** model, context, cost, rateLimit5h, rateLimit7d
 - **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
-- **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, performance
+- **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance
 - **Line 4:** tokenBreakdown, forecast, budget
 - **Line 5:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version
 

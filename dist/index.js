@@ -17,7 +17,7 @@ var DISPLAY_PRESETS = {
   detailed: [
     ["model", "context", "cost", "rateLimit5h", "rateLimit7d", "rateLimit7dSonnet", "rateLimit7dFable", "zaiUsage"],
     ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
-    ["configCounts", "toolActivity", "agentStatus", "cacheHit", "performance"],
+    ["configCounts", "toolActivity", "agentStatus", "cacheHit", "promptCache", "performance"],
     ["tokenBreakdown", "forecast", "budget", "todayCost"],
     ["codexUsage", "geminiUsage", "antigravityUsage", "linesChanged", "outputStyle", "version", "peakHours"],
     ["lastPrompt", "vimMode", "apiDuration", "tagStatus"]
@@ -43,6 +43,7 @@ var PRESET_CHAR_MAP = {
   B: "burnRate",
   E: "depletionTime",
   H: "cacheHit",
+  c: "promptCache",
   X: "codexUsage",
   G: "geminiUsage",
   "^": "antigravityUsage",
@@ -483,6 +484,8 @@ var ICON = {
   yellowCircle: "\u{1F7E1}\uFE0F",
   redCircle: "\u{1F534}\uFE0F",
   fire: "\u{1F525}\uFE0F",
+  hotSprings: "\u2668\uFE0F",
+  snowflake: "\u2744\uFE0F",
   speech: "\u{1F4AC}\uFE0F",
   target: "\u{1F3AF}\uFE0F",
   key: "\u{1F511}\uFE0F"
@@ -1251,14 +1254,24 @@ var modelWidget = {
   id: "model",
   name: "Model",
   async getData(ctx) {
-    const { model } = ctx.stdin;
+    const { model, effort, fast_mode } = ctx.stdin;
     const modelId = model?.id || "";
-    const { effortLevel, fastMode } = await getModelSettings(modelId);
+    const liveEffort = isEffortLevel(effort?.level) ? effort.level : void 0;
+    const liveFastMode = typeof fast_mode === "boolean" ? fast_mode : void 0;
+    if (liveEffort !== void 0 && liveFastMode !== void 0) {
+      return {
+        id: modelId,
+        displayName: model?.display_name || "-",
+        effortLevel: liveEffort,
+        fastMode: liveFastMode
+      };
+    }
+    const settings = await getModelSettings(modelId);
     return {
       id: modelId,
       displayName: model?.display_name || "-",
-      effortLevel,
-      fastMode
+      effortLevel: liveEffort ?? settings.effortLevel,
+      fastMode: liveFastMode ?? settings.fastMode
     };
   },
   render(data) {
@@ -1907,7 +1920,7 @@ function processEntries(entries, existing) {
             input: block.input
           });
           existing.runningToolIds.add(block.id);
-          if (block.name === "Task") {
+          if (block.name === "Agent" || block.name === "Task") {
             existing.activeAgentIds.add(block.id);
           }
           if (block.name === "TaskCreate") {
@@ -2148,12 +2161,30 @@ function extractAgentStatus(transcript) {
     if (!tool)
       continue;
     const input = tool.input;
+    const subagentType = input?.subagent_type;
     active.push({
-      name: input?.subagent_type || "Agent",
-      description: input?.description
+      name: subagentType || "Agent",
+      description: input?.description,
+      model: resolveSubagentModel(subagentType, input?.model)
     });
   }
   return { active, completed: transcript.completedAgentCount };
+}
+var ENV_DEFAULT_SUBAGENT_TYPES = /* @__PURE__ */ new Set(["general-purpose", "claude"]);
+function resolveSubagentModel(subagentType, explicitModel, env = process.env) {
+  if (subagentType === "fork")
+    return void 0;
+  const envModel = env.CLAUDE_CODE_SUBAGENT_MODEL?.trim() || void 0;
+  const force = env.CLAUDE_CODE_SUBAGENT_MODEL_FORCE;
+  const forced = force === "1" || force === "true";
+  if (forced && envModel && subagentType !== "Explore")
+    return envModel;
+  if (explicitModel?.trim())
+    return explicitModel.trim();
+  if (envModel && subagentType && ENV_DEFAULT_SUBAGENT_TYPES.has(subagentType)) {
+    return envModel;
+  }
+  return void 0;
 }
 function getActiveSlashCommand(transcript) {
   return transcript.activeSlashCommand;
@@ -2210,7 +2241,9 @@ var agentStatusWidget = {
       );
     }
     const activeAgent = data.active[0];
-    const agentText = activeAgent.description ? `${activeAgent.name}: ${truncate(activeAgent.description, 20)}` : activeAgent.name;
+    const modelSuffix = activeAgent.model ? `(${shortenModelName(activeAgent.model)})` : "";
+    const label = `${activeAgent.name}${modelSuffix}`;
+    const agentText = activeAgent.description ? `${label}: ${truncate(activeAgent.description, 20)}` : label;
     const more = data.active.length > 1 ? ` +${data.active.length - 1}` : "";
     return `${colorize(ICON.robot, theme.info)} ${t.widgets.agent}: ${agentText}${more}`;
   }
@@ -2333,6 +2366,34 @@ var cacheHitWidget = {
   render(data) {
     const color = getColorForPercent(100 - data.hitPercentage);
     return `${ICON.package} ${colorize(`${data.hitPercentage}%`, color)}`;
+  }
+};
+
+// scripts/widgets/prompt-cache.ts
+var promptCacheWidget = {
+  id: "promptCache",
+  name: "Prompt Cache",
+  async getData(ctx) {
+    const cache = ctx.stdin.prompt_cache;
+    if (!cache || cache.caching_observed === false)
+      return null;
+    const ratio = cache.hit_ratio;
+    const hitPercentage = typeof ratio === "number" && Number.isFinite(ratio) ? Math.min(100, Math.max(0, Math.round(ratio * 100))) : void 0;
+    const misses = typeof cache.misses === "number" && cache.misses > 0 ? cache.misses : 0;
+    return { warm: cache.warm === true, hitPercentage, misses };
+  },
+  render(data) {
+    const theme = getTheme();
+    const icon = data.warm ? ICON.hotSprings : ICON.snowflake;
+    const parts = [icon];
+    if (data.hitPercentage !== void 0) {
+      const color = getColorForPercent(100 - data.hitPercentage);
+      parts.push(colorize(`${data.hitPercentage}%`, color));
+    }
+    if (data.misses > 0) {
+      parts.push(colorize(`\u2717${data.misses}`, theme.warning));
+    }
+    return parts.join(" ");
   }
 };
 
@@ -4560,6 +4621,7 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["burnRate", burnRateWidget],
   ["depletionTime", depletionTimeWidget],
   ["cacheHit", cacheHitWidget],
+  ["promptCache", promptCacheWidget],
   ["codexUsage", codexUsageWidget],
   ["geminiUsage", geminiUsageWidget],
   ["geminiUsageAll", geminiUsageAllWidget],
