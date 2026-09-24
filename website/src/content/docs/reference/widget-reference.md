@@ -14,14 +14,14 @@ This page provides detailed information about each widget, including its data so
 | Property | Value |
 |----------|-------|
 | **Widget ID** | `model` |
-| **Data Source** | stdin (model info) + settings (effort/fast mode) |
-| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet/Fable (MAX/X/H/M/L) and fast mode indicator for Opus (↯). |
+| **Data Source** | stdin (model info, live `effort.level` / `fast_mode`) + settings.json fallback |
+| **Description** | Displays the current model name with emoji. Shows effort level for Opus/Sonnet/Fable (MAX/X/H/M/L) and fast mode indicator for Opus (↯). The live `effort.level` / `fast_mode` fields Claude Code sends on stdin win, so mid-session `/effort` changes and session-only picks are reflected; older Claude Code versions without them fall back to `settings.json`. |
 
 **Example output:**
 ```
 Opus(X)
 Sonnet(M)
-Opus(X↯)
+Opus(X) ↯
 ```
 
 ### context

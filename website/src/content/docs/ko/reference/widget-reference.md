@@ -12,8 +12,8 @@ sidebar:
 ### model
 
 - **ID**: `model`
-- **데이터 소스**: stdin (모델 정보) + settings
-- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet/Fable의 경우 effort 수준(MAX=max, X=xhigh, H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다.
+- **데이터 소스**: stdin (모델 정보, 실시간 `effort.level` / `fast_mode`) + settings.json 폴백
+- **표시 내용**: 모델 이름과 이모지. Opus/Sonnet/Fable의 경우 effort 수준(MAX=max, X=xhigh, H=high, M=medium, L=low)을 표시합니다. Opus에서 빠른 모드가 활성화되면 (↯) 기호를 추가합니다. Claude Code가 stdin으로 보내는 실시간 `effort.level` / `fast_mode`를 우선 사용하므로 세션 중 `/effort` 변경과 세션 한정 선택이 그대로 반영되며, 이 필드가 없는 구버전 Claude Code에서는 `settings.json`으로 폴백합니다.
 - **출력 예시**: `◆ Opus(X)`, `◆ Opus(X) ↯`, `◆ Sonnet(M)`, `◆ Haiku`
 
 ### context
