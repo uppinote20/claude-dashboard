@@ -1110,9 +1110,16 @@ describe('widgets', () => {
         vi.useRealTimers();
       });
 
-      it('should leave expiresAt undefined when expires_at is null', async () => {
-        const ctx = createContext({ prompt_cache: { ...warmCache, expires_at: null } });
-        expect((await promptCacheWidget.getData(ctx))?.expiresAt).toBeUndefined();
+      it('should leave expiresAt undefined when expires_at is null or not positive', async () => {
+        const nullCtx = createContext({ prompt_cache: { ...warmCache, expires_at: null } });
+        const zeroCtx = createContext({ prompt_cache: { ...warmCache, expires_at: 0 } });
+        expect((await promptCacheWidget.getData(nullCtx))?.expiresAt).toBeUndefined();
+        expect((await promptCacheWidget.getData(zeroCtx))?.expiresAt).toBeUndefined();
+      });
+
+      it('should show only the warm icon when expiresAt is unknown', () => {
+        const ctx = createContext();
+        expect(promptCacheStateWidget.render({ warm: true, misses: 0 }, ctx)).toBe(ICON.hotSprings);
       });
 
       it('should show the remaining time next to the warm icon', () => {

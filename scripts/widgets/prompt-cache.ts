@@ -35,7 +35,7 @@ async function getPromptCacheData(ctx: WidgetContext): Promise<PromptCacheData |
   const misses = typeof cache.misses === 'number' && cache.misses > 0 ? cache.misses : 0;
 
   const expiresAt =
-    typeof cache.expires_at === 'number' && Number.isFinite(cache.expires_at)
+    typeof cache.expires_at === 'number' && Number.isFinite(cache.expires_at) && cache.expires_at > 0
       ? cache.expires_at * 1000
       : undefined;
 

@@ -2382,7 +2382,7 @@ async function getPromptCacheData(ctx) {
   const ratio = cache.hit_ratio;
   const hitPercentage = typeof ratio === "number" && Number.isFinite(ratio) ? clampPercent(ratio * 100) : void 0;
   const misses = typeof cache.misses === "number" && cache.misses > 0 ? cache.misses : 0;
-  const expiresAt = typeof cache.expires_at === "number" && Number.isFinite(cache.expires_at) ? cache.expires_at * 1e3 : void 0;
+  const expiresAt = typeof cache.expires_at === "number" && Number.isFinite(cache.expires_at) && cache.expires_at > 0 ? cache.expires_at * 1e3 : void 0;
   return { warm: cache.warm === true, hitPercentage, misses, expiresAt };
 }
 function formatWarmTimeLeft(data, t) {
