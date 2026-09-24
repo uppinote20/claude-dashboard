@@ -59,7 +59,10 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `todoProgress` | Todo completion rate |
 | `burnRate` | Token consumption per minute |
 | `cacheHit` | Cache hit rate percentage (last request) |
-| `promptCache` | Session prompt-cache health: ♨️ warm / ❄️ cold, hit ratio, misses (Claude Code ≥ 2.1.251) |
+| `promptCache` | Session prompt-cache health: ♨️ warm with time left before it goes cold / ❄️ cold, hit ratio, miss count (Claude Code ≥ 2.1.251) |
+| `promptCacheState` | Warm/cold icon + time left only (sub-widget of `promptCache`) |
+| `promptCacheHit` | Session cache hit ratio only (sub-widget of `promptCache`) |
+| `promptCacheMisses` | Miss count only (sub-widget of `promptCache`) |
 | `depletionTime` | Estimated time to rate limit |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) |
 | `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed) |
@@ -132,7 +135,7 @@ Single AskUserQuestion call with `multiSelect: true`, max 4 options. Ask: "Line 
 1. **Model & Context** — `model`, `context`, `contextBar`, `contextPercentage`, `contextUsage`
 2. **Cost & Limits** — `cost`, `rateLimit5h`, `rateLimit7d`, `rateLimit7dSonnet`, `rateLimit7dFable`, `budget`, `forecast`, `todayCost`
 3. **Project, Session & Activity** — `projectInfo`, `sessionId`, `sessionIdFull`, `sessionDuration`, `sessionName`, `configCounts`, `toolActivity`, `agentStatus`, `agentMode`, `todoProgress`, `outputStyle`, `vimMode`, `linesChanged`, `version`, `lastPrompt`, `slashCommand`
-4. **Performance, Tokens & Other CLIs** — `burnRate`, `tokenSpeed`, `cacheHit`, `promptCache`, `performance`, `tokenBreakdown`, `depletionTime`, `apiDuration`, `peakHours`, `tagStatus`, `codexUsage`, `geminiUsage`, `geminiUsageAll`, `antigravityUsage`, `antigravityUsageAll`, `zaiUsage`
+4. **Performance, Tokens & Other CLIs** — `burnRate`, `tokenSpeed`, `cacheHit`, `promptCache`, `promptCacheState`, `promptCacheHit`, `promptCacheMisses`, `performance`, `tokenBreakdown`, `depletionTime`, `apiDuration`, `peakHours`, `tagStatus`, `codexUsage`, `geminiUsage`, `geminiUsageAll`, `antigravityUsage`, `antigravityUsageAll`, `zaiUsage`
 
 **Step B — Pick widgets from each selected category:**
 For every category the user selected in Step A, send one AskUserQuestion call with `multiSelect: true` listing the widgets in that category. AskUserQuestion allows max 4 options per call, so if a category has more than 4 widgets, split into multiple consecutive calls (e.g. "Cost & Limits (1/2)", "Cost & Limits (2/2)") — the user can pick zero or more widgets from each page.
@@ -196,7 +199,7 @@ Create `~/.claude/claude-dashboard.local.json`:
 }
 ```
 
-Preset characters: `M`=model, `C`=context, `b`=contextBar, `%`=contextPercentage, `#`=contextUsage, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `f`=7dFable, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `g`=agentMode, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `c`=promptCache, `X`=codexUsage, `G`=geminiUsage, `^`=antigravityUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version, `Q`=tokenSpeed, `J`=sessionName, `@`=todayCost, `?`=lastPrompt, `/`=slashCommand, `m`=vimMode, `a`=apiDuration, `p`=peakHours, `t`=tagStatus. Use `|` to separate lines.
+Preset characters: `M`=model, `C`=context, `b`=contextBar, `%`=contextPercentage, `#`=contextUsage, `$`=cost, `R`=rateLimit5h, `7`=rateLimit7d, `S`=7dSonnet, `f`=7dFable, `P`=projectInfo, `I`=sessionId, `D`=sessionDuration, `T`=toolActivity, `A`=agentStatus, `g`=agentMode, `O`=todoProgress, `B`=burnRate, `E`=depletionTime, `H`=cacheHit, `c`=promptCache, `w`=promptCacheState, `h`=promptCacheHit, `x`=promptCacheMisses, `X`=codexUsage, `G`=geminiUsage, `^`=antigravityUsage, `Z`=zaiUsage, `K`=configCounts, `N`=tokenBreakdown, `F`=performance, `W`=forecast, `U`=budget, `L`=linesChanged, `Y`=outputStyle, `V`=version, `Q`=tokenSpeed, `J`=sessionName, `@`=todayCost, `?`=lastPrompt, `/`=slashCommand, `m`=vimMode, `a`=apiDuration, `p`=peakHours, `t`=tagStatus. Use `|` to separate lines.
 
 **For custom mode:**
 ```json
