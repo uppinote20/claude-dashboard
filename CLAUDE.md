@@ -159,7 +159,7 @@ interface Widget<T extends WidgetData> {
 | `todoProgress` | transcript | Todo completion |
 | `burnRate` | stdin + session | Token consumption per minute |
 | `cacheHit` | stdin | Cache hit rate percentage (last request, from `context_window.current_usage`) |
-| `promptCache` | stdin | Session-wide prompt cache health from `prompt_cache` (≥ 2.1.251): ♨️ warm + time left until cold (from `expires_at`) / ❄️ cold, `hit_ratio` %, `miss N` (localized). Hidden until first API response or when `caching_observed` is false. Countdown only advances on re-render — `refreshInterval` keeps it live while idle |
+| `promptCache` | stdin | Session-wide prompt cache health from `prompt_cache` (≥ 2.1.251): ♨️ warm + time left until cold (from `expires_at`) / ❄️ cold, `hit_ratio` %, `miss N` (localized). Hidden until first API response or when `caching_observed` is false. Claude Code re-renders on its own at `expires_at`, so the warm→cold flip is automatic; the minute countdown in between only ticks with `statusLine.refreshInterval` |
 | `promptCacheState` | stdin | Warm/cold icon + time left only (sub-widget of `promptCache`) |
 | `promptCacheHit` | stdin | Session `hit_ratio` % only (sub-widget of `promptCache`) |
 | `promptCacheMisses` | stdin | `miss N` only, empty at 0 (sub-widget of `promptCache`) |
@@ -302,7 +302,7 @@ echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/tmp"},...}' 
 ## Key Conventions
 
 1. **dist/index.js is committed** - Plugin users don't need to build
-2. **60-second API cache** - Avoid rate limiting
+2. **API cache (default 300s, `cache.ttlSeconds`)** - Avoid rate limiting; shared across processes via the file cache
 3. **Graceful degradation** - Show ⚠️ on API errors, widgets return null on failure
 4. **i18n** - All user-facing strings in locales/*.json
 5. **Widget isolation** - Each widget handles its own data fetching and rendering

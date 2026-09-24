@@ -20,7 +20,7 @@ If rate limit widgets display a warning icon instead of percentages:
 
 - **Expired token**: Your API token may have expired. Re-login to Claude Code to refresh it.
 - **Network issue**: Check your internet connection.
-- **API rate limited**: The dashboard caches API responses for 60 seconds. Wait for the cache to refresh and try again.
+- **API rate limited**: The dashboard caches API responses for `cache.ttlSeconds` (default 300 seconds). Wait for the cache to refresh and try again.
 
 ## Wrong language
 

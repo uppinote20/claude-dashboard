@@ -84,7 +84,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected whe
 | | `todoProgress` | Todo completion rate |
 | **Analytics** | `burnRate` | Token consumption per minute |
 | | `cacheHit` | Cache hit rate percentage (last request) |
-| | `promptCache` | Session prompt-cache health: ♨️ warm with time left before it goes cold / ❄️ cold, hit ratio, miss count, e.g. `♨️ 4m 91% miss 2` (from `prompt_cache`, Claude Code ≥ 2.1.251). Set `refreshInterval` on the status line to keep the countdown moving while idle |
+| | `promptCache` | Session prompt-cache health: ♨️ warm with time left before it goes cold / ❄️ cold, hit ratio, miss count, e.g. `♨️ 4m 91% miss 2` (from `prompt_cache`, Claude Code ≥ 2.1.251). The warm→cold switch happens on its own; set `statusLine.refreshInterval` (e.g. `60`) to keep the minute countdown ticking while idle |
 | | `promptCacheState` | Warm/cold icon + time left only, e.g. `♨️ 4m` (sub-widget of `promptCache`) |
 | | `promptCacheHit` | Session cache hit ratio only, e.g. `91%` (sub-widget of `promptCache`) |
 | | `promptCacheMisses` | Miss count only, e.g. `miss 2`; hidden at 0 (sub-widget of `promptCache`) |
@@ -252,7 +252,7 @@ status line stops updating.
 
 - API token may be expired - re-login to Claude Code
 - Network issue - check internet connection
-- API rate limited - wait 60 seconds for cache refresh
+- API rate limited - wait for the cache to refresh (`cache.ttlSeconds`, default 300 seconds)
 
 </details>
 
