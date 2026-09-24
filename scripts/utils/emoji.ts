@@ -42,6 +42,7 @@ export const ICON = {
   yellowCircle: '🟡️',
   redCircle: '🔴️',
   fire: '🔥️',
+  hotSprings: '♨️',
   snowflake: '❄️',
   speech: '💬️',
   target: '🎯️',

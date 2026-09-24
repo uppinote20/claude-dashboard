@@ -1061,11 +1061,13 @@ describe('widgets', () => {
       });
     });
 
-    it('should render a fire icon with the hit percentage while warm', () => {
+    it('should render a hot-springs icon with the hit percentage while warm', () => {
       const ctx = createContext();
       const result = promptCacheWidget.render({ warm: true, hitPercentage: 91, misses: 0 }, ctx);
 
-      expect(result).toContain(ICON.fire);
+      expect(result).toContain(ICON.hotSprings);
+      // burnRate owns the fire icon; both sit in the detailed preset
+      expect(result).not.toContain(ICON.fire);
       expect(result).toContain('91%');
       expect(result).not.toContain('✗');
     });
@@ -1083,7 +1085,7 @@ describe('widgets', () => {
       const ctx = createContext();
       const result = promptCacheWidget.render({ warm: true, misses: 0 }, ctx);
 
-      expect(result).toContain(ICON.fire);
+      expect(result).toContain(ICON.hotSprings);
       expect(result).not.toContain('%');
     });
   });

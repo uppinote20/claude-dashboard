@@ -159,7 +159,7 @@ interface Widget<T extends WidgetData> {
 | `todoProgress` | transcript | Todo completion |
 | `burnRate` | stdin + session | Token consumption per minute |
 | `cacheHit` | stdin | Cache hit rate percentage (last request, from `context_window.current_usage`) |
-| `promptCache` | stdin | Session-wide prompt cache health from `prompt_cache` (≥ 2.1.251): 🔥 warm / ❄️ cold, `hit_ratio` %, `✗N` misses. Hidden until first API response or when `caching_observed` is false |
+| `promptCache` | stdin | Session-wide prompt cache health from `prompt_cache` (≥ 2.1.251): ♨️ warm / ❄️ cold, `hit_ratio` %, `✗N` misses. Hidden until first API response or when `caching_observed` is false |
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model + rate-limit windows). Windows are labeled from `limit_window_seconds`, not response position — Plus returns 5h + 7d, Pro a single 7d |
 | `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |

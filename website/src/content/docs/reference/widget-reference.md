@@ -323,13 +323,13 @@ Agent: 3 done
 | **Widget ID** | `promptCache` |
 | **Preset char** | `c` |
 | **Data Source** | stdin (`prompt_cache`, Claude Code ≥ 2.1.251) |
-| **Description** | Session-wide prompt cache health for the main conversation — the same numbers as the `Prompt cache (main)` line in `/cost`. 🔥 means the cached prefix is still within its TTL (warm), ❄️ means it has gone cold and the next request re-caches the conversation. The percentage is `hit_ratio` (cache reads over all input tokens this session), and `✗N` counts requests that missed the cache. Hidden until the first API response and when the provider or gateway reports no cache tokens (`caching_observed: false`). Subagent requests are not counted. |
+| **Description** | Session-wide prompt cache health for the main conversation — the same numbers as the `Prompt cache (main)` line in `/cost`. ♨️ means the cached prefix is still within its TTL (warm), ❄️ means it has gone cold and the next request re-caches the conversation. The percentage is `hit_ratio` (cache reads over all input tokens this session), and `✗N` counts requests that missed the cache. Hidden until the first API response and when the provider or gateway reports no cache tokens (`caching_observed: false`). Subagent requests are not counted. |
 
 **Example output:**
 ```
-🔥 91%
+♨️ 91%
 ❄️ 91% ✗2
-🔥
+♨️
 ```
 
 ### depletionTime

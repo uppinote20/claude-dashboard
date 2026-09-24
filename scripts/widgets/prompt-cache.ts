@@ -6,7 +6,7 @@
  * whether the cached prefix is still warm, the session hit ratio, and how many
  * requests missed the cache.
  *
- *   🔥 91%        warm, 91% of input tokens served from cache
+ *   ♨️ 91%        warm, 91% of input tokens served from cache
  *   ❄️ 91% ✗2     cold (TTL expired), 2 misses so far
  *
  * Hidden until the first API response (field absent) and when the provider or
@@ -42,7 +42,7 @@ export const promptCacheWidget: Widget<PromptCacheData> = {
 
   render(data: PromptCacheData): string {
     const theme = getTheme();
-    const icon = data.warm ? ICON.fire : ICON.snowflake;
+    const icon = data.warm ? ICON.hotSprings : ICON.snowflake;
 
     const parts: string[] = [icon];
     if (data.hitPercentage !== undefined) {

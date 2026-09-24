@@ -59,7 +59,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `todoProgress` | Todo completion rate |
 | `burnRate` | Token consumption per minute |
 | `cacheHit` | Cache hit rate percentage (last request) |
-| `promptCache` | Session prompt-cache health: 🔥 warm / ❄️ cold, hit ratio, misses (Claude Code ≥ 2.1.251) |
+| `promptCache` | Session prompt-cache health: ♨️ warm / ❄️ cold, hit ratio, misses (Claude Code ≥ 2.1.251) |
 | `depletionTime` | Estimated time to rate limit |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) |
 | `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed) |

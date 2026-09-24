@@ -84,7 +84,7 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected whe
 | | `todoProgress` | Todo completion rate |
 | **Analytics** | `burnRate` | Token consumption per minute |
 | | `cacheHit` | Cache hit rate percentage (last request) |
-| | `promptCache` | Session prompt-cache health: 🔥 warm / ❄️ cold, hit ratio, miss count (from `prompt_cache`, Claude Code ≥ 2.1.251) |
+| | `promptCache` | Session prompt-cache health: ♨️ warm / ❄️ cold, hit ratio, miss count (from `prompt_cache`, Claude Code ≥ 2.1.251) |
 | | `depletionTime` | Estimated time to rate limit (approx)¹ |
 | **Multi-CLI** | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed)² |
 | | `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed)³ |

@@ -484,6 +484,7 @@ var ICON = {
   yellowCircle: "\u{1F7E1}\uFE0F",
   redCircle: "\u{1F534}\uFE0F",
   fire: "\u{1F525}\uFE0F",
+  hotSprings: "\u2668\uFE0F",
   snowflake: "\u2744\uFE0F",
   speech: "\u{1F4AC}\uFE0F",
   target: "\u{1F3AF}\uFE0F",
@@ -2383,7 +2384,7 @@ var promptCacheWidget = {
   },
   render(data) {
     const theme = getTheme();
-    const icon = data.warm ? ICON.fire : ICON.snowflake;
+    const icon = data.warm ? ICON.hotSprings : ICON.snowflake;
     const parts = [icon];
     if (data.hitPercentage !== void 0) {
       const color = getColorForPercent(100 - data.hitPercentage);
