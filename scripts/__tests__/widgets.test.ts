@@ -36,6 +36,7 @@
  * @covers scripts/widgets/tag-status.ts
  * @covers scripts/widgets/slash-command.ts
  * @covers scripts/widgets/agent-mode.ts
+ * @covers scripts/widgets/prompt-cache.ts
  * @covers scripts/utils/transcript-parser.ts
  * @covers scripts/utils/session.ts
  * @covers scripts/utils/budget.ts
