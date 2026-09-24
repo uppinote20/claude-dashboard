@@ -1002,7 +1002,7 @@ var ko_default = {
     hooks: "\uD6C5",
     burnRate: "\uC18C\uBAA8\uC728",
     cache: "\uCE90\uC2DC",
-    cacheMiss: "\uBBF8\uC2A4",
+    cacheMiss: "miss",
     toLimit: "\uD6C4",
     forecast: "\uC608\uCE21",
     budget: "\uC608\uC0B0",

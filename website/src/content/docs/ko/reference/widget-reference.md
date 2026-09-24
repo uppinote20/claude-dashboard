@@ -183,8 +183,8 @@ sidebar:
 - **ID**: `promptCache`
 - **프리셋 문자**: `c`
 - **데이터 소스**: stdin (`prompt_cache`, Claude Code 2.1.251 이상)
-- **표시 내용**: 메인 대화의 세션 전체 프롬프트 캐시 상태 — `/cost`의 `Prompt cache (main)` 줄과 같은 수치입니다. ♨️는 캐시된 prefix가 아직 TTL 안에 있음(warm), ❄️는 만료되어 다음 요청이 대화를 다시 캐시함(cold)을 뜻합니다. warm일 때는 캐시가 만료되기까지 남은 시간(`expires_at` 기준, 마지막 1분은 초 단위)도 표시합니다. 퍼센트는 `hit_ratio`(세션 전체 입력 토큰 중 캐시 read 비율), `미스 N`은 캐시 미스로 집계된 요청 수입니다. 카운트다운은 status line이 다시 그려질 때만 갱신되는데 세션이 쉬는 동안에는 다시 그려지지 않으므로, `statusLine` 설정에 `"refreshInterval": 30`을 추가하면 계속 갱신됩니다. 첫 API 응답 전이거나 프로바이더/게이트웨이가 캐시 토큰을 보고하지 않으면(`caching_observed: false`) 숨겨집니다. 서브에이전트 요청은 집계에 포함되지 않습니다.
-- **출력 예시**: `♨️ 4분 91% 미스 2`, `♨️ 40초 91%`, `❄️ 42% 미스 7`
+- **표시 내용**: 메인 대화의 세션 전체 프롬프트 캐시 상태 — `/cost`의 `Prompt cache (main)` 줄과 같은 수치입니다. ♨️는 캐시된 prefix가 아직 TTL 안에 있음(warm), ❄️는 만료되어 다음 요청이 대화를 다시 캐시함(cold)을 뜻합니다. warm일 때는 캐시가 만료되기까지 남은 시간(`expires_at` 기준, 마지막 1분은 초 단위)도 표시합니다. 퍼센트는 `hit_ratio`(세션 전체 입력 토큰 중 캐시 read 비율), `miss N`은 캐시 미스로 집계된 요청 수입니다. 카운트다운은 status line이 다시 그려질 때만 갱신되는데 세션이 쉬는 동안에는 다시 그려지지 않으므로, `statusLine` 설정에 `"refreshInterval": 30`을 추가하면 계속 갱신됩니다. 첫 API 응답 전이거나 프로바이더/게이트웨이가 캐시 토큰을 보고하지 않으면(`caching_observed: false`) 숨겨집니다. 서브에이전트 요청은 집계에 포함되지 않습니다.
+- **출력 예시**: `♨️ 4분 91% miss 2`, `♨️ 40초 91%`, `❄️ 42% miss 7`
 
 ### promptCacheState / promptCacheHit / promptCacheMisses
 
@@ -194,7 +194,7 @@ sidebar:
 |---------|-------------|-----------|
 | `promptCacheState` | `w` | warm/cold 아이콘 + 남은 시간 (예: `♨️ 4분`, `❄️`) |
 | `promptCacheHit` | `h` | 세션 히트율만 (예: `91%`) |
-| `promptCacheMisses` | `x` | 미스 횟수만 (예: `미스 2`) |
+| `promptCacheMisses` | `x` | 미스 횟수만 (예: `miss 2`) |
 
 ### depletionTime
 
