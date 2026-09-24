@@ -323,14 +323,24 @@ Agent: 3 done
 | **Widget ID** | `promptCache` |
 | **Preset char** | `c` |
 | **Data Source** | stdin (`prompt_cache`, Claude Code ≥ 2.1.251) |
-| **Description** | Session-wide prompt cache health for the main conversation — the same numbers as the `Prompt cache (main)` line in `/cost`. ♨️ means the cached prefix is still within its TTL (warm), ❄️ means it has gone cold and the next request re-caches the conversation. The percentage is `hit_ratio` (cache reads over all input tokens this session), and `✗N` counts requests that missed the cache. Hidden until the first API response and when the provider or gateway reports no cache tokens (`caching_observed: false`). Subagent requests are not counted. |
+| **Description** | Session-wide prompt cache health for the main conversation — the same numbers as the `Prompt cache (main)` line in `/cost`. ♨️ means the cached prefix is still within its TTL (warm), ❄️ means it has gone cold and the next request re-caches the conversation. While warm it also shows the time left before the cache goes cold (from `expires_at`; seconds in the last minute). The percentage is `hit_ratio` (cache reads over all input tokens this session), and `miss N` counts requests that missed the cache. Claude Code re-renders the status line by itself when `expires_at` is reached, so the switch to ❄️ is automatic. The minute countdown in between only moves on re-renders, which pause while the session is idle — add `"refreshInterval": 60` to your `statusLine` setting to keep it ticking. Hidden until the first API response and when the provider or gateway reports no cache tokens (`caching_observed: false`). Subagent requests are not counted. |
 
 **Example output:**
 ```
-♨️ 91%
-❄️ 91% ✗2
-♨️
+♨️ 4m 91% miss 2
+♨️ 40s 91%
+❄️ 42% miss 7
 ```
+
+### promptCacheState / promptCacheHit / promptCacheMisses
+
+Sub-widgets of `promptCache` that render just one of its parts, sharing its data source. A sub-widget with nothing to show (no ratio yet, zero misses) renders empty and is dropped from the line.
+
+| Widget ID | Preset char | Shows |
+|-----------|-------------|-------|
+| `promptCacheState` | `w` | Warm/cold icon + time left (e.g. `♨️ 4m`, `❄️`) |
+| `promptCacheHit` | `h` | Session hit ratio only (e.g. `91%`) |
+| `promptCacheMisses` | `x` | Miss count only (e.g. `miss 2`) |
 
 ### depletionTime
 

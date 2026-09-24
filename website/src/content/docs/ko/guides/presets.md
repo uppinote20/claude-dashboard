@@ -43,7 +43,8 @@ sidebar:
 | `m` | vimMode | `a` | apiDuration |
 | `p` | peakHours | `t` | tagStatus |
 | `b` | contextBar | `%` | contextPercentage |
-| `c` | promptCache | | |
+| `c` | promptCache | `w` | promptCacheState |
+| `h` | promptCacheHit | `x` | promptCacheMisses |
 | `#` | contextUsage | `/` | slashCommand |
 | `g` | agentMode | `f` | rateLimit7dFable |
 | `^` | antigravityUsage | | |

@@ -163,6 +163,9 @@ export type WidgetId =
   | 'depletionTime'
   | 'cacheHit'
   | 'promptCache'
+  | 'promptCacheState'
+  | 'promptCacheHit'
+  | 'promptCacheMisses'
   | 'codexUsage'
   | 'geminiUsage'
   | 'geminiUsageAll'
@@ -287,6 +290,9 @@ export const PRESET_CHAR_MAP: Record<string, WidgetId> = {
   E: 'depletionTime',
   H: 'cacheHit',
   c: 'promptCache',
+  w: 'promptCacheState',
+  h: 'promptCacheHit',
+  x: 'promptCacheMisses',
   X: 'codexUsage',
   G: 'geminiUsage',
   '^': 'antigravityUsage',
@@ -380,6 +386,7 @@ export interface Translations {
     hooks: string;
     burnRate: string;
     cache: string;
+    cacheMiss: string;
     toLimit: string;
     forecast: string;
     budget: string;
@@ -584,6 +591,8 @@ export interface PromptCacheData {
   hitPercentage?: number;
   /** Requests counted as cache misses this session */
   misses: number;
+  /** When the cached prefix goes cold (epoch ms); undefined when unknown */
+  expiresAt?: number;
 }
 
 /**

@@ -43,7 +43,7 @@
  * @covers scripts/utils/codex-client.ts
  * @covers scripts/utils/git.ts (countUntrackedLines via mock)
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { modelWidget, getDefaultEffort } from '../widgets/model.js';
 import {
   contextWidget,
@@ -58,7 +58,12 @@ import { toolActivityWidget } from '../widgets/tool-activity.js';
 import { projectInfoWidget, clearGitCacheForTest } from '../widgets/project-info.js';
 import { burnRateWidget } from '../widgets/burn-rate.js';
 import { cacheHitWidget } from '../widgets/cache-hit.js';
-import { promptCacheWidget } from '../widgets/prompt-cache.js';
+import {
+  promptCacheWidget,
+  promptCacheStateWidget,
+  promptCacheHitWidget,
+  promptCacheMissesWidget,
+} from '../widgets/prompt-cache.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
 import { codexUsageWidget } from '../widgets/codex-usage.js';
 import { geminiUsageWidget } from '../widgets/gemini-usage.js';
@@ -1047,6 +1052,7 @@ describe('widgets', () => {
         warm: true,
         hitPercentage: 91,
         misses: 2,
+        expiresAt: 1738429200 * 1000,
       });
 
       const over = createContext({ prompt_cache: { ...warmCache, hit_ratio: 1.2, misses: 0 } });
@@ -1059,6 +1065,7 @@ describe('widgets', () => {
         warm: true,
         hitPercentage: undefined,
         misses: 0,
+        expiresAt: 1738429200 * 1000,
       });
     });
 
@@ -1070,7 +1077,7 @@ describe('widgets', () => {
       // burnRate owns the fire icon; both sit in the detailed preset
       expect(result).not.toContain(ICON.fire);
       expect(result).toContain('91%');
-      expect(result).not.toContain('✗');
+      expect(result).not.toContain('miss');
     });
 
     it('should render a snowflake and the miss count when cold with misses', () => {
@@ -1079,7 +1086,8 @@ describe('widgets', () => {
 
       expect(result).toContain(ICON.snowflake);
       expect(result).toContain('64%');
-      expect(result).toContain('✗3');
+      expect(result).toContain('miss 3');
+      expect(result).not.toContain('✗');
     });
 
     it('should render only the state icon when the ratio is unknown', () => {
@@ -1088,6 +1096,106 @@ describe('widgets', () => {
 
       expect(result).toContain(ICON.hotSprings);
       expect(result).not.toContain('%');
+    });
+
+    describe('time until the cache goes cold', () => {
+      const NOW = new Date('2026-09-24T12:00:00Z').getTime();
+
+      beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(NOW);
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('should leave expiresAt undefined when expires_at is null or not positive', async () => {
+        const nullCtx = createContext({ prompt_cache: { ...warmCache, expires_at: null } });
+        const zeroCtx = createContext({ prompt_cache: { ...warmCache, expires_at: 0 } });
+        expect((await promptCacheWidget.getData(nullCtx))?.expiresAt).toBeUndefined();
+        expect((await promptCacheWidget.getData(zeroCtx))?.expiresAt).toBeUndefined();
+      });
+
+      it('should show only the warm icon when expiresAt is unknown', () => {
+        const ctx = createContext();
+        expect(promptCacheStateWidget.render({ warm: true, misses: 0 }, ctx)).toBe(ICON.hotSprings);
+      });
+
+      it('should show the remaining time next to the warm icon', () => {
+        const ctx = createContext();
+        const result = promptCacheWidget.render(
+          { warm: true, hitPercentage: 91, misses: 2, expiresAt: NOW + 4 * 60_000 + 30_000 },
+          ctx
+        );
+        const plain = result.replace(/\x1b\[[0-9;]*m/g, '');
+        expect(plain).toBe(`${ICON.hotSprings} 4m 91% miss 2`);
+      });
+
+      it('should show seconds in the last minute', () => {
+        const ctx = createContext();
+        const result = promptCacheStateWidget.render(
+          { warm: true, misses: 0, expiresAt: NOW + 45_000 },
+          ctx
+        );
+        expect(result).toContain('45s');
+      });
+
+      it('should drop the countdown once expiresAt has passed or the cache is cold', () => {
+        const ctx = createContext();
+        const expired = promptCacheStateWidget.render(
+          { warm: true, misses: 0, expiresAt: NOW - 1_000 },
+          ctx
+        );
+        const cold = promptCacheStateWidget.render(
+          { warm: false, misses: 0, expiresAt: NOW + 60_000 },
+          ctx
+        );
+        expect(expired).toBe(ICON.hotSprings);
+        expect(cold).toBe(ICON.snowflake);
+      });
+    });
+
+    describe('sub-widgets', () => {
+      const data = { warm: false, hitPercentage: 64, misses: 3 };
+
+      it('should have correct ids and names', () => {
+        expect(promptCacheStateWidget.id).toBe('promptCacheState');
+        expect(promptCacheStateWidget.name).toBe('Prompt Cache (State)');
+        expect(promptCacheHitWidget.id).toBe('promptCacheHit');
+        expect(promptCacheHitWidget.name).toBe('Prompt Cache (Hit)');
+        expect(promptCacheMissesWidget.id).toBe('promptCacheMisses');
+        expect(promptCacheMissesWidget.name).toBe('Prompt Cache (Misses)');
+      });
+
+      it('should be registered and reachable via preset chars', () => {
+        expect(getWidget('promptCacheState')).toBe(promptCacheStateWidget);
+        expect(getWidget('promptCacheHit')).toBe(promptCacheHitWidget);
+        expect(getWidget('promptCacheMisses')).toBe(promptCacheMissesWidget);
+        expect(PRESET_CHAR_MAP.w).toBe('promptCacheState');
+        expect(PRESET_CHAR_MAP.h).toBe('promptCacheHit');
+        expect(PRESET_CHAR_MAP.x).toBe('promptCacheMisses');
+      });
+
+      it('should share the combined widget getData', () => {
+        expect(promptCacheStateWidget.getData).toBe(promptCacheWidget.getData);
+        expect(promptCacheHitWidget.getData).toBe(promptCacheWidget.getData);
+        expect(promptCacheMissesWidget.getData).toBe(promptCacheWidget.getData);
+      });
+
+      it('should render one part each', () => {
+        const ctx = createContext();
+        expect(promptCacheStateWidget.render(data, ctx)).toBe(ICON.snowflake);
+        expect(promptCacheHitWidget.render(data, ctx)).toContain('64%');
+        expect(promptCacheHitWidget.render(data, ctx)).not.toContain(ICON.snowflake);
+        expect(promptCacheMissesWidget.render(data, ctx)).toContain('miss 3');
+      });
+
+      it('should render empty (and so be dropped from the line) when its part is absent', () => {
+        const ctx = createContext();
+        expect(promptCacheHitWidget.render({ warm: true, misses: 0 }, ctx)).toBe('');
+        expect(promptCacheMissesWidget.render({ warm: true, misses: 0 }, ctx)).toBe('');
+      });
     });
   });
 

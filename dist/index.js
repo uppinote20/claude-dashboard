@@ -44,6 +44,9 @@ var PRESET_CHAR_MAP = {
   E: "depletionTime",
   H: "cacheHit",
   c: "promptCache",
+  w: "promptCacheState",
+  h: "promptCacheHit",
+  x: "promptCacheMisses",
   X: "codexUsage",
   G: "geminiUsage",
   "^": "antigravityUsage",
@@ -938,6 +941,7 @@ var en_default = {
     hooks: "Hooks",
     burnRate: "Rate",
     cache: "Cache",
+    cacheMiss: "miss",
     toLimit: "to",
     forecast: "Forecast",
     budget: "Budget",
@@ -998,6 +1002,7 @@ var ko_default = {
     hooks: "\uD6C5",
     burnRate: "\uC18C\uBAA8\uC728",
     cache: "\uCE90\uC2DC",
+    cacheMiss: "miss",
     toLimit: "\uD6C4",
     forecast: "\uC608\uCE21",
     budget: "\uC608\uC0B0",
@@ -2370,31 +2375,66 @@ var cacheHitWidget = {
 };
 
 // scripts/widgets/prompt-cache.ts
+async function getPromptCacheData(ctx) {
+  const cache = ctx.stdin.prompt_cache;
+  if (!cache || cache.caching_observed === false)
+    return null;
+  const ratio = cache.hit_ratio;
+  const hitPercentage = typeof ratio === "number" && Number.isFinite(ratio) ? clampPercent(ratio * 100) : void 0;
+  const misses = typeof cache.misses === "number" && cache.misses > 0 ? cache.misses : 0;
+  const expiresAt = typeof cache.expires_at === "number" && Number.isFinite(cache.expires_at) && cache.expires_at > 0 ? cache.expires_at * 1e3 : void 0;
+  return { warm: cache.warm === true, hitPercentage, misses, expiresAt };
+}
+function formatWarmTimeLeft(data, t) {
+  if (!data.warm || data.expiresAt === void 0)
+    return "";
+  const leftMs = data.expiresAt - Date.now();
+  if (leftMs <= 0)
+    return "";
+  if (leftMs < 6e4)
+    return `${Math.ceil(leftMs / 1e3)}${t.time.seconds}`;
+  return formatTimeRemaining(new Date(data.expiresAt), t);
+}
+function renderState(data, ctx) {
+  const icon = data.warm ? ICON.hotSprings : ICON.snowflake;
+  const timeLeft = formatWarmTimeLeft(data, ctx.translations);
+  return timeLeft ? `${icon} ${colorize(timeLeft, getTheme().secondary)}` : icon;
+}
+function renderHit(data) {
+  if (data.hitPercentage === void 0)
+    return "";
+  return colorize(`${data.hitPercentage}%`, getColorForPercent(100 - data.hitPercentage));
+}
+function renderMisses(data, ctx) {
+  if (data.misses === 0)
+    return "";
+  return colorize(`${ctx.translations.widgets.cacheMiss} ${data.misses}`, getTheme().warning);
+}
 var promptCacheWidget = {
   id: "promptCache",
   name: "Prompt Cache",
-  async getData(ctx) {
-    const cache = ctx.stdin.prompt_cache;
-    if (!cache || cache.caching_observed === false)
-      return null;
-    const ratio = cache.hit_ratio;
-    const hitPercentage = typeof ratio === "number" && Number.isFinite(ratio) ? Math.min(100, Math.max(0, Math.round(ratio * 100))) : void 0;
-    const misses = typeof cache.misses === "number" && cache.misses > 0 ? cache.misses : 0;
-    return { warm: cache.warm === true, hitPercentage, misses };
-  },
-  render(data) {
-    const theme = getTheme();
-    const icon = data.warm ? ICON.hotSprings : ICON.snowflake;
-    const parts = [icon];
-    if (data.hitPercentage !== void 0) {
-      const color = getColorForPercent(100 - data.hitPercentage);
-      parts.push(colorize(`${data.hitPercentage}%`, color));
-    }
-    if (data.misses > 0) {
-      parts.push(colorize(`\u2717${data.misses}`, theme.warning));
-    }
-    return parts.join(" ");
+  getData: getPromptCacheData,
+  render(data, ctx) {
+    return [renderState(data, ctx), renderHit(data), renderMisses(data, ctx)].filter(Boolean).join(" ");
   }
+};
+var promptCacheStateWidget = {
+  id: "promptCacheState",
+  name: "Prompt Cache (State)",
+  getData: getPromptCacheData,
+  render: renderState
+};
+var promptCacheHitWidget = {
+  id: "promptCacheHit",
+  name: "Prompt Cache (Hit)",
+  getData: getPromptCacheData,
+  render: renderHit
+};
+var promptCacheMissesWidget = {
+  id: "promptCacheMisses",
+  name: "Prompt Cache (Misses)",
+  getData: getPromptCacheData,
+  render: renderMisses
 };
 
 // scripts/utils/codex-client.ts
@@ -4622,6 +4662,9 @@ var widgetRegistry = /* @__PURE__ */ new Map([
   ["depletionTime", depletionTimeWidget],
   ["cacheHit", cacheHitWidget],
   ["promptCache", promptCacheWidget],
+  ["promptCacheState", promptCacheStateWidget],
+  ["promptCacheHit", promptCacheHitWidget],
+  ["promptCacheMisses", promptCacheMissesWidget],
   ["codexUsage", codexUsageWidget],
   ["geminiUsage", geminiUsageWidget],
   ["geminiUsageAll", geminiUsageAllWidget],
