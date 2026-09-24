@@ -614,6 +614,7 @@ var CLEANABLE_PREFIXES = [
   "gemini-usage-",
   "antigravity-usage-",
   "antigravity-token-",
+  "antigravity-wincred-",
   "zai-usage-"
 ];
 var lastCleanupTime = 0;
@@ -3166,6 +3167,7 @@ var geminiUsageAllWidget = {
 };
 
 // scripts/utils/antigravity-client.ts
+import { execFile as execFile6 } from "child_process";
 import { readFile as readFile8, stat as stat9 } from "fs/promises";
 import os4 from "os";
 import path4 from "path";
@@ -3173,6 +3175,10 @@ var API_TIMEOUT_MS4 = 5e3;
 var ANTIGRAVITY_DIR = path4.join(".gemini", "antigravity-cli");
 var OAUTH_TOKEN_FILE = "antigravity-oauth-token";
 var SETTINGS_FILE2 = "settings.json";
+var WINCRED_TARGET = "gemini:antigravity";
+var WINCRED_TIMEOUT_MS = 3e3;
+var WINCRED_MISS_CACHE_FILE = "antigravity-wincred-miss.json";
+var WINCRED_MISS_TTL_SECONDS = 600;
 var CODE_ASSIST_ENDPOINT2 = "https://cloudcode-pa.googleapis.com";
 var CODE_ASSIST_API_VERSION2 = "v1internal";
 var CODE_ASSIST_METADATA = {
@@ -3189,15 +3195,78 @@ var antigravityCacheMap = /* @__PURE__ */ new Map();
 var inFlightFetch = null;
 var pendingRefreshRequests2 = /* @__PURE__ */ new Map();
 var installedCheck = null;
+var winCredRead = null;
 var cachedCredentials2 = null;
 var cachedSettings2 = null;
 function getTokenPath() {
   return path4.join(os4.homedir(), ANTIGRAVITY_DIR, OAUTH_TOKEN_FILE);
 }
+var WINCRED_SCRIPT = `
+$sig = @'
+using System; using System.Runtime.InteropServices;
+public static class CredNative {
+  [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern bool CredRead(string target, int type, int flags, out IntPtr cred);
+  [DllImport("advapi32.dll")] public static extern void CredFree(IntPtr cred);
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct CREDENTIAL {
+    public int Flags; public int Type; public string TargetName; public string Comment;
+    public long LastWritten; public int CredentialBlobSize; public IntPtr CredentialBlob;
+    public int Persist; public int AttributeCount; public IntPtr Attributes;
+    public string TargetAlias; public string UserName;
+  }
+}
+'@
+Add-Type -TypeDefinition $sig
+$p = [IntPtr]::Zero
+if ([CredNative]::CredRead('${WINCRED_TARGET}', 1, 0, [ref]$p)) {
+  $c = [Runtime.InteropServices.Marshal]::PtrToStructure($p, [type][CredNative+CREDENTIAL])
+  $b = New-Object byte[] $c.CredentialBlobSize
+  [Runtime.InteropServices.Marshal]::Copy($c.CredentialBlob, $b, 0, $c.CredentialBlobSize)
+  [CredNative]::CredFree($p)
+  [Console]::Out.Write([Text.Encoding]::UTF8.GetString($b))
+}
+`;
+function spawnCredRead() {
+  return new Promise((resolve) => {
+    execFile6(
+      "powershell.exe",
+      ["-NoProfile", "-NonInteractive", "-Command", WINCRED_SCRIPT],
+      { encoding: "utf-8", timeout: WINCRED_TIMEOUT_MS, windowsHide: true },
+      (error, stdout) => {
+        if (error) {
+          debugLog("antigravity", "CredRead failed", error);
+          resolve(null);
+          return;
+        }
+        const raw = stdout.trim();
+        resolve(raw.startsWith("{") ? raw : null);
+      }
+    );
+  });
+}
+function readWinCredToken() {
+  if (process.platform !== "win32") {
+    return Promise.resolve(null);
+  }
+  winCredRead ??= (async () => {
+    const missFile = fileCachePath(WINCRED_MISS_CACHE_FILE);
+    if (await loadFileCache(missFile, WINCRED_MISS_TTL_SECONDS)) {
+      debugLog("antigravity", "Credential Manager miss cached, skipping CredRead");
+      return null;
+    }
+    const raw = await spawnCredRead();
+    if (!raw) {
+      await saveFileCache(missFile, true);
+    }
+    return raw;
+  })();
+  return winCredRead;
+}
 function isAntigravityInstalled() {
   installedCheck ??= stat9(getTokenPath()).then(
     () => true,
-    () => false
+    async () => await readWinCredToken() !== null
   );
   return installedCheck;
 }
@@ -3211,24 +3280,35 @@ function parseExpiry(expiry) {
   }
   return Number.isNaN(ms) ? void 0 : ms;
 }
+function parseCredentials(raw) {
+  const json = JSON.parse(raw);
+  const accessToken = json?.token?.access_token;
+  if (!accessToken) {
+    return null;
+  }
+  return {
+    accessToken,
+    refreshToken: json?.token?.refresh_token,
+    expiryDate: parseExpiry(json?.token?.expiry)
+  };
+}
 async function getCredentialsFromFile3() {
   try {
     const tokenPath = getTokenPath();
-    const fileStat = await stat9(tokenPath);
+    let fileStat;
+    try {
+      fileStat = await stat9(tokenPath);
+    } catch {
+      const raw = await readWinCredToken();
+      return raw ? parseCredentials(raw) : null;
+    }
     if (cachedCredentials2 && cachedCredentials2.mtime === fileStat.mtimeMs) {
       return cachedCredentials2.data;
     }
-    const raw = await readFile8(tokenPath, "utf-8");
-    const json = JSON.parse(raw);
-    const accessToken = json?.token?.access_token;
-    if (!accessToken) {
+    const data = parseCredentials(await readFile8(tokenPath, "utf-8"));
+    if (!data) {
       return null;
     }
-    const data = {
-      accessToken,
-      refreshToken: json?.token?.refresh_token,
-      expiryDate: parseExpiry(json?.token?.expiry)
-    };
     cachedCredentials2 = { data, mtime: fileStat.mtimeMs };
     return data;
   } catch {

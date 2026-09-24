@@ -10,6 +10,7 @@
  * @tested scripts/__tests__/antigravity-client.test.ts
  */
 
+import { execFile } from 'child_process';
 import { readFile, stat } from 'fs/promises';
 import os from 'os';
 import path from 'path';
@@ -28,6 +29,12 @@ const API_TIMEOUT_MS = 5000;
 const ANTIGRAVITY_DIR = path.join('.gemini', 'antigravity-cli');
 const OAUTH_TOKEN_FILE = 'antigravity-oauth-token';
 const SETTINGS_FILE = 'settings.json';
+/** Windows agy keeps the token in Credential Manager under this generic-credential target */
+const WINCRED_TARGET = 'gemini:antigravity';
+const WINCRED_TIMEOUT_MS = 3000;
+/** Cross-process "no credential" marker — a fresh agy login shows up within this window */
+const WINCRED_MISS_CACHE_FILE = 'antigravity-wincred-miss.json';
+const WINCRED_MISS_TTL_SECONDS = 600;
 
 const CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com';
 const CODE_ASSIST_API_VERSION = 'v1internal';
@@ -69,6 +76,11 @@ const pendingRefreshRequests: Map<string, Promise<AntigravityCredentials | null>
  * Memoized install check — the token file cannot appear mid-render
  */
 let installedCheck: Promise<boolean> | null = null;
+
+/**
+ * Memoized Windows Credential Manager read (see readWinCredToken)
+ */
+let winCredRead: Promise<string | null> | null = null;
 
 /**
  * Cached token-file credentials with mtime tracking
@@ -121,12 +133,87 @@ function getTokenPath(): string {
 }
 
 /**
- * Check if Antigravity CLI is installed (has a credential file)
+ * Read agy's token blob from Windows Credential Manager (CredRead via P/Invoke).
+ * On Windows agy never writes the token file — the same JSON lives as a
+ * generic credential instead. Resolves null on any other platform or failure.
+ */
+const WINCRED_SCRIPT = `
+$sig = @'
+using System; using System.Runtime.InteropServices;
+public static class CredNative {
+  [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+  public static extern bool CredRead(string target, int type, int flags, out IntPtr cred);
+  [DllImport("advapi32.dll")] public static extern void CredFree(IntPtr cred);
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct CREDENTIAL {
+    public int Flags; public int Type; public string TargetName; public string Comment;
+    public long LastWritten; public int CredentialBlobSize; public IntPtr CredentialBlob;
+    public int Persist; public int AttributeCount; public IntPtr Attributes;
+    public string TargetAlias; public string UserName;
+  }
+}
+'@
+Add-Type -TypeDefinition $sig
+$p = [IntPtr]::Zero
+if ([CredNative]::CredRead('${WINCRED_TARGET}', 1, 0, [ref]$p)) {
+  $c = [Runtime.InteropServices.Marshal]::PtrToStructure($p, [type][CredNative+CREDENTIAL])
+  $b = New-Object byte[] $c.CredentialBlobSize
+  [Runtime.InteropServices.Marshal]::Copy($c.CredentialBlob, $b, 0, $c.CredentialBlobSize)
+  [CredNative]::CredFree($p)
+  [Console]::Out.Write([Text.Encoding]::UTF8.GetString($b))
+}
+`;
+
+function spawnCredRead(): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', WINCRED_SCRIPT],
+      { encoding: 'utf-8', timeout: WINCRED_TIMEOUT_MS, windowsHide: true },
+      (error, stdout) => {
+        if (error) {
+          debugLog('antigravity', 'CredRead failed', error);
+          resolve(null);
+          return;
+        }
+        const raw = stdout.trim();
+        resolve(raw.startsWith('{') ? raw : null);
+      }
+    );
+  });
+}
+
+/**
+ * Memoized per process — the install check and the credential read share one
+ * PowerShell spawn. A miss is remembered cross-process so Windows users without
+ * agy don't pay a PowerShell + Add-Type startup on every render.
+ */
+function readWinCredToken(): Promise<string | null> {
+  if (process.platform !== 'win32') {
+    return Promise.resolve(null);
+  }
+  winCredRead ??= (async () => {
+    const missFile = fileCachePath(WINCRED_MISS_CACHE_FILE);
+    if (await loadFileCache<true>(missFile, WINCRED_MISS_TTL_SECONDS)) {
+      debugLog('antigravity', 'Credential Manager miss cached, skipping CredRead');
+      return null;
+    }
+    const raw = await spawnCredRead();
+    if (!raw) {
+      await saveFileCache(missFile, true);
+    }
+    return raw;
+  })();
+  return winCredRead;
+}
+
+/**
+ * Check if Antigravity CLI is installed (token file, or Credential Manager on Windows)
  */
 export function isAntigravityInstalled(): Promise<boolean> {
   installedCheck ??= stat(getTokenPath()).then(
     () => true,
-    () => false
+    async () => (await readWinCredToken()) !== null
   );
   return installedCheck;
 }
@@ -147,31 +234,45 @@ function parseExpiry(expiry: unknown): number | undefined {
 }
 
 /**
- * Read agy's OAuth token file (nested Go oauth2.Token shape)
+ * Parse agy's token JSON (nested Go oauth2.Token shape)
+ */
+function parseCredentials(raw: string): AntigravityCredentials | null {
+  const json = JSON.parse(raw);
+  const accessToken = json?.token?.access_token;
+  if (!accessToken) {
+    return null;
+  }
+  return {
+    accessToken,
+    refreshToken: json?.token?.refresh_token,
+    expiryDate: parseExpiry(json?.token?.expiry),
+  };
+}
+
+/**
+ * Read agy's OAuth token: the token file, or Credential Manager on Windows
  */
 async function getCredentialsFromFile(): Promise<AntigravityCredentials | null> {
   try {
     const tokenPath = getTokenPath();
-    const fileStat = await stat(tokenPath);
+    let fileStat;
+    try {
+      fileStat = await stat(tokenPath);
+    } catch {
+      // No token file: Windows agy stores it in Credential Manager instead
+      const raw = await readWinCredToken();
+      return raw ? parseCredentials(raw) : null;
+    }
 
     // Use cached credentials if file hasn't changed
     if (cachedCredentials && cachedCredentials.mtime === fileStat.mtimeMs) {
       return cachedCredentials.data;
     }
 
-    const raw = await readFile(tokenPath, 'utf-8');
-    const json = JSON.parse(raw);
-
-    const accessToken = json?.token?.access_token;
-    if (!accessToken) {
+    const data = parseCredentials(await readFile(tokenPath, 'utf-8'));
+    if (!data) {
       return null;
     }
-
-    const data: AntigravityCredentials = {
-      accessToken,
-      refreshToken: json?.token?.refresh_token,
-      expiryDate: parseExpiry(json?.token?.expiry),
-    };
 
     cachedCredentials = { data, mtime: fileStat.mtimeMs };
     return data;
@@ -729,6 +830,7 @@ export function clearAntigravityCache(): void {
   pendingRefreshRequests.clear();
   inFlightFetch = null;
   installedCheck = null;
+  winCredRead = null;
   cachedCredentials = null;
   cachedSettings = null;
 }

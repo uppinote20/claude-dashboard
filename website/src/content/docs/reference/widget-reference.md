@@ -376,7 +376,7 @@ gemini pro:60% flash:20%
 |----------|-------|
 | **Widget ID** | `antigravityUsage` |
 | **Data Source** | Antigravity API (Code Assist) |
-| **Description** | Shows Google Antigravity CLI weekly quota grouped by model family, such as Gemini and Claude+GPT. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found. |
+| **Description** | Shows Google Antigravity CLI weekly quota grouped by model family, such as Gemini and Claude+GPT. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` (on Windows, the `gemini:antigravity` Credential Manager entry) is not found. |
 
 **Example output:**
 ```
@@ -389,7 +389,7 @@ gemini pro:60% flash:20%
 |----------|-------|
 | **Widget ID** | `antigravityUsageAll` |
 | **Data Source** | Antigravity API (Code Assist) |
-| **Description** | Shows Google Antigravity CLI weekly quota for every model bucket, using each model's display name. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found. |
+| **Description** | Shows Google Antigravity CLI weekly quota for every model bucket, using each model's display name. Auto-hides if `~/.gemini/antigravity-cli/antigravity-oauth-token` (on Windows, the `gemini:antigravity` Credential Manager entry) is not found. |
 
 **Example output:**
 ```

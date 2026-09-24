@@ -162,7 +162,7 @@ interface Widget<T extends WidgetData> {
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model + rate-limit windows). Windows are labeled from `limit_window_seconds`, not response position — Plus returns 5h + 7d, Pro a single 7d |
 | `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |
 | `geminiUsageAll` | Gemini API | Google Gemini CLI usage (all model buckets) |
-| `antigravityUsage` | Antigravity API | Google Antigravity CLI weekly quota by model family (Gemini / Claude+GPT). Auto-hides without `~/.gemini/antigravity-cli/antigravity-oauth-token` |
+| `antigravityUsage` | Antigravity API | Google Antigravity CLI weekly quota by model family (Gemini / Claude+GPT). Auto-hides without `~/.gemini/antigravity-cli/antigravity-oauth-token` (on Windows, the `gemini:antigravity` Credential Manager entry) |
 | `antigravityUsageAll` | Antigravity API | Google Antigravity CLI per-model quota buckets |
 | `zaiUsage` | z.ai API | z.ai/ZHIPU GLM usage (5h tokens, 1m MCP) |
 | `tokenBreakdown` | stdin | Input/output/cache write/read token breakdown |

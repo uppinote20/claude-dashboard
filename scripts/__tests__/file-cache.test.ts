@@ -103,11 +103,14 @@ describe('file-cache', () => {
       resetCleanupThrottle();
     });
 
-    it('removes expired files for all 4 cleanable prefixes', async () => {
+    it('removes expired files for every cleanable prefix', async () => {
       const targets = [
         'cache-old.json',
         'codex-usage-old.json',
         'gemini-usage-old.json',
+        'antigravity-usage-old.json',
+        'antigravity-token-old.json',
+        'antigravity-wincred-miss.json',
         'zai-usage-old.json',
       ];
       for (const name of targets) {

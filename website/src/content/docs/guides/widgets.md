@@ -101,7 +101,7 @@ claude-dashboard provides 40 widgets organized by category. Each widget can be i
 1. **depletionTime** assumes all utilization came from the current session; accuracy improves as the session runs longer.
 2. **codexUsage** auto-hides if `~/.codex/auth.json` is not found.
 3. **geminiUsage** and **geminiUsageAll** auto-hide if `~/.gemini/oauth_creds.json` is not found. (Gemini CLI personal tiers retired 2026-06-18; enterprise still supported)
-4. **antigravityUsage** and **antigravityUsageAll** auto-hide if `~/.gemini/antigravity-cli/antigravity-oauth-token` is not found.
+4. **antigravityUsage** and **antigravityUsageAll** auto-hide if `~/.gemini/antigravity-cli/antigravity-oauth-token` (on Windows, the `gemini:antigravity` Credential Manager entry) is not found.
 5. **zaiUsage** auto-hides if not detected via `ANTHROPIC_BASE_URL`.
 6. **budget** requires `"dailyBudget"` to be set in the configuration file.
 7. **peakHours** peak = weekdays 5-11 AM PT; shows countdown to next transition.

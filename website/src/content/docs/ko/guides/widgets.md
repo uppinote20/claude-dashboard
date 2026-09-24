@@ -101,7 +101,7 @@ claude-dashboard는 40개의 위젯을 제공합니다. 각 위젯은 독립적�
 1. 모든 사용량이 현재 세션에서 발생했다고 가정합니다. 세션이 길어질수록 정확도가 향상됩니다.
 2. `~/.codex/auth.json`이 없으면 자동 숨김됩니다.
 3. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다. (Gemini CLI 개인 티어는 2026-06-18 종료, enterprise는 계속 지원)
-4. `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+4. `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일(Windows는 자격 증명 관리자의 `gemini:antigravity` 항목)이 없으면 자동 숨김됩니다.
 5. `ANTHROPIC_BASE_URL`을 통해 z.ai가 감지되지 않으면 자동 숨김됩니다.
 6. 설정 파일에 `"dailyBudget"` 값이 필요합니다.
 7. 피크 = 평일 5-11 AM PT; 다음 전환까지 카운트다운을 표시합니다.

@@ -212,14 +212,14 @@ sidebar:
 
 - **ID**: `antigravityUsage`
 - **데이터 소스**: Antigravity API (Google Code Assist)
-- **표시 내용**: Google Antigravity CLI — 모델 패밀리별 주간 quota 그룹 (Gemini / Claude+GPT). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+- **표시 내용**: Google Antigravity CLI — 모델 패밀리별 주간 quota 그룹 (Gemini / Claude+GPT). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일(Windows는 자격 증명 관리자의 `gemini:antigravity` 항목)이 없으면 자동 숨김됩니다.
 - **출력 예시**: `🪐️ Gemini 27% (6d22h) │ Claude+GPT 39% (6d19h)`
 
 ### antigravityUsageAll
 
 - **ID**: `antigravityUsageAll`
 - **데이터 소스**: Antigravity API (Google Code Assist)
-- **표시 내용**: Google Antigravity CLI — 모델별 quota 상세 (모델 표시 이름 사용). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일이 없으면 자동 숨김됩니다.
+- **표시 내용**: Google Antigravity CLI — 모델별 quota 상세 (모델 표시 이름 사용). `~/.gemini/antigravity-cli/antigravity-oauth-token` 파일(Windows는 자격 증명 관리자의 `gemini:antigravity` 항목)이 없으면 자동 숨김됩니다.
 - **출력 예시**: `🪐️ Gemini 3.6 Flash: 27% │ Claude Opus: 39%`
 
 ### zaiUsage
