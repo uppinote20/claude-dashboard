@@ -72,7 +72,7 @@ sidebar:
 ### 전체 모니터링
 
 ```json
-{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XG^LYV" }
+{ "preset": "MC$R7|PIDBO|KTAHcF|NWU|XG^LYV" }
 ```
 
 - **1줄:** model, context, cost, rateLimit5h, rateLimit7d

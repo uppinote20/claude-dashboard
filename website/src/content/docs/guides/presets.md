@@ -72,7 +72,7 @@ Result: model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet -- all
 ### Full monitoring
 
 ```json
-{ "preset": "MC$R7|PIDBO|KTAHF|NWU|XG^LYV" }
+{ "preset": "MC$R7|PIDBO|KTAHcF|NWU|XG^LYV" }
 ```
 
 - **Line 1:** model, context, cost, rateLimit5h, rateLimit7d
