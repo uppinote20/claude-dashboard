@@ -42,6 +42,32 @@ const MODELS_RESPONSE = {
   },
 };
 
+/**
+ * Mock child_process.execFile as Windows Credential Manager returning `blob`,
+ * and pin process.platform so the fallback path is deterministic on any CI OS.
+ */
+function mockWinCred(blob: string, platform: NodeJS.Platform = 'win32') {
+  vi.spyOn(process, 'platform', 'get').mockReturnValue(platform);
+  const execFileMock = vi.fn().mockImplementation((_cmd: unknown, _args: unknown, _opts: unknown, cb: (e: null, out: string) => void) => {
+    cb(null, blob);
+  });
+  vi.doMock('child_process', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('child_process')>();
+    return { ...actual, execFile: execFileMock };
+  });
+  return execFileMock;
+}
+
+/**
+ * Mock fs/promises so agy's token file (and settings.json) is missing
+ */
+function mockTokenFileMissing() {
+  vi.doMock('fs/promises', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('fs/promises')>();
+    return { ...actual, stat: vi.fn().mockRejectedValue(new Error('ENOENT')) };
+  });
+}
+
 function tokenJson(expiry: string): string {
   return JSON.stringify({
     token: {
@@ -151,20 +177,22 @@ async function importClient() {
 describe('antigravity-client', () => {
   beforeEach(() => {
     vi.resetModules();
+    // Pin a non-Windows platform so the Credential Manager fallback never runs
+    // against the host's real credential store; Windows cases opt in via mockWinCred
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux');
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     vi.doUnmock('fs/promises');
+    vi.doUnmock('child_process');
     vi.doUnmock('../utils/file-cache.js');
   });
 
   describe('isAntigravityInstalled', () => {
     it('should return false when the token file is missing', async () => {
-      vi.doMock('fs/promises', async (importOriginal) => {
-        const actual = await importOriginal<typeof import('fs/promises')>();
-        return { ...actual, stat: vi.fn().mockRejectedValue(new Error('ENOENT')) };
-      });
+      mockTokenFileMissing();
 
       const { isAntigravityInstalled } = await importClient();
       expect(await isAntigravityInstalled()).toBe(false);
@@ -176,9 +204,73 @@ describe('antigravity-client', () => {
       const { isAntigravityInstalled } = await importClient();
       expect(await isAntigravityInstalled()).toBe(true);
     });
+
+    it('should fall back to Credential Manager on Windows when the token file is missing', async () => {
+      mockTokenFileMissing();
+      const execFileMock = mockWinCred(tokenJson(FUTURE_EXPIRY));
+      mockFileCache();
+
+      const { isAntigravityInstalled } = await importClient();
+      expect(await isAntigravityInstalled()).toBe(true);
+      expect(execFileMock).toHaveBeenCalledOnce();
+      expect(execFileMock.mock.calls[0][0]).toBe('powershell.exe');
+    });
+
+    it('should record a cross-process miss when Credential Manager has no entry', async () => {
+      mockTokenFileMissing();
+      mockWinCred('');
+      const saveSpy = mockFileCache();
+
+      const { isAntigravityInstalled } = await importClient();
+      expect(await isAntigravityInstalled()).toBe(false);
+      expect(saveSpy).toHaveBeenCalledWith('/tmp/antigravity-wincred-miss.json', true);
+    });
+
+    it('should skip the PowerShell spawn while a miss is cached', async () => {
+      mockTokenFileMissing();
+      const execFileMock = mockWinCred(tokenJson(FUTURE_EXPIRY));
+      mockFileCache({
+        loadFileCache: vi.fn().mockImplementation((cacheFile: string) =>
+          Promise.resolve(cacheFile.includes('antigravity-wincred-miss') ? { data: true, timestamp: Date.now() } : null)
+        ),
+      });
+
+      const { isAntigravityInstalled } = await importClient();
+      expect(await isAntigravityInstalled()).toBe(false);
+      expect(execFileMock).not.toHaveBeenCalled();
+    });
+
+    it('should not consult Credential Manager off Windows', async () => {
+      mockTokenFileMissing();
+      const execFileMock = mockWinCred(tokenJson(FUTURE_EXPIRY), 'linux');
+
+      const { isAntigravityInstalled } = await importClient();
+      expect(await isAntigravityInstalled()).toBe(false);
+      expect(execFileMock).not.toHaveBeenCalled();
+    });
   });
 
   describe('fetchAntigravityUsage', () => {
+    it('should fetch usage with credentials from Credential Manager when the token file is missing', async () => {
+      // stat rejects for the token file, so settings.json is unreadable too -> model undefined
+      mockTokenFileMissing();
+      const execFileMock = mockWinCred(tokenJson(FUTURE_EXPIRY));
+      mockFileCache();
+      const fetchMock = mockCloudFetch();
+
+      const { isAntigravityInstalled, fetchAntigravityUsage } = await importClient();
+      // Same order as the widget: install check, then fetch
+      expect(await isAntigravityInstalled()).toBe(true);
+      const result = await fetchAntigravityUsage();
+
+      expect(result).not.toBeNull();
+      expect(result?.buckets).toHaveLength(5);
+      // Install check and credential read share one PowerShell spawn
+      expect(execFileMock).toHaveBeenCalledOnce();
+      const authHeader = (fetchMock.mock.calls[0][1] as RequestInit | undefined)?.headers as Record<string, string>;
+      expect(authHeader?.['Authorization']).toBe('Bearer ag-access');
+    });
+
     it('should parse models into family groups and buckets', async () => {
       mockFs(FUTURE_EXPIRY);
       const saveSpy = mockFileCache();

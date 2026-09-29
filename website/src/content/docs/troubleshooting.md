@@ -71,7 +71,7 @@ The multi-CLI widgets (`codexUsage`, `geminiUsage`, `antigravityUsage`, `zaiUsag
 
 - **codexUsage**: Requires `~/.codex/auth.json` to exist
 - **geminiUsage / geminiUsageAll**: Requires `~/.gemini/oauth_creds.json` to exist
-- **antigravityUsage / antigravityUsageAll**: Requires `~/.gemini/antigravity-cli/antigravity-oauth-token` to exist
+- **antigravityUsage / antigravityUsageAll**: Requires `~/.gemini/antigravity-cli/antigravity-oauth-token` (on Windows, the `gemini:antigravity` Credential Manager entry) to exist
 - **zaiUsage**: Requires detection via `ANTHROPIC_BASE_URL` environment variable
 
 Make sure the corresponding CLI is installed and authenticated before expecting these widgets to appear.

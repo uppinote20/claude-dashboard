@@ -51,6 +51,7 @@ const CLEANABLE_PREFIXES = [
   'gemini-usage-',
   'antigravity-usage-',
   'antigravity-token-',
+  'antigravity-wincred-',
   'zai-usage-',
 ];
 
