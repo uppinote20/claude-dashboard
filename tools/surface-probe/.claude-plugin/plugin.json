@@ -1,0 +1,5 @@
+{
+  "name": "surface-probe",
+  "version": "0.1.0",
+  "description": "Diagnostic mod: reports which surfaces a session draws on, attach/detach events, and the ui.render asks each surface sends"
+}

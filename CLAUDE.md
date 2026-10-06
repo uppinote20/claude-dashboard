@@ -84,6 +84,8 @@ claude-dashboard/
 │       ├── band-marker.ts   # Per-session band heartbeat marker (band-<sessionId>)
 │       ├── render-mode.ts   # Mod pane/band render mode detection
 │       └── transcript-parser.ts # Transcript JSONL parsing
+├── tools/
+│   └── surface-probe/       # Diagnostic mod: which surfaces attach / ask to draw (not shipped)
 ├── types/
 │   └── mod-state.d.ts       # Mod state type declarations
 ├── locales/
@@ -371,7 +373,8 @@ Before committing:
 1. Edit `scripts/mod/register.tsx` (config keys `modPane` / `modBand` / `modBandDefault` live in `scripts/types.ts`)
 2. `npm run build && claude plugin validate .` (validate also reports a pre-existing reserved-name error for "claude-dashboard"; ignore it)
 3. Real-render check: `claude --plugin-dir .`, then `/claude-dashboard-pane` and `/claude-dashboard-band on` (both take `on` / `off` / nothing to toggle)
-4. Constraints: helpers that take `$` must be top-level function declarations; atom plugin/key and ui matchers must be string literals; `export function register`; no minify
+4. Pane/band not showing on a client? Load `tools/surface-probe` beside it and run `/surface-probe` (see its README)
+5. Constraints: helpers that take `$` must be top-level function declarations; atom plugin/key and ui matchers must be string literals; `export function register`; no minify
 
 ## Cache Architecture
 
