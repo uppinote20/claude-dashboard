@@ -14,7 +14,7 @@ import { join } from 'path';
 import type { BackgroundTask, TouchedFile } from '../types.js';
 import { getRunningTools, parseTranscript, toolLabel } from './transcript-parser.js';
 
-type SubagentStatus = 'running' | 'done' | 'stale';
+type SubagentStatus = 'running' | 'done' | 'failed' | 'stale';
 
 export interface SubagentInfo {
   id: string;
@@ -22,6 +22,8 @@ export interface SubagentInfo {
   description?: string;
   model?: string;
   status: SubagentStatus;
+  /** The task-notification status that ended a `failed` agent (`killed`, `failed`, ...) */
+  endStatus?: string;
   startedAt?: number;
   lastAt?: number;
   /** Completed tool calls */
@@ -80,10 +82,14 @@ async function scanOne(dir: string, base: string, mtime: number, now: number): P
  * authoritative: an agent the user stopped never writes a final end_turn record of its own.
  */
 function applyNotification(agent: SubagentInfo, notified: BackgroundTask | undefined): SubagentInfo {
-  return agent.status !== 'done' && notified && notified.status !== 'running' ? { ...agent, status: 'done' } : agent;
+  if (agent.status === 'done' || !notified || notified.status === 'running') return agent;
+  // Only `completed` is a success; a killed or failed agent keeps its reason.
+  return notified.status === 'completed'
+    ? { ...agent, status: 'done' }
+    : { ...agent, status: 'failed', endStatus: notified.status };
 }
 
-const STATUS_ORDER: Record<SubagentStatus, number> = { running: 0, stale: 1, done: 2 };
+const STATUS_ORDER: Record<SubagentStatus, number> = { running: 0, stale: 1, failed: 2, done: 3 };
 
 /**
  * The `limit` most recently written subagents of the session at `transcriptPath`:

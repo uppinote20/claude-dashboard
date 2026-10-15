@@ -28,7 +28,8 @@ export function makeViewContext(ctx: WidgetContext, transcript: ParsedTranscript
  * or exited, so a turn or job still marked running is no longer known to be.
  */
 export function isSessionIdle(v: ViewContext): boolean {
-  return v.now - (v.transcript.lastEntryAt ?? 0) > STALE_AFTER_MS;
+  const last = v.transcript.lastEntryAt;
+  return last !== undefined && v.now - last > STALE_AFTER_MS;
 }
 
 /** `📜 Turns · 12` plus optional trailing segments. */

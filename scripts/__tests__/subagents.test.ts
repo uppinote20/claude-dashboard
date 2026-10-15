@@ -91,16 +91,20 @@ describe('listSubagents', () => {
     expect((await listSubagents(SESSION, NOW)).map((a) => a.id)).toEqual(['ok']);
   });
 
-  it('marks an agent done when the main transcript has its completion notice', async () => {
+  it('settles an agent from the main transcript notice: completed is done, anything else failed', async () => {
     await writeAgent('stopped', { agentType: 'scout' }, [prompt, working(1)]);
     await writeAgent('live', { agentType: 'scout' }, [prompt, working(1)]);
+    await writeAgent('ok', { agentType: 'scout' }, [prompt, working(1)]);
     const { listSubagents } = await import('../utils/subagents.js');
     const notices = new Map([
       ['stopped', { kind: 'agent' as const, startedAt: NOW, status: 'killed' }],
       ['live', { kind: 'agent' as const, startedAt: NOW, status: 'running' }],
+      ['ok', { kind: 'agent' as const, startedAt: NOW, status: 'completed' }],
     ]);
     const byId = Object.fromEntries((await listSubagents(SESSION, NOW, 20, notices)).map((a) => [a.id, a.status]));
-    expect(byId).toEqual({ stopped: 'done', live: 'running' });
+    expect(byId).toEqual({ stopped: 'failed', live: 'running', ok: 'done' });
+    const stopped = (await listSubagents(SESSION, NOW, 20, notices)).find((a) => a.id === 'stopped');
+    expect(stopped?.endStatus).toBe('killed');
   });
 
   it('parses only the `limit` most recently written transcripts', async () => {

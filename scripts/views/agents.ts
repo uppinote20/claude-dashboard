@@ -33,6 +33,10 @@ export function renderAgents(v: ViewContext, agents: SubagentInfo[]): string[] {
       lines.push(dim(v, `✓ ${a.type}  ${details}`));
       continue;
     }
+    if (a.status === 'failed') {
+      lines.push(`${colorize(`✗ ${a.endStatus}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
+      continue;
+    }
     const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : '';
     lines.push(`${runningMarker(v, a.status === 'stale')} ${colorize(a.type, theme.model)}  ${colorize(details, theme.secondary)}${tool}`);
   }

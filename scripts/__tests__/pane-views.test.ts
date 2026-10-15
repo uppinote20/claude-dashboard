@@ -101,15 +101,27 @@ describe('renderPaneView', () => {
     expect(lines[2]).toMatch(/#1 .*first prompt {2}10s {2}↑1\.0K ↓200 {2}🔧️4/);
   });
 
-  it('turns: the newest turn stops counting once the session goes quiet', async () => {
+  it('turns: the newest turn stops counting and loses its marker once the session goes quiet', async () => {
     const lines = strip(await render('turns', NOW + 60 * 60_000)).split('\n');
-    expect(lines[1]).toMatch(/\/ship {2}0s/);
+    expect(lines[1]).toMatch(/^ {2}#2 .*\/ship {2}0s/);
   });
 
   it('agents: running subagent with model and tool', async () => {
     const out = strip(await render('agents', Date.parse(ts(6))));
     expect(out).toContain('Agents · 1 running · 1');
     expect(out).toMatch(/▶ fast-worker {2}Sonnet 5\.5 {2}"write tests"/);
+  });
+
+  it('agents: an agent the user stopped shows its end status, not a success mark', async () => {
+    await writeJsonl(SESSION, [
+      ...MAIN,
+      { type: 'assistant', timestamp: ts(21), message: { content: [{ type: 'tool_use', id: 'ag1', name: 'Agent', input: { description: 'write tests' } }] } },
+      { type: 'user', timestamp: ts(22), message: { content: [{ type: 'tool_result', tool_use_id: 'ag1', content: 'Async agent launched successfully.\nagentId: s1' }] } },
+      { type: 'user', timestamp: ts(23), message: { content: '<task-notification><task-id>s1</task-id><status>killed</status></task-notification>' } },
+    ]);
+    const out = strip(await render('agents', Date.parse(ts(30))));
+    expect(out).toContain('Agents · 0 running · 1');
+    expect(out).toMatch(/✗ killed fast-worker/);
   });
 
   it('files: merges main and subagent writes, relative to the project', async () => {

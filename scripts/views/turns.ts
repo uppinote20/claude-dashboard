@@ -28,7 +28,7 @@ export function renderTurns(v: ViewContext): string[] {
     const isLast = i === recent.length - 1;
     const number = transcript.turnCount - (recent.length - 1 - i);
     const elapsed = formatElapsed((isLast && lastRunning ? now : turn.lastAt) - turn.at);
-    const marker = isLast ? colorize('▶', theme.accent) : ' ';
+    const marker = isLast && lastRunning ? colorize('▶', theme.accent) : ' ';
     const prompt = colorize(truncate(turn.prompt, PROMPT_CHARS), isLast ? theme.accent : theme.model);
     const meta = [
       elapsed,
