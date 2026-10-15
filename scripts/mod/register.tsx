@@ -14,7 +14,7 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 import en from '../../locales/en.json'
 import ko from '../../locales/ko.json'
 import { parseAnsi, type Segment } from './ansi'
-import { resolvePaneCommand, resolveToggle, type PaneView } from './toggle'
+import { PANE_VIEWS, resolvePaneCommand, resolveToggle, type PaneView } from './toggle'
 import { buildStdin, type ModRateLimit, type ModSnapshot } from './stdin-builder'
 import { isMissingExecutable, NODE_LOOKUP_SCRIPT, parseNodePath } from './node-path'
 
@@ -218,6 +218,14 @@ function syncTicker($: EngineInterface) {
   }
 }
 
+// A tab press or a view argument on an open pane: redraw in place on the new view.
+async function selectView($: EngineInterface, view: PaneView) {
+  if (view === paneView) return
+  paneView = view
+  syncTicker($)
+  await requestRefresh($)
+}
+
 // An open pane switching views redraws in place; otherwise this is an ordinary open/close.
 async function runPaneCommand($: EngineInterface, args: string): Promise<string> {
   const cmd = resolvePaneCommand(args, isPaneOpen, paneView)
@@ -272,6 +280,28 @@ async function switchSession($: EngineInterface, sessionId: string) {
     syncTicker($)
     await requestRefresh($)
   }
+}
+
+// One plain Button per view: a click, its digit while the pane holds the keys, or Tab/arrows
+// then Enter switches. The current tab is drawn bold, the rest dim.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function drawTabs($: EngineInterface, Box: any, Text: any, Button: any) {
+  const labels = strings().tabs
+  return (
+    <Box flexDirection="row" gap={2}>
+      {PANE_VIEWS.map((view, i) => (
+        <Button
+          key={`tab:${view}`}
+          plain
+          hotkey={String(i + 1)}
+          dimColor={view !== paneView}
+          onPress={() => void selectView($, view)}
+        >
+          {view === paneView ? <Text bold>{labels[view]}</Text> : labels[view]}
+        </Button>
+      ))}
+    </Box>
+  )
 }
 
 // Box/Text come from $.ui.resolve(e): each surface has its own element table.
@@ -358,8 +388,14 @@ export function register(on: Parameters<Register>[0]) {
   })
 
   on('ui.render', { component: 'Pane', requestId: 'claude-dashboard' }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
-    return drawLines(Box, Text, await read($, paneLines))
+    const { Box, Text, Button } = $.ui.resolve(e)
+    const lines = await read($, paneLines)
+    return (
+      <Box flexDirection="column">
+        {drawTabs($, Box, Text, Button)}
+        {drawLines(Box, Text, lines)}
+      </Box>
+    )
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {

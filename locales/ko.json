@@ -86,6 +86,15 @@
     "paneUsage": "사용법: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     "bandUsage": "사용법: /claude-dashboard-band [on|off]",
     "renderFailed": "대시보드 렌더 실패",
-    "paneViewSwitched": "대시보드 패널 보기:"
+    "paneViewSwitched": "대시보드 패널 보기:",
+    "tabs": {
+      "dashboard": "대시",
+      "turns": "턴",
+      "agents": "에이전트",
+      "files": "파일",
+      "todos": "할 일",
+      "errors": "에러",
+      "bg": "백그라운드"
+    }
   }
 }

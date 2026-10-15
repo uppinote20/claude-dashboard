@@ -383,7 +383,7 @@ Before committing:
 
 1. Edit `scripts/mod/register.tsx` (config keys `modPane` / `modBand` / `modBandDefault` live in `scripts/types.ts`)
 2. `npm run build && claude plugin validate .` (validate also reports a pre-existing reserved-name error for "claude-dashboard"; ignore it)
-3. Real-render check: `claude --plugin-dir .`, then `/claude-dashboard-pane` and `/claude-dashboard-band on` (both take `on` / `off` / nothing to toggle); also try the pane views, e.g. `/claude-dashboard-pane turns` (`dashboard|turns|agents|files|todos|errors|bg`)
+3. Real-render check: `claude --plugin-dir .`, then `/claude-dashboard-pane` and `/claude-dashboard-band on` (both take `on` / `off` / nothing to toggle); also try the pane views, e.g. `/claude-dashboard-pane turns` (`dashboard|turns|agents|files|todos|errors|bg`); in the pane, `ctrl+x tab` then a digit `1`-`7` (or Tab + Enter) switches tabs
 4. Constraints: helpers that take `$` must be top-level function declarations; atom plugin/key and ui matchers must be string literals; `export function register`; no minify
 
 ## Cache Architecture

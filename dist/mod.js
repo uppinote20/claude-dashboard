@@ -90,7 +90,16 @@ var en_default = {
     paneUsage: "Usage: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "Usage: /claude-dashboard-band [on|off]",
     renderFailed: "Dashboard render failed",
-    paneViewSwitched: "Dashboard pane view:"
+    paneViewSwitched: "Dashboard pane view:",
+    tabs: {
+      dashboard: "Dash",
+      turns: "Turns",
+      agents: "Agents",
+      files: "Files",
+      todos: "Todos",
+      errors: "Errors",
+      bg: "Bg"
+    }
   }
 };
 
@@ -183,7 +192,16 @@ var ko_default = {
     paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-band [on|off]",
     renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328",
-    paneViewSwitched: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110 \uBCF4\uAE30:"
+    paneViewSwitched: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110 \uBCF4\uAE30:",
+    tabs: {
+      dashboard: "\uB300\uC2DC",
+      turns: "\uD134",
+      agents: "\uC5D0\uC774\uC804\uD2B8",
+      files: "\uD30C\uC77C",
+      todos: "\uD560 \uC77C",
+      errors: "\uC5D0\uB7EC",
+      bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
+    }
   }
 };
 
@@ -543,6 +561,13 @@ function syncTicker($) {
     tickerMs = ms;
   }
 }
+async function selectView($, view) {
+  if (view === paneView)
+    return;
+  paneView = view;
+  syncTicker($);
+  await requestRefresh($);
+}
 async function runPaneCommand($, args) {
   const cmd = resolvePaneCommand(args, isPaneOpen, paneView);
   if (cmd === null)
@@ -601,6 +626,20 @@ async function switchSession($, sessionId) {
     syncTicker($);
     await requestRefresh($);
   }
+}
+function drawTabs($, Box, Text, Button) {
+  const labels = strings().tabs;
+  return /* @__PURE__ */ h(Box, { flexDirection: "row", gap: 2 }, PANE_VIEWS.map((view, i) => /* @__PURE__ */ h(
+    Button,
+    {
+      key: `tab:${view}`,
+      plain: true,
+      hotkey: String(i + 1),
+      dimColor: view !== paneView,
+      onPress: () => void selectView($, view)
+    },
+    view === paneView ? /* @__PURE__ */ h(Text, { bold: true }, labels[view]) : labels[view]
+  )));
 }
 function drawLines(Box, Text, lines) {
   return /* @__PURE__ */ h(Box, { flexDirection: "column" }, lines.map((line) => /* @__PURE__ */ h(Text, null, line.map((seg) => /* @__PURE__ */ h(Text, { color: seg.color, bold: seg.bold, dimColor: seg.dim }, seg.text)))));
@@ -667,8 +706,9 @@ function register(on) {
     return { text: on2 ? strings().bandOn : strings().bandOff };
   });
   on("ui.render", { component: "Pane", requestId: "claude-dashboard" }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e);
-    return drawLines(Box, Text, await read($, paneLines));
+    const { Box, Text, Button } = $.ui.resolve(e);
+    const lines = await read($, paneLines);
+    return /* @__PURE__ */ h(Box, { flexDirection: "column" }, drawTabs($, Box, Text, Button), drawLines(Box, Text, lines));
   });
   on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
     if (!isBandOn || !BAND_SURFACES.has(e.surface) || e.props.hasSurvey)

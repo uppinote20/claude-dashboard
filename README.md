@@ -252,6 +252,8 @@ claude-dashboard also ships as a Claude Code **mod** (function-hook plugin, earl
 
 **Pane views** (`/claude-dashboard-pane <view>`):
 
+The pane has a tab bar (`1: Dash  2: Turns  3: Agents  4: Files  5: Todos  6: Errors  7: Bg`): click a tab, or focus the pane (click it or `ctrl+x tab`) and press its digit, or move with Tab / arrows and press Enter. Esc returns to the prompt. `/claude-dashboard-pane <view>` switches the same way from the prompt.
+
 | View | Shows |
 |------|-------|
 | `dashboard` | The widget layout from `modPane` (default view; refreshes every 60s) |
