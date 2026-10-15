@@ -33,7 +33,16 @@ claude-dashboard/
 │   │   ├── stdin-builder.ts # Builds renderer stdin from mod API state
 │   │   ├── ansi.ts          # ANSI parser for mod rendering
 │   │   ├── node-path.ts     # Locate node when the host PATH lacks it (nvm/fnm/volta)
-│   │   └── toggle.ts        # Shared on/off/toggle argument rule for mod commands
+│   │   └── toggle.ts        # on/off/toggle + pane view argument rules
+│   ├── views/               # Pane session views (/claude-dashboard-pane <view>)
+│   │   ├── index.ts         # View registry
+│   │   ├── shared.ts        # Shared view helpers
+│   │   ├── turns.ts         # turns view (per-prompt tokens/tools)
+│   │   ├── agents.ts        # agents view (subagent status)
+│   │   ├── files.ts         # files view (edited files)
+│   │   ├── todos.ts         # todos view
+│   │   ├── errors.ts        # errors view (failed tool calls)
+│   │   └── background.ts    # bg view (background jobs)
 │   ├── types.ts             # TypeScript interfaces
 │   ├── widgets/             # Widget system
 │   │   ├── base.ts          # Widget interface
@@ -82,6 +91,7 @@ claude-dashboard/
 │       ├── progress-bar.ts  # Progress bar rendering
 │       ├── session.ts       # Session duration tracking
 │       ├── budget.ts        # Budget tracking utilities
+│       ├── subagents.ts     # Subagent transcript scan (agent-*.jsonl + .meta.json)
 │       ├── band-marker.ts   # Per-session band heartbeat marker (band-<sessionId>)
 │       ├── render-mode.ts   # Mod pane/band render mode detection
 │       └── transcript-parser.ts # Transcript JSONL parsing
@@ -135,6 +145,8 @@ claude-dashboard/
 | Registry invariant 테스트 | `scripts/__tests__/emoji.test.ts` |
 | mod (renderer 하위 프로세스 + ANSI 변환) | `scripts/mod/register.tsx`, `scripts/mod/ansi.ts` |
 | 세션 마커 (TTL heartbeat) | `scripts/utils/band-marker.ts` |
+| pane session view (transcript-derived) | `scripts/views/turns.ts` |
+| subagent transcript scan | `scripts/utils/subagents.ts` |
 
 ## Widget Architecture
 
@@ -371,7 +383,7 @@ Before committing:
 
 1. Edit `scripts/mod/register.tsx` (config keys `modPane` / `modBand` / `modBandDefault` live in `scripts/types.ts`)
 2. `npm run build && claude plugin validate .` (validate also reports a pre-existing reserved-name error for "claude-dashboard"; ignore it)
-3. Real-render check: `claude --plugin-dir .`, then `/claude-dashboard-pane` and `/claude-dashboard-band on` (both take `on` / `off` / nothing to toggle)
+3. Real-render check: `claude --plugin-dir .`, then `/claude-dashboard-pane` and `/claude-dashboard-band on` (both take `on` / `off` / nothing to toggle); also try the pane views, e.g. `/claude-dashboard-pane turns` (`dashboard|turns|agents|files|todos|errors|bg`)
 4. Constraints: helpers that take `$` must be top-level function declarations; atom plugin/key and ui matchers must be string literals; `export function register`; no minify
 
 ## Cache Architecture
