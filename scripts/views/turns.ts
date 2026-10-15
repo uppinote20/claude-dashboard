@@ -33,7 +33,8 @@ export function renderTurns(v: ViewContext): string[] {
     const meta = [
       elapsed,
       `↑${formatTokens(turn.tokensIn)} ↓${formatTokens(turn.tokensOut)}`,
-      turn.tools > 0 ? `${ICON.wrench}${turn.tools}` : '',
+      // turn.tools counts every call, agents included; show them in their own column only.
+      turn.tools > turn.agents ? `${ICON.wrench}${turn.tools - turn.agents}` : '',
       turn.agents > 0 ? `${ICON.robot}${turn.agents}` : '',
     ].filter(Boolean).join('  ');
     lines.push(`${marker} ${colorize(`#${number} ${clock(turn.at)}`, theme.secondary)}  ${prompt}  ${colorize(meta, theme.secondary)}`);

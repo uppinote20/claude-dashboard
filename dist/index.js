@@ -5397,7 +5397,8 @@ function renderTurns(v) {
     const meta = [
       elapsed,
       `\u2191${formatTokens(turn.tokensIn)} \u2193${formatTokens(turn.tokensOut)}`,
-      turn.tools > 0 ? `${ICON.wrench}${turn.tools}` : "",
+      // turn.tools counts every call, agents included; show them in their own column only.
+      turn.tools > turn.agents ? `${ICON.wrench}${turn.tools - turn.agents}` : "",
       turn.agents > 0 ? `${ICON.robot}${turn.agents}` : ""
     ].filter(Boolean).join("  ");
     lines.push(`${marker} ${colorize(`#${number} ${clock(turn.at)}`, theme.secondary)}  ${prompt}  ${colorize(meta, theme.secondary)}`);
@@ -5427,7 +5428,7 @@ function renderAgents(v, agents) {
       continue;
     }
     if (a.status === "failed") {
-      lines.push(`${colorize(`\u2717 ${a.endStatus}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
+      lines.push(`${colorize(`\u2717 ${a.endStatus ?? "failed"}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
       continue;
     }
     const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : "";

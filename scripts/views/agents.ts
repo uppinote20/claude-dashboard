@@ -34,7 +34,7 @@ export function renderAgents(v: ViewContext, agents: SubagentInfo[]): string[] {
       continue;
     }
     if (a.status === 'failed') {
-      lines.push(`${colorize(`✗ ${a.endStatus}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
+      lines.push(`${colorize(`✗ ${a.endStatus ?? 'failed'}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
       continue;
     }
     const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : '';

@@ -122,6 +122,8 @@ describe('renderPaneView', () => {
     const out = strip(await render('agents', Date.parse(ts(30))));
     expect(out).toContain('Agents · 0 running · 1');
     expect(out).toMatch(/✗ killed fast-worker/);
+    // The agent call is counted under 🤖 only, not also under 🔧.
+    expect(strip(await render('turns', Date.parse(ts(30))))).toMatch(/#2 .*\/ship .*🤖️1$/m);
   });
 
   it('files: merges main and subagent writes, relative to the project', async () => {
