@@ -16,6 +16,18 @@ describe('resolveRenderMode', () => {
     expect(resolveRenderMode({ CLAUDE_DASHBOARD_SURFACE: 'pane' })).toEqual({ fromMod: false });
   });
 
+  it('reads a pane view only for the pane surface', () => {
+    const pane = { CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane' };
+    expect(resolveRenderMode({ ...pane, CLAUDE_DASHBOARD_PANE_VIEW: 'turns' }))
+      .toEqual({ fromMod: true, surface: 'pane', paneView: 'turns' });
+    expect(resolveRenderMode({ ...pane, CLAUDE_DASHBOARD_PANE_VIEW: 'dashboard' }))
+      .toEqual({ fromMod: true, surface: 'pane' });
+    expect(resolveRenderMode({ ...pane, CLAUDE_DASHBOARD_PANE_VIEW: 'bogus' }))
+      .toEqual({ fromMod: true, surface: 'pane' });
+    expect(resolveRenderMode({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'band', CLAUDE_DASHBOARD_PANE_VIEW: 'turns' }))
+      .toEqual({ fromMod: true, surface: 'band' });
+  });
+
   it('ignores unknown surfaces', () => {
     expect(resolveRenderMode({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'huge' }))
       .toEqual({ fromMod: true });

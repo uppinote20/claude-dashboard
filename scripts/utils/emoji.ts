@@ -47,4 +47,9 @@ export const ICON = {
   speech: '💬️',
   target: '🎯️',
   key: '🔑️',
+  scroll: '📜️',
+  wrench: '🔧️',
+  pencil: '✏️',
+  clipboard: '📋️',
+  noEntry: '🚫️',
 } as const;

@@ -6,6 +6,7 @@
  * literally and refuses `var register = …`, which an arrow export compiles to.
  * @handbook 9.1-mod-renderer-subprocess
  * @handbook 9.3-engine-validator-constraints
+ * @handbook 9.5-pane-views
  */
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
@@ -13,12 +14,14 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 import en from '../../locales/en.json'
 import ko from '../../locales/ko.json'
 import { parseAnsi, type Segment } from './ansi'
-import { resolveToggle } from './toggle'
+import { resolvePaneCommand, resolveToggle, type PaneView } from './toggle'
 import { buildStdin, type ModRateLimit, type ModSnapshot } from './stdin-builder'
 import { isMissingExecutable, NODE_LOOKUP_SCRIPT, parseNodePath } from './node-path'
 
 const PANE = 'claude-dashboard'
 const TICK_MS = 60_000
+// Session views follow subagents and background jobs, which fire no session.measure.
+const VIEW_TICK_MS = 10_000
 const RUN_TIMEOUT_MS = 5_000
 // An interactive shell sourcing nvm can be slow; this runs once per session at most.
 const NODE_LOOKUP_TIMEOUT_MS = 10_000
@@ -52,10 +55,13 @@ interface Usage {
 // Module state: a reload re-runs register and session.start, so starting over is fine.
 const snapshot: ModSnapshot = { sessionId: '', model: '', cwd: '', rateLimits: [] }
 let isPaneOpen = false
+// Session-scoped like the band: a new session opens on the dashboard.
+let paneView: PaneView = 'dashboard'
 let isBandOn = false
 // Band runs re-mark the session when they finish; off must wait for them before clearing.
 const bandRuns = new Set<Promise<void>>()
 let ticker: Timer | null = null
+let tickerMs = 0
 
 // 'node' off PATH until it fails to start; then the looked-up path, shared by concurrent runs.
 let nodeCommand = 'node'
@@ -113,7 +119,7 @@ async function canDrawBand($: EngineInterface): Promise<boolean> {
 
 async function refreshPane($: EngineInterface) {
   if (!isPaneOpen) return
-  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: 'pane' })
+  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: 'pane', CLAUDE_DASHBOARD_PANE_VIEW: paneView })
   await update($, paneLines, keepOrWarn(lines))
 }
 
@@ -201,11 +207,32 @@ async function setBand($: EngineInterface, on: boolean) {
 
 function syncTicker($: EngineInterface) {
   const needed = isPaneOpen || isBandOn
-  if (needed && !ticker) ticker = $.clock.every(TICK_MS, () => void requestRefresh($))
-  if (!needed && ticker) {
+  const ms = isPaneOpen && paneView !== 'dashboard' ? VIEW_TICK_MS : TICK_MS
+  if (ticker && (!needed || ms !== tickerMs)) {
     ticker.cancel()
     ticker = null
   }
+  if (needed && !ticker) {
+    ticker = $.clock.every(ms, () => void requestRefresh($))
+    tickerMs = ms
+  }
+}
+
+// An open pane switching views redraws in place; otherwise this is an ordinary open/close.
+async function runPaneCommand($: EngineInterface, args: string): Promise<string> {
+  const cmd = resolvePaneCommand(args, isPaneOpen, paneView)
+  if (cmd === null) return strings().paneUsage
+  const switched = cmd.view !== paneView
+  paneView = cmd.view
+  if (cmd.open && isPaneOpen) {
+    if (!switched) return strings().paneOpened
+    syncTicker($)
+    await requestRefresh($)
+    return `${strings().paneViewSwitched} ${paneView}`
+  }
+  await setPane($, cmd.open)
+  if (!cmd.open) return strings().paneClosed
+  return switched ? `${strings().paneViewSwitched} ${paneView}` : strings().paneOpened
 }
 
 function applyUsage(u: Usage) {
@@ -267,8 +294,8 @@ export function register(on: Parameters<Register>[0]) {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'claude-dashboard-pane',
-      description: 'Show the dashboard in a pane beside the transcript (on|off, none toggles)',
-      argumentHint: '[on|off]',
+      description: 'Show the dashboard or a session view (turns, agents, files, todos, errors, bg) in a pane',
+      argumentHint: '[on|off|dashboard|turns|agents|files|todos|errors|bg]',
     })
     // session.start is awaited before the first prompt: fetch the independent reads together.
     const [id, model, cwd, root, version, usage] = await Promise.all([
@@ -312,12 +339,9 @@ export function register(on: Parameters<Register>[0]) {
     return next(e)
   })
 
-  // Both commands take on, off, or nothing to flip the current state.
+  // Both commands take on, off, or nothing to flip the current state; the pane also takes a view.
   on('command.run', { command: 'claude-dashboard-pane' }, async ($, e) => {
-    const open = resolveToggle(e.args, isPaneOpen)
-    if (open === null) return { text: strings().paneUsage }
-    await setPane($, open)
-    return { text: open ? strings().paneOpened : strings().paneClosed }
+    return { text: await runPaneCommand($, e.args) }
   })
 
   on('ui.close', { id: 'claude-dashboard' }, ($, e, next) => {

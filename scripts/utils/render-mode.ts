@@ -3,11 +3,13 @@
  * (pane / band). Only the mod sets CLAUDE_DASHBOARD_MOD=1; every other variable is ignored
  * without it, so a stray env in the user's shell cannot change the statusLine.
  * @handbook 9.4-render-mode-env
+ * @handbook 9.5-pane-views
  * @handbook 4.9-band-marker-heartbeat
  * @tested scripts/__tests__/render-mode.test.ts
  * @tested scripts/__tests__/statusline-mod-env.test.ts
  */
 import { parsePreset, type Config, type DisplayMode, type WidgetId } from '../types.js';
+import { isPaneView, type PaneView } from '../mod/toggle.js';
 
 export type ModSurface = 'pane' | 'band';
 
@@ -17,6 +19,8 @@ export interface RenderMode {
   markSession?: string;
   clearSession?: string;
   printSettings?: boolean;
+  /** Pane only: a session view to draw instead of the widget dashboard */
+  paneView?: Exclude<PaneView, 'dashboard'>;
 }
 
 /**
@@ -43,9 +47,11 @@ export function resolveRenderMode(env: Record<string, string | undefined>): Rend
   }
 
   const requested = env.CLAUDE_DASHBOARD_SURFACE as ModSurface | undefined;
-  return requested && SURFACES.includes(requested)
-    ? { fromMod: true, surface: requested }
-    : { fromMod: true };
+  if (!requested || !SURFACES.includes(requested)) return { fromMod: true };
+  const view = env.CLAUDE_DASHBOARD_PANE_VIEW;
+  return requested === 'pane' && isPaneView(view) && view !== 'dashboard'
+    ? { fromMod: true, surface: requested, paneView: view }
+    : { fromMod: true, surface: requested };
 }
 
 /**

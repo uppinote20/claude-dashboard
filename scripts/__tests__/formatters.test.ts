@@ -11,8 +11,7 @@ import {
   parseModelName,
   calculatePercent,
   formatDuration,
-  formatWindowLabel,
-} from '../utils/formatters.js';
+  formatWindowLabel, sparkline, formatElapsed } from '../utils/formatters.js';
 import type { Translations } from '../types.js';
 import { MOCK_TRANSLATIONS } from './fixtures.js';
 
@@ -228,5 +227,27 @@ describe('formatters', () => {
       expect(formatWindowLabel(-1, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
       expect(formatWindowLabel(NaN, 'fallback', MOCK_TRANSLATIONS)).toBe('fallback');
     });
+  });
+});
+
+describe('sparkline', () => {
+  it('scales to the largest value', () => {
+    expect(sparkline([0, 4, 8])).toBe('▁▅█');
+    expect(sparkline([1, 8])).toBe('▂█');
+  });
+  it('draws the lowest bar for zeros and nothing for an empty series', () => {
+    expect(sparkline([0, 0])).toBe('▁▁');
+    expect(sparkline([])).toBe('');
+  });
+  it('draws a single value as full', () => {
+    expect(sparkline([5])).toBe('█');
+  });
+});
+
+describe('formatElapsed', () => {
+  it.each([
+    [0, '0s'], [42_000, '42s'], [192_000, '3m12s'], [3_900_000, '1h05m'], [-5, '0s'],
+  ])('%d ms -> %s', (ms, expected) => {
+    expect(formatElapsed(ms)).toBe(expected);
   });
 });

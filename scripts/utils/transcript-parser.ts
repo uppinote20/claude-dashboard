@@ -1,7 +1,9 @@
 /**
  * Transcript parser - parses Claude Code transcript.jsonl files
  * @handbook 4.5-transcript-incremental-parsing
+ * @handbook 9.5-pane-views
  * @tested scripts/__tests__/transcript-parser.test.ts
+ * @tested scripts/__tests__/transcript-views.test.ts
  * @tested scripts/__tests__/widgets.test.ts
  * Uses incremental parsing: remembers last byte offset and only parses new content.
  * The status line is a fresh process per render, so the parse state is also persisted
@@ -19,6 +21,7 @@ import type {
   WidgetContext,
   SlashCommandData,
   AgentStatusData,
+  TurnRecord,
 } from '../types.js';
 import { truncate } from './formatters.js';
 import { fileCachePath, saveFileCache } from './file-cache.js';
@@ -69,7 +72,117 @@ function createParsedTranscript(): ParsedTranscript {
     sessionConsumedTokens: 0,
     lastRequestOutput: 0,
     lastRequestInput: 0,
+    turns: [],
+    turnCount: 0,
+    touchedFiles: new Map(),
+    toolErrors: [],
+    backgroundTasks: new Map(),
   };
+}
+
+// Caps keep the persisted parse state small: it is rewritten on every render with new lines.
+export const MAX_TURNS = 50;
+export const MAX_TOUCHED_FILES = 200;
+export const MAX_TOOL_ERRORS = 30;
+export const MAX_BACKGROUND_TASKS = 30;
+const PROMPT_MAX_CHARS = 120;
+const ERROR_MAX_CHARS = 120;
+
+/** Tools whose successful result means a file was written; value is the path field. */
+const FILE_WRITE_TOOLS: Record<string, string> = {
+  Edit: 'file_path',
+  Write: 'file_path',
+  MultiEdit: 'file_path',
+  NotebookEdit: 'notebook_path',
+};
+
+const COMMAND_ARGS_RE = /<command-args>([^<]*)<\/command-args>/;
+const BASH_INPUT_RE = /^<bash-input>([\s\S]*?)<\/bash-input>/;
+const SYSTEM_REMINDER_RE = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
+const BACKGROUND_ID_RE = /running in background with ID: ([\w-]+)/;
+const ASYNC_AGENT_ID_RE = /launched[\s\S]*?agentId: ([\w-]+)/i;
+
+function oneLine(text: string, max: number): string {
+  return truncate(text.replace(/\s+/g, ' ').trim(), max);
+}
+
+type ContentBlocks = NonNullable<NonNullable<TranscriptEntry['message']>['content']>;
+
+/** Text of a user entry's prompt blocks; tool_result entries are not prompts. */
+function promptText(content: ContentBlocks): string | null {
+  if (typeof content === 'string') return content;
+  if (content.some((b) => b.type === 'tool_result')) return null;
+  return content
+    .filter((b) => b.type === 'text' && typeof b.text === 'string')
+    .map((b) => b.text)
+    .join('\n');
+}
+
+/**
+ * The prompt a user entry carries, or null when Claude Code wrote it: tool results,
+ * task notifications, command stdout, caveats. A slash command shows as `/name args`,
+ * shell input as `!cmd`. `isMeta` entries (skill bodies, image refs) are filtered by the caller.
+ */
+export function classifyPrompt(content: ContentBlocks): string | null {
+  const raw = promptText(content);
+  if (raw === null) return null;
+  const text = raw.replace(SYSTEM_REMINDER_RE, '').trim();
+  if (!text) return null;
+
+  const cmd = text.match(SLASH_COMMAND_TAG_RE);
+  if (cmd) {
+    const name = cmd[1].trim();
+    if (!name.startsWith('/')) return null;
+    const args = text.match(COMMAND_ARGS_RE)?.[1] ?? '';
+    return oneLine(`${name} ${args}`, PROMPT_MAX_CHARS);
+  }
+  const bash = text.match(BASH_INPUT_RE);
+  if (bash) return oneLine(`!${bash[1]}`, PROMPT_MAX_CHARS);
+  if (text.startsWith('<')) return null;
+  return oneLine(text, PROMPT_MAX_CHARS);
+}
+
+/** A tool_result's text, whether sent as a string or as text blocks. */
+function toolResultText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (!Array.isArray(content)) return '';
+  return content
+    .map((b) => (b && typeof b === 'object' && typeof (b as { text?: unknown }).text === 'string' ? (b as { text: string }).text : ''))
+    .join('\n');
+}
+
+function errorMessage(text: string): string {
+  const cleaned = text.replace(/<\/?tool_use_error>/g, '').trim();
+  return oneLine(cleaned.split('\n')[0] ?? '', ERROR_MAX_CHARS);
+}
+
+/** Map insertion order is age order: drop the oldest keys past `max`. */
+function capMap<V>(map: Map<string, V>, max: number): void {
+  for (const key of map.keys()) {
+    if (map.size <= max) break;
+    map.delete(key);
+  }
+}
+
+function pushCapped<T>(list: T[], item: T, max: number): void {
+  list.push(item);
+  if (list.length > max) list.splice(0, list.length - max);
+}
+
+function xmlTag(text: string, tag: string): string | undefined {
+  return text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim();
+}
+
+/** Apply a `<task-notification>` (background job or async agent came to rest). */
+function applyTaskNotification(existing: ParsedTranscript, text: string, at: number): void {
+  const id = xmlTag(text, 'task-id');
+  if (!id) return;
+  const task = existing.backgroundTasks.get(id);
+  if (!task) return;
+  task.status = xmlTag(text, 'status') ?? 'completed';
+  const summary = xmlTag(text, 'summary');
+  if (summary) task.summary = oneLine(summary, PROMPT_MAX_CHARS);
+  task.endedAt = at;
 }
 
 /**
@@ -101,9 +214,15 @@ function parseJsonlContent(content: string): TranscriptEntry[] {
  */
 function processEntries(
   entries: TranscriptEntry[],
-  existing: ParsedTranscript
+  existing: ParsedTranscript,
+  sidechain = false
 ): void {
   for (const entry of entries) {
+    // A subagent's own transcript marks every record isSidechain; there it is the main thread.
+    const isMain = sidechain || !entry.isSidechain;
+    const at = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
+    if (isMain) trackThread(existing, entry, at);
+
     // Track session start time from first entry
     if (!existing.sessionStartTime && entry.timestamp) {
       existing.sessionStartTime = new Date(entry.timestamp).getTime();
@@ -125,6 +244,12 @@ function processEntries(
             input: retainToolInput(block.name, block.input),
           });
           existing.runningToolIds.add(block.id);
+
+          const turn = isMain ? existing.turns.at(-1) : undefined;
+          if (turn) {
+            turn.tools++;
+            if (block.name === 'Agent' || block.name === 'Task') turn.agents++;
+          }
 
           // Track subagent dispatches. The tool is `Agent` in current Claude Code;
           // `Task` is the pre-rename name still found in older transcripts.
@@ -229,6 +354,8 @@ function processEntries(
             existing.lastTodoWriteInput = tool.input;
           }
 
+          if (isMain) trackToolResult(existing, block, tool, Number.isFinite(at) ? at : Date.now());
+
           // Apply pending TaskCreate on result
           const pendingCreate = existing.pendingTaskCreates.get(block.tool_use_id);
           if (pendingCreate) {
@@ -256,7 +383,91 @@ function processEntries(
       }
     }
 
-    accountTokens(existing, entry);
+    accountTokens(existing, entry, isMain);
+  }
+}
+
+/**
+ * Per-thread state for the pane views: turn boundaries, last activity, and whether the
+ * thread came to rest. Main-thread entries only (see processEntries' `isMain`).
+ */
+function trackThread(existing: ParsedTranscript, entry: TranscriptEntry, at: number): void {
+  if (Number.isFinite(at)) existing.lastEntryAt = at;
+
+  if (entry.type === 'assistant') {
+    const model = entry.message?.model;
+    if (model && !model.startsWith('<')) existing.lastModel = model;
+    existing.lastStopReason = entry.message?.stop_reason ?? undefined;
+    const turn = existing.turns.at(-1);
+    if (turn && Number.isFinite(at)) turn.lastAt = at;
+    return;
+  }
+
+  if (entry.type !== 'user' || entry.message?.content === undefined) return;
+
+  const content = entry.message.content;
+  const text = typeof content === 'string' ? content : promptText(content);
+  // A tool result, notification, or prompt sends the thread back to work. Local command
+  // output (`/exit`, `!cmd` stdout) does not, so it must not clear a rest state.
+  if (text === null) {
+    existing.lastStopReason = undefined;
+    return;
+  }
+  if (text.trimStart().startsWith('<task-notification>')) {
+    existing.lastStopReason = undefined;
+    applyTaskNotification(existing, text, Number.isFinite(at) ? at : Date.now());
+    return;
+  }
+
+  if (entry.isMeta || !Number.isFinite(at)) return;
+  const prompt = classifyPrompt(content);
+  if (prompt === null) return;
+  existing.lastStopReason = undefined;
+  const turn: TurnRecord = { at, prompt, lastAt: at, tokensIn: 0, tokensOut: 0, tools: 0, agents: 0 };
+  pushCapped(existing.turns, turn, MAX_TURNS);
+  existing.turnCount++;
+}
+
+type ContentBlock = Extract<ContentBlocks, unknown[]>[number];
+
+/** Files written, failures, and background jobs started — read from one tool_result. */
+function trackToolResult(
+  existing: ParsedTranscript,
+  block: ContentBlock,
+  tool: ParsedTranscript['toolUses'] extends Map<string, infer V> ? V | undefined : never,
+  at: number
+): void {
+  const text = toolResultText(block.content);
+
+  if (block.is_error) {
+    pushCapped(
+      existing.toolErrors,
+      { at, tool: tool?.name ?? 'Tool', target: tool?.target, message: errorMessage(text) },
+      MAX_TOOL_ERRORS
+    );
+    return;
+  }
+  if (!tool) return;
+
+  const pathField = FILE_WRITE_TOOLS[tool.name];
+  const filePath = pathField ? (tool.input as Record<string, unknown> | undefined)?.[pathField] : undefined;
+  if (typeof filePath === 'string') {
+    const prev = existing.touchedFiles.get(filePath);
+    existing.touchedFiles.set(filePath, { edits: (prev?.edits ?? 0) + 1, lastAt: at });
+    capMap(existing.touchedFiles, MAX_TOUCHED_FILES);
+  }
+
+  const isAgent = tool.name === 'Agent' || tool.name === 'Task';
+  const id = (isAgent ? text.match(ASYNC_AGENT_ID_RE) : text.match(BACKGROUND_ID_RE))?.[1];
+  if (id) {
+    const description = (tool.input as { description?: unknown } | undefined)?.description;
+    existing.backgroundTasks.set(id, {
+      kind: isAgent ? 'agent' : tool.name === 'Bash' ? 'bash' : 'other',
+      description: typeof description === 'string' ? oneLine(description, PROMPT_MAX_CHARS) : tool.target,
+      startedAt: at,
+      status: 'running',
+    });
+    capMap(existing.backgroundTasks, MAX_BACKGROUND_TASKS);
   }
 }
 
@@ -288,10 +499,10 @@ function tokenCount(value: unknown): number {
  * are excluded: they are billed at a fraction of input and re-read the whole prefix on
  * every call, so including them made the figure track context size, not spend.
  */
-function accountTokens(existing: ParsedTranscript, entry: TranscriptEntry): void {
+function accountTokens(existing: ParsedTranscript, entry: TranscriptEntry, isMain: boolean): void {
   // Subagent records interleave with the main thread and would both move the
   // boundary and switch the tracked request id.
-  if (entry.isSidechain) return;
+  if (!isMain) return;
   if (entry.type !== 'user' && entry.type !== 'assistant') return;
 
   const t = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
@@ -338,6 +549,11 @@ function accountTokens(existing: ParsedTranscript, entry: TranscriptEntry): void
   );
   existing.sessionConsumedTokens +=
     existing.lastRequestInput - prevIn + existing.lastRequestOutput - prevOut;
+  const turn = existing.turns.at(-1);
+  if (turn) {
+    turn.tokensIn += existing.lastRequestInput - prevIn;
+    turn.tokensOut += existing.lastRequestOutput - prevOut;
+  }
 
   const start = existing.lastRequestStartAt;
   if (Number.isFinite(t) && start !== undefined && t > start) {
@@ -474,7 +690,8 @@ async function isResumable(state: TranscriptState, fileSize: number): Promise<bo
  * this process first, then from the persisted file cache, else a full parse.
  */
 export async function parseTranscript(
-  transcriptPath: string
+  transcriptPath: string,
+  options: { sidechain?: boolean } = {}
 ): Promise<ParsedTranscript | null> {
   try {
     const fileSize = (await stat(transcriptPath)).size;
@@ -488,7 +705,7 @@ export async function parseTranscript(
     if (state.size < fileSize) {
       const { content, nextOffset } = await readCompleteLines(transcriptPath, state.size, fileSize);
       if (nextOffset > state.size) {
-        processEntries(parseJsonlContent(content), state.data);
+        processEntries(parseJsonlContent(content), state.data, options.sidechain);
         // The fingerprint only widens until HEAD_BYTES; past that it is fixed.
         if (state.size < HEAD_BYTES) state.head = await readHead(transcriptPath, nextOffset);
         state.size = nextOffset;
@@ -518,6 +735,15 @@ function retainToolInput(name: string, input: unknown): unknown {
       return { description: inp.description, subagent_type: inp.subagent_type, model: inp.model };
     case 'TodoWrite':
       return { todos: inp.todos };
+    case 'Bash':
+    case 'Monitor':
+      return typeof inp.description === 'string' ? { description: inp.description } : undefined;
+    case 'Edit':
+    case 'Write':
+    case 'MultiEdit':
+      return { file_path: inp.file_path };
+    case 'NotebookEdit':
+      return { notebook_path: inp.notebook_path };
     default:
       return undefined;
   }
@@ -535,7 +761,10 @@ export function extractToolTarget(name: string, input: unknown): string | undefi
     case 'Read':
     case 'Write':
     case 'Edit':
+    case 'MultiEdit':
       return typeof inp.file_path === 'string' ? basename(inp.file_path) : undefined;
+    case 'NotebookEdit':
+      return typeof inp.notebook_path === 'string' ? basename(inp.notebook_path) : undefined;
     case 'Glob':
     case 'Grep':
       return typeof inp.pattern === 'string' ? truncate(inp.pattern, 20) : undefined;
@@ -752,4 +981,24 @@ export function getActiveSlashCommand(
   transcript: ParsedTranscript
 ): SlashCommandData | null {
   return transcript.activeSlashCommand;
+}
+
+export interface TodoItem {
+  content: string;
+  status: string;
+}
+
+/**
+ * The whole todo list for the pane's todos view, in list order. Same precedence as
+ * extractTodoOrTaskProgress: Tasks API first, TodoWrite as the fallback.
+ */
+export function extractTodoList(transcript: ParsedTranscript): TodoItem[] {
+  if (transcript.tasks.size > 0) {
+    return [...transcript.tasks.values()].map((t) => ({ content: t.subject, status: t.status }));
+  }
+  const input = transcript.lastTodoWriteInput as { todos?: Array<{ content?: unknown; status?: unknown }> } | null;
+  if (!input || !Array.isArray(input.todos)) return [];
+  return input.todos
+    .filter((t) => typeof t.content === 'string')
+    .map((t) => ({ content: t.content as string, status: normalizeTaskStatus(String(t.status ?? 'pending')) }));
 }

@@ -152,6 +152,11 @@ function createTranscript(overrides: Partial<ParsedTranscript> = {}): ParsedTran
     sessionConsumedTokens: 0,
     lastRequestOutput: 0,
     lastRequestInput: 0,
+    turns: [],
+    turnCount: 0,
+    touchedFiles: new Map(),
+    toolErrors: [],
+    backgroundTasks: new Map(),
     ...overrides,
   };
 }

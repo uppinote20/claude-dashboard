@@ -428,6 +428,27 @@ export interface Translations {
     errorFetching: string;
     noData: string;
   };
+  /** Pane view headers and empty states (scripts/views/) */
+  paneViews: {
+    turns: string;
+    agents: string;
+    files: string;
+    todos: string;
+    errors: string;
+    background: string;
+    emptyTurns: string;
+    emptyAgents: string;
+    emptyFiles: string;
+    emptyTodos: string;
+    emptyErrors: string;
+    emptyBackground: string;
+    noTranscript: string;
+    running: string;
+    done: string;
+    stale: string;
+    main: string;
+    agentsSuffix: string;
+  };
 }
 
 /**
@@ -975,9 +996,15 @@ export interface TranscriptEntry {
   timestamp?: string;
   /** True for subagent records written into the main transcript (older Claude Code) */
   isSidechain?: boolean;
+  /** Injected by Claude Code (skill bodies, caveats, image refs), not typed by the user */
+  isMeta?: boolean;
   /** Session name set by /rename command */
   customTitle?: string;
   message?: {
+    /** Model that produced an assistant record */
+    model?: string;
+    /** Why an assistant response stopped (`end_turn`, `tool_use`, ...) */
+    stop_reason?: string | null;
     /**
      * Block array (assistant + most user entries) or bare string
      * (legacy short-form user entries). Consumers must guard with
@@ -991,6 +1018,10 @@ export interface TranscriptEntry {
       input?: unknown;
       /** Text content for 'text' type blocks */
       text?: string;
+      /** tool_result payload: a string or text blocks */
+      content?: unknown;
+      /** Set on a tool_result whose tool failed (exit code, denial, tool_use_error) */
+      is_error?: boolean;
     }>;
   };
 }
@@ -1059,6 +1090,63 @@ export interface ParsedTranscript {
   lastRequestStartAt?: number;
   /** Timestamp of the newest `user` entry (prompt or tool_result) */
   lastBoundaryAt?: number;
+
+  // --- Pane views (scripts/views/) ---
+
+  /** Turns started by real user input, oldest first, capped at MAX_TURNS */
+  turns: TurnRecord[];
+  /** Every turn ever started, including those dropped by the cap (turn numbering) */
+  turnCount: number;
+  /** Files written by Edit/Write/NotebookEdit, keyed by absolute path */
+  touchedFiles: Map<string, TouchedFile>;
+  /** Failed tool results, oldest first, capped at MAX_TOOL_ERRORS */
+  toolErrors: ToolErrorRecord[];
+  /** Background jobs (run_in_background Bash, async agents), keyed by task id */
+  backgroundTasks: Map<string, BackgroundTask>;
+  /** Timestamp of the newest entry; a subagent's last activity */
+  lastEntryAt?: number;
+  /** stop_reason of the newest assistant record; `end_turn` means the thread came to rest */
+  lastStopReason?: string;
+  /** Model of the newest assistant record */
+  lastModel?: string;
+}
+
+/** One user turn: a prompt and everything the assistant did until the next one. */
+export interface TurnRecord {
+  /** Epoch ms of the prompt */
+  at: number;
+  /** One-line prompt text, slash command (`/ship args`) or shell input (`!cmd`) */
+  prompt: string;
+  /** Epoch ms of the turn's newest entry */
+  lastAt: number;
+  /** input + cache write tokens across the turn's requests */
+  tokensIn: number;
+  tokensOut: number;
+  tools: number;
+  agents: number;
+}
+
+export interface TouchedFile {
+  edits: number;
+  lastAt: number;
+}
+
+export interface ToolErrorRecord {
+  at: number;
+  tool: string;
+  target?: string;
+  /** First line of the error text */
+  message: string;
+}
+
+export interface BackgroundTask {
+  kind: 'bash' | 'agent' | 'other';
+  description?: string;
+  startedAt: number;
+  /** `running` until a task-notification arrives, then its `<status>` */
+  status: string;
+  summary?: string;
+  endedAt?: number;
 }
 
 /**

@@ -22,6 +22,7 @@ import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput, getWidget } from './widgets/index.js';
 import { resolveRenderMode, resolveModLayout, MOD_UNAVAILABLE_WIDGETS } from './utils/render-mode.js';
+import { renderPaneView } from './views/index.js';
 import { markBand, clearBand, isBandActive } from './utils/band-marker.js';
 
 // The plugin's own config, not one of Claude Code's files, so it deliberately
@@ -171,6 +172,12 @@ async function main(): Promise<void> {
       ...config,
       disabledWidgets: [...(config.disabledWidgets ?? []), ...MOD_UNAVAILABLE_WIDGETS],
     };
+  }
+
+  // Session views read the transcript only: skip the rate-limit fetch and widget pipeline.
+  if (renderMode.paneView) {
+    console.log(await renderPaneView(renderMode.paneView, { stdin, config, translations, rateLimits: null }));
+    return;
   }
 
   // Build rate limits: prefer stdin, fallback to API

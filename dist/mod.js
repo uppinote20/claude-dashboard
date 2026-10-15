@@ -61,15 +61,36 @@ var en_default = {
     errorFetching: "Error fetching data",
     noData: "No usage data available"
   },
+  paneViews: {
+    turns: "Turns",
+    agents: "Agents",
+    files: "Files",
+    todos: "Todos",
+    errors: "Errors",
+    background: "Background",
+    emptyTurns: "No prompts yet",
+    emptyAgents: "No subagents in this session",
+    emptyFiles: "No files written yet",
+    emptyTodos: "No todo list yet",
+    emptyErrors: "No failed tools",
+    emptyBackground: "No background jobs",
+    noTranscript: "Transcript not available yet",
+    running: "running",
+    done: "done",
+    stale: "stale",
+    main: "main",
+    agentsSuffix: "agents"
+  },
   mod: {
     paneTitle: "Dashboard",
     paneOpened: "Dashboard pane opened.",
     paneClosed: "Dashboard pane closed.",
     bandOn: "Dashboard band on \u2014 statusLine hidden for this session (terminal/desktop only).",
     bandOff: "Dashboard band off \u2014 statusLine restored.",
-    paneUsage: "Usage: /claude-dashboard-pane [on|off]",
+    paneUsage: "Usage: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "Usage: /claude-dashboard-band [on|off]",
-    renderFailed: "Dashboard render failed"
+    renderFailed: "Dashboard render failed",
+    paneViewSwitched: "Dashboard pane view:"
   }
 };
 
@@ -133,15 +154,36 @@ var ko_default = {
     errorFetching: "\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30 \uC624\uB958",
     noData: "\uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130 \uC5C6\uC74C"
   },
+  paneViews: {
+    turns: "\uD134",
+    agents: "\uC5D0\uC774\uC804\uD2B8",
+    files: "\uD30C\uC77C",
+    todos: "\uD560 \uC77C",
+    errors: "\uC5D0\uB7EC",
+    background: "\uBC31\uADF8\uB77C\uC6B4\uB4DC",
+    emptyTurns: "\uC544\uC9C1 \uC785\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyAgents: "\uC774 \uC138\uC158\uC5D0 \uC11C\uBE0C\uC5D0\uC774\uC804\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyFiles: "\uC544\uC9C1 \uC218\uC815\uD55C \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyTodos: "\uC544\uC9C1 \uD560 \uC77C \uBAA9\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyErrors: "\uC2E4\uD328\uD55C \uB3C4\uAD6C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyBackground: "\uBC31\uADF8\uB77C\uC6B4\uB4DC \uC791\uC5C5\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noTranscript: "\uC544\uC9C1 transcript\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    running: "\uC9C4\uD589 \uC911",
+    done: "\uC644\uB8CC",
+    stale: "\uBA48\uCDA4",
+    main: "\uBA54\uC778",
+    agentsSuffix: "\uC5D0\uC774\uC804\uD2B8"
+  },
   mod: {
     paneTitle: "\uB300\uC2DC\uBCF4\uB4DC",
     paneOpened: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uC5F4\uC5C8\uC2B5\uB2C8\uB2E4.",
     paneClosed: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uB2EB\uC558\uC2B5\uB2C8\uB2E4.",
     bandOn: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uCF1C\uC9D0 \u2014 \uC774 \uC138\uC158\uC758 statusLine\uC744 \uC228\uAE41\uB2C8\uB2E4 (\uD130\uBBF8\uB110/\uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9).",
     bandOff: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uAEBC\uC9D0 \u2014 statusLine\uC744 \uBCF5\uC6D0\uD588\uC2B5\uB2C8\uB2E4.",
-    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off]",
+    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-band [on|off]",
-    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328"
+    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328",
+    paneViewSwitched: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110 \uBCF4\uAE30:"
   }
 };
 
@@ -242,6 +284,17 @@ function resolveToggle(args, current) {
     return false;
   return null;
 }
+var PANE_VIEWS = ["dashboard", "turns", "agents", "files", "todos", "errors", "bg"];
+function isPaneView(value) {
+  return value !== void 0 && PANE_VIEWS.includes(value);
+}
+function resolvePaneCommand(args, isOpen, view) {
+  const arg = args.trim().toLowerCase();
+  if (isPaneView(arg))
+    return { open: true, view: arg };
+  const open = resolveToggle(arg, isOpen);
+  return open === null ? null : { open, view };
+}
 
 // scripts/mod/stdin-builder.ts
 var MODEL_SCOPED = /opus|sonnet|fable/i;
@@ -334,6 +387,7 @@ function parseNodePath(stdout) {
 // scripts/mod/register.tsx
 var PANE = "claude-dashboard";
 var TICK_MS = 6e4;
+var VIEW_TICK_MS = 1e4;
 var RUN_TIMEOUT_MS = 5e3;
 var NODE_LOOKUP_TIMEOUT_MS = 1e4;
 var paneLines = atom({ plugin: "claude-dashboard", key: "paneLines" }, []);
@@ -352,9 +406,11 @@ function strings() {
 }
 var snapshot = { sessionId: "", model: "", cwd: "", rateLimits: [] };
 var isPaneOpen = false;
+var paneView = "dashboard";
 var isBandOn = false;
 var bandRuns = /* @__PURE__ */ new Set();
 var ticker = null;
+var tickerMs = 0;
 var nodeCommand = "node";
 var nodeLookup = null;
 async function lookUpNode($) {
@@ -405,7 +461,7 @@ async function canDrawBand($) {
 async function refreshPane($) {
   if (!isPaneOpen)
     return;
-  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: "pane" });
+  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: "pane", CLAUDE_DASHBOARD_PANE_VIEW: paneView });
   await update($, paneLines, keepOrWarn(lines));
 }
 async function runBand($) {
@@ -477,12 +533,33 @@ async function setBand($, on) {
 }
 function syncTicker($) {
   const needed = isPaneOpen || isBandOn;
-  if (needed && !ticker)
-    ticker = $.clock.every(TICK_MS, () => void requestRefresh($));
-  if (!needed && ticker) {
+  const ms = isPaneOpen && paneView !== "dashboard" ? VIEW_TICK_MS : TICK_MS;
+  if (ticker && (!needed || ms !== tickerMs)) {
     ticker.cancel();
     ticker = null;
   }
+  if (needed && !ticker) {
+    ticker = $.clock.every(ms, () => void requestRefresh($));
+    tickerMs = ms;
+  }
+}
+async function runPaneCommand($, args) {
+  const cmd = resolvePaneCommand(args, isPaneOpen, paneView);
+  if (cmd === null)
+    return strings().paneUsage;
+  const switched = cmd.view !== paneView;
+  paneView = cmd.view;
+  if (cmd.open && isPaneOpen) {
+    if (!switched)
+      return strings().paneOpened;
+    syncTicker($);
+    await requestRefresh($);
+    return `${strings().paneViewSwitched} ${paneView}`;
+  }
+  await setPane($, cmd.open);
+  if (!cmd.open)
+    return strings().paneClosed;
+  return switched ? `${strings().paneViewSwitched} ${paneView}` : strings().paneOpened;
 }
 function applyUsage(u) {
   if (u.startedAt !== void 0)
@@ -532,8 +609,8 @@ function register(on) {
   on("session.start", async ($, e, next) => {
     await $.command.register({
       name: "claude-dashboard-pane",
-      description: "Show the dashboard in a pane beside the transcript (on|off, none toggles)",
-      argumentHint: "[on|off]"
+      description: "Show the dashboard or a session view (turns, agents, files, todos, errors, bg) in a pane",
+      argumentHint: "[on|off|dashboard|turns|agents|files|todos|errors|bg]"
     });
     const [id, model, cwd, root, version, usage] = await Promise.all([
       $.session.id(),
@@ -575,11 +652,7 @@ function register(on) {
     return next(e);
   });
   on("command.run", { command: "claude-dashboard-pane" }, async ($, e) => {
-    const open = resolveToggle(e.args, isPaneOpen);
-    if (open === null)
-      return { text: strings().paneUsage };
-    await setPane($, open);
-    return { text: open ? strings().paneOpened : strings().paneClosed };
+    return { text: await runPaneCommand($, e.args) };
   });
   on("ui.close", { id: "claude-dashboard" }, ($, e, next) => {
     isPaneOpen = false;

@@ -193,3 +193,28 @@ export function formatWindowLabel(
 export function osc8Link(url: string, text: string): string {
   return `\x1b]8;;${url}\x1b\\${text}\x1b]8;;\x1b\\`;
 }
+
+const SPARK_BARS = '▁▂▃▄▅▆▇█';
+
+/**
+ * One block glyph per value, scaled to the largest (`[1, 4, 8]` → `▁▄█`). An all-zero
+ * series draws the lowest bar for each value; an empty one draws nothing.
+ */
+export function sparkline(values: readonly number[]): string {
+  const max = Math.max(0, ...values);
+  return values
+    .map((v) => {
+      if (max === 0 || !(v > 0)) return SPARK_BARS[0];
+      return SPARK_BARS[Math.min(SPARK_BARS.length - 1, Math.round((v / max) * (SPARK_BARS.length - 1)))];
+    })
+    .join('');
+}
+
+/** Second-resolution elapsed time: `42s`, `3m12s`, `1h05m`. */
+export function formatElapsed(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 60) return `${totalMinutes}m${String(totalSeconds % 60).padStart(2, '0')}s`;
+  return `${Math.floor(totalMinutes / 60)}h${String(totalMinutes % 60).padStart(2, '0')}m`;
+}
