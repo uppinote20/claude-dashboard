@@ -91,6 +91,18 @@ describe('listSubagents', () => {
     expect((await listSubagents(SESSION, NOW)).map((a) => a.id)).toEqual(['ok']);
   });
 
+  it('marks an agent done when the main transcript has its completion notice', async () => {
+    await writeAgent('stopped', { agentType: 'scout' }, [prompt, working(1)]);
+    await writeAgent('live', { agentType: 'scout' }, [prompt, working(1)]);
+    const { listSubagents } = await import('../utils/subagents.js');
+    const notices = new Map([
+      ['stopped', { kind: 'agent' as const, startedAt: NOW, status: 'killed' }],
+      ['live', { kind: 'agent' as const, startedAt: NOW, status: 'running' }],
+    ]);
+    const byId = Object.fromEntries((await listSubagents(SESSION, NOW, 20, notices)).map((a) => [a.id, a.status]));
+    expect(byId).toEqual({ stopped: 'done', live: 'running' });
+  });
+
   it('parses only the `limit` most recently written transcripts', async () => {
     await writeAgent('older', { agentType: 'a' }, [prompt, finished(1)], NOW - 5000);
     await writeAgent('newer', { agentType: 'b' }, [prompt, finished(1)], NOW - 1000);
