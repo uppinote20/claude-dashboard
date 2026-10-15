@@ -19,6 +19,8 @@ export function resolveToggle(args: string, current: boolean): boolean | null {
 /** What the pane draws: the widget dashboard, or one of the session views. */
 export const PANE_VIEWS = ['dashboard', 'turns', 'agents', 'files', 'todos', 'errors', 'bg'] as const;
 export type PaneView = (typeof PANE_VIEWS)[number];
+/** The views drawn from the session's transcripts rather than the widget pipeline. */
+export type SessionView = Exclude<PaneView, 'dashboard'>;
 
 export function isPaneView(value: string | undefined): value is PaneView {
   return value !== undefined && (PANE_VIEWS as readonly string[]).includes(value);

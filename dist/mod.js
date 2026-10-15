@@ -572,18 +572,17 @@ async function runPaneCommand($, args) {
   const cmd = resolvePaneCommand(args, isPaneOpen, paneView);
   if (cmd === null)
     return strings().paneUsage;
-  const switched = cmd.view !== paneView;
-  paneView = cmd.view;
-  if (cmd.open && isPaneOpen) {
-    if (!switched)
-      return strings().paneOpened;
-    syncTicker($);
-    await requestRefresh($);
-    return `${strings().paneViewSwitched} ${paneView}`;
-  }
-  await setPane($, cmd.open);
-  if (!cmd.open)
+  if (!cmd.open) {
+    await setPane($, false);
     return strings().paneClosed;
+  }
+  const switched = cmd.view !== paneView;
+  if (isPaneOpen) {
+    await selectView($, cmd.view);
+  } else {
+    paneView = cmd.view;
+    await setPane($, true);
+  }
   return switched ? `${strings().paneViewSwitched} ${paneView}` : strings().paneOpened;
 }
 function applyUsage(u) {

@@ -1,20 +1,21 @@
 /**
  * Turns view: one line per user prompt, newest first, with what the turn cost.
  * @handbook 9.5-pane-views
+ * @tested scripts/__tests__/pane-views.test.ts
  */
 
 import { colorize } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import { formatElapsed, formatTokens, sparkline, truncate } from '../utils/formatters.js';
-import { clock, emptyLine, header, isSessionIdle, type ViewContext } from './shared.js';
+import { clock, emptyView, header, isSessionIdle, type ViewContext } from './shared.js';
 
-export const MAX_TURN_LINES = 20;
+const MAX_TURN_LINES = 20;
 const PROMPT_CHARS = 48;
 
 export function renderTurns(v: ViewContext): string[] {
   const { transcript, t, theme, now } = v;
   const turns = transcript.turns;
-  if (turns.length === 0) return [header(v, ICON.scroll, t.turns), emptyLine(v, t.emptyTurns)];
+  if (turns.length === 0) return emptyView(v, ICON.scroll, t.turns, t.emptyTurns);
 
   const recent = turns.slice(-MAX_TURN_LINES);
   const spark = colorize(sparkline(recent.map((x) => x.tokensIn + x.tokensOut)), theme.info);

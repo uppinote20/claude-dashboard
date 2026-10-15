@@ -7,6 +7,7 @@
  * @covers scripts/views/todos.ts
  * @covers scripts/views/errors.ts
  * @covers scripts/views/background.ts
+ * @covers scripts/views/shared.ts
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mkdir, writeFile, rm } from 'fs/promises';

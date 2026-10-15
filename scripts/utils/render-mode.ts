@@ -9,7 +9,7 @@
  * @tested scripts/__tests__/statusline-mod-env.test.ts
  */
 import { parsePreset, type Config, type DisplayMode, type WidgetId } from '../types.js';
-import { isPaneView, type PaneView } from '../mod/toggle.js';
+import { isPaneView, type SessionView } from '../mod/toggle.js';
 
 export type ModSurface = 'pane' | 'band';
 
@@ -20,7 +20,7 @@ export interface RenderMode {
   clearSession?: string;
   printSettings?: boolean;
   /** Pane only: a session view to draw instead of the widget dashboard */
-  paneView?: Exclude<PaneView, 'dashboard'>;
+  paneView?: SessionView;
 }
 
 /**

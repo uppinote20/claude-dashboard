@@ -2009,6 +2009,7 @@ var sessionDurationWidget = {
 import { open as open2, readFile as readFile6, stat as stat6 } from "fs/promises";
 import { basename as basename2 } from "path";
 var cachedTranscript = null;
+var SUBAGENT_TRANSCRIPT_RE = /[\\/]subagents[\\/]agent-[^\\/]+\.jsonl$/;
 var HEAD_BYTES = 1024;
 function createParsedTranscript() {
   return {
@@ -2039,8 +2040,7 @@ var MAX_TURNS = 50;
 var MAX_TOUCHED_FILES = 200;
 var MAX_TOOL_ERRORS = 30;
 var MAX_BACKGROUND_TASKS = 30;
-var PROMPT_MAX_CHARS = 120;
-var ERROR_MAX_CHARS = 120;
+var LINE_MAX_CHARS = 120;
 var FILE_WRITE_TOOLS = {
   Edit: "file_path",
   Write: "file_path",
@@ -2051,7 +2051,14 @@ var COMMAND_ARGS_RE = /<command-args>([^<]*)<\/command-args>/;
 var BASH_INPUT_RE = /^<bash-input>([\s\S]*?)<\/bash-input>/;
 var SYSTEM_REMINDER_RE = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
 var BACKGROUND_ID_RE = /running in background with ID: ([\w-]+)/;
+var BACKGROUND_TOOLS = /* @__PURE__ */ new Set(["Bash", "Monitor"]);
 var ASYNC_AGENT_ID_RE = /launched[\s\S]*?agentId: ([\w-]+)/i;
+function isAgentTool(name) {
+  return name === "Agent" || name === "Task";
+}
+function toolLabel(name, target) {
+  return target ? `${name}(${target})` : name;
+}
 function oneLine(text, max) {
   return truncate(text.replace(/\s+/g, " ").trim(), max);
 }
@@ -2062,11 +2069,8 @@ function promptText(content) {
     return null;
   return content.filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("\n");
 }
-function classifyPrompt(content) {
-  const raw = promptText(content);
-  if (raw === null)
-    return null;
-  const text = raw.replace(SYSTEM_REMINDER_RE, "").trim();
+function classifyText(raw) {
+  const text = (raw.includes("<system-reminder>") ? raw.replace(SYSTEM_REMINDER_RE, "") : raw).trim();
   if (!text)
     return null;
   const cmd = text.match(SLASH_COMMAND_TAG_RE);
@@ -2075,14 +2079,14 @@ function classifyPrompt(content) {
     if (!name.startsWith("/"))
       return null;
     const args = text.match(COMMAND_ARGS_RE)?.[1] ?? "";
-    return oneLine(`${name} ${args}`, PROMPT_MAX_CHARS);
+    return oneLine(`${name} ${args}`, LINE_MAX_CHARS);
   }
   const bash = text.match(BASH_INPUT_RE);
   if (bash)
-    return oneLine(`!${bash[1]}`, PROMPT_MAX_CHARS);
+    return oneLine(`!${bash[1]}`, LINE_MAX_CHARS);
   if (text.startsWith("<"))
     return null;
-  return oneLine(text, PROMPT_MAX_CHARS);
+  return oneLine(text, LINE_MAX_CHARS);
 }
 function toolResultText(content) {
   if (typeof content === "string")
@@ -2093,7 +2097,7 @@ function toolResultText(content) {
 }
 function errorMessage(text) {
   const cleaned = text.replace(/<\/?tool_use_error>/g, "").trim();
-  return oneLine(cleaned.split("\n")[0] ?? "", ERROR_MAX_CHARS);
+  return oneLine(cleaned.split("\n")[0] ?? "", LINE_MAX_CHARS);
 }
 function capMap(map, max) {
   for (const key of map.keys()) {
@@ -2108,7 +2112,12 @@ function pushCapped(list, item, max) {
     list.splice(0, list.length - max);
 }
 function xmlTag(text, tag) {
-  return text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim();
+  const open4 = `<${tag}>`;
+  const start = text.indexOf(open4);
+  if (start < 0)
+    return void 0;
+  const end = text.indexOf(`</${tag}>`, start);
+  return end < 0 ? void 0 : text.slice(start + open4.length, end).trim();
 }
 function applyTaskNotification(existing, text, at) {
   const id = xmlTag(text, "task-id");
@@ -2120,7 +2129,7 @@ function applyTaskNotification(existing, text, at) {
   task.status = xmlTag(text, "status") ?? "completed";
   const summary = xmlTag(text, "summary");
   if (summary)
-    task.summary = oneLine(summary, PROMPT_MAX_CHARS);
+    task.summary = oneLine(summary, LINE_MAX_CHARS);
   task.endedAt = at;
 }
 var SLASH_COMMAND_TAG_RE = /<command-name>([^<]+)<\/command-name>/;
@@ -2161,10 +2170,10 @@ function processEntries(entries, existing, sidechain = false) {
           const turn = isMain ? existing.turns.at(-1) : void 0;
           if (turn) {
             turn.tools++;
-            if (block.name === "Agent" || block.name === "Task")
+            if (isAgentTool(block.name))
               turn.agents++;
           }
-          if (block.name === "Agent" || block.name === "Task") {
+          if (isAgentTool(block.name)) {
             existing.activeAgentIds.add(block.id);
           }
           if (block.name === "TaskCreate") {
@@ -2267,7 +2276,7 @@ function processEntries(entries, existing, sidechain = false) {
         }
       }
     }
-    accountTokens(existing, entry, isMain);
+    accountTokens(existing, entry, isMain, at);
   }
 }
 function trackThread(existing, entry, at) {
@@ -2285,33 +2294,24 @@ function trackThread(existing, entry, at) {
   }
   if (entry.type !== "user" || entry.message?.content === void 0)
     return;
-  const content = entry.message.content;
-  const text = typeof content === "string" ? content : promptText(content);
-  if (text === null) {
-    existing.lastStopReason = void 0;
-    return;
-  }
-  if (text.trimStart().startsWith("<task-notification>")) {
-    existing.lastStopReason = void 0;
+  const text = promptText(entry.message.content);
+  const isNotification = text?.trimStart().startsWith("<task-notification>") ?? false;
+  if (isNotification)
     applyTaskNotification(existing, text, Number.isFinite(at) ? at : Date.now());
+  const prompt = text === null || isNotification || entry.isMeta ? null : classifyText(text);
+  if (text === null || isNotification || prompt !== null)
+    existing.lastStopReason = void 0;
+  if (prompt === null || !Number.isFinite(at))
     return;
-  }
-  if (entry.isMeta || !Number.isFinite(at))
-    return;
-  const prompt = classifyPrompt(content);
-  if (prompt === null)
-    return;
-  existing.lastStopReason = void 0;
   const turn = { at, prompt, lastAt: at, tokensIn: 0, tokensOut: 0, tools: 0, agents: 0 };
   pushCapped(existing.turns, turn, MAX_TURNS);
   existing.turnCount++;
 }
 function trackToolResult(existing, block, tool, at) {
-  const text = toolResultText(block.content);
   if (block.is_error) {
     pushCapped(
       existing.toolErrors,
-      { at, tool: tool?.name ?? "Tool", target: tool?.target, message: errorMessage(text) },
+      { at, tool: tool?.name ?? "Tool", target: tool?.target, message: errorMessage(toolResultText(block.content)) },
       MAX_TOOL_ERRORS
     );
     return;
@@ -2325,13 +2325,16 @@ function trackToolResult(existing, block, tool, at) {
     existing.touchedFiles.set(filePath, { edits: (prev?.edits ?? 0) + 1, lastAt: at });
     capMap(existing.touchedFiles, MAX_TOUCHED_FILES);
   }
-  const isAgent = tool.name === "Agent" || tool.name === "Task";
-  const id = (isAgent ? text.match(ASYNC_AGENT_ID_RE) : text.match(BACKGROUND_ID_RE))?.[1];
+  const isAgent = isAgentTool(tool.name);
+  if (!isAgent && !BACKGROUND_TOOLS.has(tool.name))
+    return;
+  const text = toolResultText(block.content);
+  const id = text.match(isAgent ? ASYNC_AGENT_ID_RE : BACKGROUND_ID_RE)?.[1];
   if (id) {
     const description = tool.input?.description;
     existing.backgroundTasks.set(id, {
       kind: isAgent ? "agent" : tool.name === "Bash" ? "bash" : "other",
-      description: typeof description === "string" ? oneLine(description, PROMPT_MAX_CHARS) : tool.target,
+      description: typeof description === "string" ? oneLine(description, LINE_MAX_CHARS) : tool.target,
       startedAt: at,
       status: "running"
     });
@@ -2344,12 +2347,11 @@ function isMeasured(outputTokens, durationMs) {
 function tokenCount(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
-function accountTokens(existing, entry, isMain) {
+function accountTokens(existing, entry, isMain, t) {
   if (!isMain)
     return;
   if (entry.type !== "user" && entry.type !== "assistant")
     return;
-  const t = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
   if (entry.type === "user") {
     if (Number.isFinite(t))
       existing.lastBoundaryAt = t;
@@ -2473,7 +2475,7 @@ async function isResumable(state, fileSize) {
     return true;
   return state.head === await readHead(state.path, state.size);
 }
-async function parseTranscript(transcriptPath, options = {}) {
+async function parseTranscript(transcriptPath) {
   try {
     const fileSize = (await stat6(transcriptPath)).size;
     let state = cachedTranscript?.path === transcriptPath ? cachedTranscript : await loadPersistedState(transcriptPath);
@@ -2484,7 +2486,7 @@ async function parseTranscript(transcriptPath, options = {}) {
     if (state.size < fileSize) {
       const { content, nextOffset } = await readCompleteLines(transcriptPath, state.size, fileSize);
       if (nextOffset > state.size) {
-        processEntries(parseJsonlContent(content), state.data, options.sidechain);
+        processEntries(parseJsonlContent(content), state.data, SUBAGENT_TRANSCRIPT_RE.test(transcriptPath));
         if (state.size < HEAD_BYTES)
           state.head = await readHead(transcriptPath, nextOffset);
         state.size = nextOffset;
@@ -5283,19 +5285,15 @@ async function readMeta(path6) {
     return null;
   }
 }
-async function scanOne(dir, metaFile, now) {
-  const base = metaFile.slice(0, -META_SUFFIX.length);
-  const jsonlPath = join8(dir, `${base}.jsonl`);
-  const [meta, parsed, fileStat] = await Promise.all([
-    readMeta(join8(dir, metaFile)),
-    parseTranscript(jsonlPath, { sidechain: true }),
-    stat11(jsonlPath).catch(() => null)
+async function scanOne(dir, base, mtime, now) {
+  const [meta, parsed] = await Promise.all([
+    readMeta(join8(dir, `${base}${META_SUFFIX}`)),
+    parseTranscript(join8(dir, `${base}.jsonl`))
   ]);
   if (!meta || !parsed)
     return null;
-  const lastAt = parsed.lastEntryAt ?? fileStat?.mtimeMs;
   let status = parsed.lastStopReason === "end_turn" ? "done" : "running";
-  if (status === "running" && fileStat && now - fileStat.mtimeMs > STALE_AFTER_MS)
+  if (status === "running" && now - mtime > STALE_AFTER_MS)
     status = "stale";
   const running = getRunningTools(parsed).at(-1);
   return {
@@ -5305,14 +5303,17 @@ async function scanOne(dir, metaFile, now) {
     model: parsed.lastModel,
     status,
     startedAt: parsed.sessionStartTime,
-    lastAt,
+    lastAt: parsed.lastEntryAt ?? mtime,
     tools: parsed.completedToolCount,
-    runningTool: running ? running.target ? `${running.name}(${running.target})` : running.name : void 0,
+    runningTool: running ? toolLabel(running.name, running.target) : void 0,
     touchedFiles: parsed.touchedFiles
   };
 }
+function applyNotification(agent, notified) {
+  return agent.status !== "done" && notified && notified.status !== "running" ? { ...agent, status: "done" } : agent;
+}
 var STATUS_ORDER = { running: 0, stale: 1, done: 2 };
-async function listSubagents(transcriptPath, now = Date.now(), limit = MAX_SUBAGENTS) {
+async function listSubagents(transcriptPath, now = Date.now(), limit = MAX_SUBAGENTS, notifications = /* @__PURE__ */ new Map()) {
   const dir = subagentsDir(transcriptPath);
   let files;
   try {
@@ -5320,21 +5321,13 @@ async function listSubagents(transcriptPath, now = Date.now(), limit = MAX_SUBAG
   } catch {
     return [];
   }
-  const metas = files.filter((f) => f.endsWith(META_SUFFIX));
+  const bases = files.filter((f) => f.endsWith(META_SUFFIX)).map((f) => f.slice(0, -META_SUFFIX.length));
   const withMtime = await Promise.all(
-    metas.map(async (f) => {
-      const s = await stat11(join8(dir, `${f.slice(0, -META_SUFFIX.length)}.jsonl`)).catch(() => null);
-      return { f, mtime: s?.mtimeMs ?? 0 };
-    })
+    bases.map(async (base) => ({ base, mtime: (await stat11(join8(dir, `${base}.jsonl`)).catch(() => null))?.mtimeMs }))
   );
-  const recent = withMtime.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
-  const agents = [];
-  for (const { f } of recent) {
-    const info = await scanOne(dir, f, now);
-    if (info)
-      agents.push(info);
-  }
-  return agents.sort(
+  const recent = withMtime.filter((x) => x.mtime !== void 0).sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+  const scanned = await Promise.all(recent.map(({ base, mtime }) => scanOne(dir, base, mtime, now)));
+  return scanned.filter((a) => a !== null).map((a) => applyNotification(a, notifications.get(a.id))).sort(
     (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.startedAt ?? 0) - (a.startedAt ?? 0)
   );
 }
@@ -5352,8 +5345,11 @@ function header(v, icon, title, ...extra) {
   const head = `${icon} ${v.theme.bold}${title}${RESET}`;
   return [head, ...extra.filter(Boolean)].join(colorize(" \xB7 ", v.theme.secondary));
 }
-function emptyLine(v, text) {
-  return colorize(`  ${text}`, v.theme.secondary);
+function emptyView(v, icon, title, empty) {
+  return [header(v, icon, title), colorize(`  ${empty}`, v.theme.secondary)];
+}
+function runningMarker(v, stale) {
+  return stale ? colorize(`? ${v.t.stale}`, v.theme.warning) : colorize("\u25B6", v.theme.safe);
 }
 function dim(v, text) {
   return `${v.theme.dim}${text}${RESET}`;
@@ -5383,7 +5379,7 @@ function renderTurns(v) {
   const { transcript, t, theme, now } = v;
   const turns = transcript.turns;
   if (turns.length === 0)
-    return [header(v, ICON.scroll, t.turns), emptyLine(v, t.emptyTurns)];
+    return emptyView(v, ICON.scroll, t.turns, t.emptyTurns);
   const recent = turns.slice(-MAX_TURN_LINES);
   const spark = colorize(sparkline(recent.map((x) => x.tokensIn + x.tokensOut)), theme.info);
   const lines = [header(v, ICON.scroll, t.turns, String(transcript.turnCount), spark)];
@@ -5411,31 +5407,24 @@ var DESCRIPTION_CHARS = 32;
 function renderAgents(v, agents) {
   const { t, theme, now } = v;
   if (agents.length === 0)
-    return [header(v, ICON.robot, t.agents), emptyLine(v, t.emptyAgents)];
-  agents = agents.map((a) => {
-    const notified = v.transcript.backgroundTasks.get(a.id);
-    return a.status !== "done" && notified && notified.status !== "running" ? { ...a, status: "done" } : a;
-  });
+    return emptyView(v, ICON.robot, t.agents, t.emptyAgents);
   const running = agents.filter((a) => a.status === "running").length;
   const lines = [header(v, ICON.robot, t.agents, `${running} ${t.running}`, `${agents.length}`)];
   for (const a of agents) {
     const end = a.status === "running" ? now : a.lastAt ?? now;
     const elapsed = a.startedAt ? formatElapsed(end - a.startedAt) : "";
-    const parts = [
-      a.type,
+    const details = [
       a.model ? modelLabel(a.model) : "",
       a.description ? `"${truncate(a.description, DESCRIPTION_CHARS)}"` : "",
       elapsed,
       `${ICON.wrench}${a.tools}`
-    ].filter(Boolean);
+    ].filter(Boolean).join("  ");
     if (a.status === "done") {
-      lines.push(dim(v, `\u2713 ${parts.join("  ")}`));
+      lines.push(dim(v, `\u2713 ${a.type}  ${details}`));
       continue;
     }
-    const marker = a.status === "stale" ? colorize(`? ${t.stale}`, theme.warning) : colorize("\u25B6", theme.safe);
-    const [type, ...rest] = parts;
     const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : "";
-    lines.push(`${marker} ${colorize(type, theme.model)}  ${colorize(rest.join("  "), theme.secondary)}${tool}`);
+    lines.push(`${runningMarker(v, a.status === "stale")} ${colorize(a.type, theme.model)}  ${colorize(details, theme.secondary)}${tool}`);
   }
   return lines;
 }
@@ -5471,7 +5460,7 @@ function renderFiles(v, agents) {
   const { t, theme, ctx } = v;
   const rows = collectFiles(v.transcript.touchedFiles, agents);
   if (rows.length === 0)
-    return [header(v, ICON.pencil, t.files), emptyLine(v, t.emptyFiles)];
+    return emptyView(v, ICON.pencil, t.files, t.emptyFiles);
   const base = ctx.stdin.workspace?.project_dir ?? ctx.stdin.workspace?.current_dir;
   const lines = [header(v, ICON.pencil, t.files, String(rows.length))];
   for (const r of rows.slice(0, MAX_FILE_LINES)) {
@@ -5492,7 +5481,7 @@ function renderTodos(v) {
   const { t, theme } = v;
   const items = extractTodoList(v.transcript);
   if (items.length === 0)
-    return [header(v, ICON.clipboard, t.todos), emptyLine(v, t.emptyTodos)];
+    return emptyView(v, ICON.clipboard, t.todos, t.emptyTodos);
   const done = items.filter((i) => i.status === "completed").length;
   const lines = [header(v, ICON.clipboard, t.todos, `${done}/${items.length}`)];
   for (const item of items) {
@@ -5514,11 +5503,11 @@ function renderErrors(v) {
   const { t, theme } = v;
   const errors = v.transcript.toolErrors;
   if (errors.length === 0)
-    return [header(v, ICON.warning, t.errors), emptyLine(v, t.emptyErrors)];
+    return emptyView(v, ICON.warning, t.errors, t.emptyErrors);
   const lines = [header(v, ICON.warning, t.errors, String(errors.length))];
   for (const e of errors.slice(-MAX_ERROR_LINES).reverse()) {
     const marker = DENIED_RE.test(e.message) ? ICON.noEntry : colorize("\u2717", theme.danger);
-    const tool = e.target ? `${e.tool}(${e.target})` : e.tool;
+    const tool = toolLabel(e.tool, e.target);
     lines.push(
       `${marker} ${colorize(clock(e.at), theme.secondary)}  ${colorize(tool, theme.model)}  ${colorize(truncate(e.message, MESSAGE_CHARS), theme.secondary)}`
     );
@@ -5533,19 +5522,17 @@ function renderBackground(v) {
   const { t, theme, now } = v;
   const tasks = [...v.transcript.backgroundTasks.values()];
   if (tasks.length === 0)
-    return [header(v, ICON.hourglass, t.background), emptyLine(v, t.emptyBackground)];
-  const isRunning = (s) => s === "running";
-  tasks.sort((a, b) => Number(isRunning(b.status)) - Number(isRunning(a.status)) || b.startedAt - a.startedAt);
+    return emptyView(v, ICON.hourglass, t.background, t.emptyBackground);
+  tasks.sort((a, b) => Number(b.status === "running") - Number(a.status === "running") || b.startedAt - a.startedAt);
   const idle = isSessionIdle(v);
-  const running = idle ? 0 : tasks.filter((x) => isRunning(x.status)).length;
+  const running = idle ? 0 : tasks.filter((x) => x.status === "running").length;
   const lines = [header(v, ICON.hourglass, t.background, `${running} ${t.running}`, String(tasks.length))];
   for (const task of tasks) {
     const description = task.description ? `"${truncate(task.description, DESCRIPTION_CHARS2)}"` : "";
     const elapsed = formatElapsed((task.endedAt ?? now) - task.startedAt);
-    if (isRunning(task.status)) {
-      const marker = idle ? colorize(`? ${t.stale}`, theme.warning) : colorize("\u25B6", theme.safe);
+    if (task.status === "running") {
       const shown = idle ? "" : `  ${colorize(elapsed, theme.secondary)}`;
-      lines.push(`${marker} ${colorize(task.kind, theme.model)}  ${description}${shown}`);
+      lines.push(`${runningMarker(v, idle)} ${colorize(task.kind, theme.model)}  ${description}${shown}`);
       continue;
     }
     const summary = task.summary ? `  ${truncate(task.summary, SUMMARY_CHARS)}` : "";
@@ -5572,10 +5559,10 @@ async function renderPaneView(view, ctx, now = Date.now()) {
       lines = renderTurns(v);
       break;
     case "agents":
-      lines = renderAgents(v, await listSubagents(transcriptPath, now));
+      lines = renderAgents(v, await listSubagents(transcriptPath, now, void 0, transcript.backgroundTasks));
       break;
     case "files":
-      lines = renderFiles(v, await listSubagents(transcriptPath, now, MAX_FILE_AGENTS));
+      lines = renderFiles(v, await listSubagents(transcriptPath, now, MAX_FILE_AGENTS, transcript.backgroundTasks));
       break;
     case "todos":
       lines = renderTodos(v);

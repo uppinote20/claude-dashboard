@@ -26,10 +26,10 @@ const toolResult = (id: string, content: unknown, isError = false) => ({
   ...(isError ? { is_error: true } : {}),
 });
 
-async function parse(entries: object[], options?: { sidechain?: boolean }) {
+async function parse(entries: object[]) {
   await writeFile(TEST_FILE, entries.map((e) => JSON.stringify(e)).join('\n') + '\n', 'utf-8');
   const { parseTranscript } = await import('../utils/transcript-parser.js');
-  const result = await parseTranscript(TEST_FILE, options);
+  const result = await parseTranscript(TEST_FILE);
   if (!result) throw new Error('parse failed');
   return result;
 }
@@ -169,10 +169,12 @@ describe('transcript views state', () => {
       expect(main.turns).toHaveLength(0);
       expect(main.lastStopReason).toBeUndefined();
 
-      vi.resetModules();
-      await rm(TEST_DIR, { recursive: true, force: true });
-      await mkdir(TEST_DIR, { recursive: true });
-      const sub = await parse(entries, { sidechain: true });
+      // The same records in a subagent's own transcript are that file's main thread.
+      const subFile = path.join(TEST_DIR, 'session', 'subagents', 'agent-a1.jsonl');
+      await mkdir(path.dirname(subFile), { recursive: true });
+      await writeFile(subFile, entries.map((e) => JSON.stringify(e)).join('\n') + '\n', 'utf-8');
+      const { parseTranscript } = await import('../utils/transcript-parser.js');
+      const sub = (await parseTranscript(subFile))!;
       expect(sub.turns.map((t) => t.prompt)).toEqual(['task']);
       expect(sub.lastStopReason).toBe('end_turn');
       expect(sub.lastModel).toBe('claude-haiku-5-5');

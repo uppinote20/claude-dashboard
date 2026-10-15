@@ -7,7 +7,7 @@
  */
 
 import type { WidgetContext } from '../types.js';
-import type { PaneView } from '../mod/toggle.js';
+import type { SessionView } from '../mod/toggle.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import { getTranscript } from '../utils/transcript-parser.js';
 import { listSubagents } from '../utils/subagents.js';
@@ -22,8 +22,6 @@ import { renderBackground } from './background.js';
 // Files a subagent wrote stay relevant after it finishes, so look further back than the agents view.
 const MAX_FILE_AGENTS = 100;
 
-export type SessionView = Exclude<PaneView, 'dashboard'>;
-
 export async function renderPaneView(view: SessionView, ctx: WidgetContext, now = Date.now()): Promise<string> {
   const transcript = await getTranscript(ctx);
   if (!transcript) return colorize(ctx.translations.paneViews.noTranscript, getTheme().secondary);
@@ -36,10 +34,10 @@ export async function renderPaneView(view: SessionView, ctx: WidgetContext, now 
       lines = renderTurns(v);
       break;
     case 'agents':
-      lines = renderAgents(v, await listSubagents(transcriptPath, now));
+      lines = renderAgents(v, await listSubagents(transcriptPath, now, undefined, transcript.backgroundTasks));
       break;
     case 'files':
-      lines = renderFiles(v, await listSubagents(transcriptPath, now, MAX_FILE_AGENTS));
+      lines = renderFiles(v, await listSubagents(transcriptPath, now, MAX_FILE_AGENTS, transcript.backgroundTasks));
       break;
     case 'todos':
       lines = renderTodos(v);

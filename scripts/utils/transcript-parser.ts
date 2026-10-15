@@ -48,6 +48,13 @@ interface TranscriptState {
 /** In-process tier: reused while one process renders repeatedly (tests, check-usage). */
 let cachedTranscript: TranscriptState | null = null;
 
+/**
+ * A subagent's own transcript (`<session>/subagents/agent-<id>.jsonl`): every record there is
+ * marked isSidechain, yet it is that file's main thread. Read from the path so a caller can
+ * never parse one file both ways under the same persisted state.
+ */
+const SUBAGENT_TRANSCRIPT_RE = /[\\/]subagents[\\/]agent-[^\\/]+\.jsonl$/;
+
 /** Bytes hashed to fingerprint a transcript file (its first line carries the session id). */
 const HEAD_BYTES = 1024;
 
@@ -82,11 +89,11 @@ function createParsedTranscript(): ParsedTranscript {
 
 // Caps keep the persisted parse state small: it is rewritten on every render with new lines.
 export const MAX_TURNS = 50;
-export const MAX_TOUCHED_FILES = 200;
+const MAX_TOUCHED_FILES = 200;
 export const MAX_TOOL_ERRORS = 30;
-export const MAX_BACKGROUND_TASKS = 30;
-const PROMPT_MAX_CHARS = 120;
-const ERROR_MAX_CHARS = 120;
+const MAX_BACKGROUND_TASKS = 30;
+/** One-line text kept in the state: prompts, error lines, job descriptions and summaries. */
+const LINE_MAX_CHARS = 120;
 
 /** Tools whose successful result means a file was written; value is the path field. */
 const FILE_WRITE_TOOLS: Record<string, string> = {
@@ -100,7 +107,19 @@ const COMMAND_ARGS_RE = /<command-args>([^<]*)<\/command-args>/;
 const BASH_INPUT_RE = /^<bash-input>([\s\S]*?)<\/bash-input>/;
 const SYSTEM_REMINDER_RE = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
 const BACKGROUND_ID_RE = /running in background with ID: ([\w-]+)/;
+/** Tools that can return `running in background with ID: …` instead of their output. */
+const BACKGROUND_TOOLS = new Set(['Bash', 'Monitor']);
 const ASYNC_AGENT_ID_RE = /launched[\s\S]*?agentId: ([\w-]+)/i;
+
+/** `Agent` in current Claude Code; `Task` is the pre-rename name still found in older transcripts. */
+function isAgentTool(name: string): boolean {
+  return name === 'Agent' || name === 'Task';
+}
+
+/** `Bash(npm test)`, or the bare name when the tool has no target. */
+export function toolLabel(name: string, target?: string): string {
+  return target ? `${name}(${target})` : name;
+}
 
 function oneLine(text: string, max: number): string {
   return truncate(text.replace(/\s+/g, ' ').trim(), max);
@@ -125,8 +144,11 @@ function promptText(content: ContentBlocks): string | null {
  */
 export function classifyPrompt(content: ContentBlocks): string | null {
   const raw = promptText(content);
-  if (raw === null) return null;
-  const text = raw.replace(SYSTEM_REMINDER_RE, '').trim();
+  return raw === null ? null : classifyText(raw);
+}
+
+function classifyText(raw: string): string | null {
+  const text = (raw.includes('<system-reminder>') ? raw.replace(SYSTEM_REMINDER_RE, '') : raw).trim();
   if (!text) return null;
 
   const cmd = text.match(SLASH_COMMAND_TAG_RE);
@@ -134,12 +156,12 @@ export function classifyPrompt(content: ContentBlocks): string | null {
     const name = cmd[1].trim();
     if (!name.startsWith('/')) return null;
     const args = text.match(COMMAND_ARGS_RE)?.[1] ?? '';
-    return oneLine(`${name} ${args}`, PROMPT_MAX_CHARS);
+    return oneLine(`${name} ${args}`, LINE_MAX_CHARS);
   }
   const bash = text.match(BASH_INPUT_RE);
-  if (bash) return oneLine(`!${bash[1]}`, PROMPT_MAX_CHARS);
+  if (bash) return oneLine(`!${bash[1]}`, LINE_MAX_CHARS);
   if (text.startsWith('<')) return null;
-  return oneLine(text, PROMPT_MAX_CHARS);
+  return oneLine(text, LINE_MAX_CHARS);
 }
 
 /** A tool_result's text, whether sent as a string or as text blocks. */
@@ -153,7 +175,7 @@ function toolResultText(content: unknown): string {
 
 function errorMessage(text: string): string {
   const cleaned = text.replace(/<\/?tool_use_error>/g, '').trim();
-  return oneLine(cleaned.split('\n')[0] ?? '', ERROR_MAX_CHARS);
+  return oneLine(cleaned.split('\n')[0] ?? '', LINE_MAX_CHARS);
 }
 
 /** Map insertion order is age order: drop the oldest keys past `max`. */
@@ -170,7 +192,11 @@ function pushCapped<T>(list: T[], item: T, max: number): void {
 }
 
 function xmlTag(text: string, tag: string): string | undefined {
-  return text.match(new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`))?.[1]?.trim();
+  const open = `<${tag}>`;
+  const start = text.indexOf(open);
+  if (start < 0) return undefined;
+  const end = text.indexOf(`</${tag}>`, start);
+  return end < 0 ? undefined : text.slice(start + open.length, end).trim();
 }
 
 /** Apply a `<task-notification>` (background job or async agent came to rest). */
@@ -181,7 +207,7 @@ function applyTaskNotification(existing: ParsedTranscript, text: string, at: num
   if (!task) return;
   task.status = xmlTag(text, 'status') ?? 'completed';
   const summary = xmlTag(text, 'summary');
-  if (summary) task.summary = oneLine(summary, PROMPT_MAX_CHARS);
+  if (summary) task.summary = oneLine(summary, LINE_MAX_CHARS);
   task.endedAt = at;
 }
 
@@ -248,12 +274,11 @@ function processEntries(
           const turn = isMain ? existing.turns.at(-1) : undefined;
           if (turn) {
             turn.tools++;
-            if (block.name === 'Agent' || block.name === 'Task') turn.agents++;
+            if (isAgentTool(block.name)) turn.agents++;
           }
 
-          // Track subagent dispatches. The tool is `Agent` in current Claude Code;
-          // `Task` is the pre-rename name still found in older transcripts.
-          if (block.name === 'Agent' || block.name === 'Task') {
+          // Track subagent dispatches.
+          if (isAgentTool(block.name)) {
             existing.activeAgentIds.add(block.id);
           }
 
@@ -383,7 +408,7 @@ function processEntries(
       }
     }
 
-    accountTokens(existing, entry, isMain);
+    accountTokens(existing, entry, isMain, at);
   }
 }
 
@@ -405,24 +430,15 @@ function trackThread(existing: ParsedTranscript, entry: TranscriptEntry, at: num
 
   if (entry.type !== 'user' || entry.message?.content === undefined) return;
 
-  const content = entry.message.content;
-  const text = typeof content === 'string' ? content : promptText(content);
-  // A tool result, notification, or prompt sends the thread back to work. Local command
-  // output (`/exit`, `!cmd` stdout) does not, so it must not clear a rest state.
-  if (text === null) {
-    existing.lastStopReason = undefined;
-    return;
-  }
-  if (text.trimStart().startsWith('<task-notification>')) {
-    existing.lastStopReason = undefined;
-    applyTaskNotification(existing, text, Number.isFinite(at) ? at : Date.now());
-    return;
-  }
+  const text = promptText(entry.message.content);
+  const isNotification = text?.trimStart().startsWith('<task-notification>') ?? false;
+  if (isNotification) applyTaskNotification(existing, text!, Number.isFinite(at) ? at : Date.now());
+  const prompt = text === null || isNotification || entry.isMeta ? null : classifyText(text);
 
-  if (entry.isMeta || !Number.isFinite(at)) return;
-  const prompt = classifyPrompt(content);
-  if (prompt === null) return;
-  existing.lastStopReason = undefined;
+  // A tool result (no prompt text), a notification, or a prompt sends the thread back to
+  // work. Local command output (`/exit`, `!cmd` stdout) does not: it keeps a rest state.
+  if (text === null || isNotification || prompt !== null) existing.lastStopReason = undefined;
+  if (prompt === null || !Number.isFinite(at)) return;
   const turn: TurnRecord = { at, prompt, lastAt: at, tokensIn: 0, tokensOut: 0, tools: 0, agents: 0 };
   pushCapped(existing.turns, turn, MAX_TURNS);
   existing.turnCount++;
@@ -434,15 +450,14 @@ type ContentBlock = Extract<ContentBlocks, unknown[]>[number];
 function trackToolResult(
   existing: ParsedTranscript,
   block: ContentBlock,
-  tool: ParsedTranscript['toolUses'] extends Map<string, infer V> ? V | undefined : never,
+  tool: ReturnType<ParsedTranscript['toolUses']['get']>,
   at: number
 ): void {
-  const text = toolResultText(block.content);
-
+  // The result text is read only where it matters: most results are Read/Grep output.
   if (block.is_error) {
     pushCapped(
       existing.toolErrors,
-      { at, tool: tool?.name ?? 'Tool', target: tool?.target, message: errorMessage(text) },
+      { at, tool: tool?.name ?? 'Tool', target: tool?.target, message: errorMessage(toolResultText(block.content)) },
       MAX_TOOL_ERRORS
     );
     return;
@@ -457,13 +472,15 @@ function trackToolResult(
     capMap(existing.touchedFiles, MAX_TOUCHED_FILES);
   }
 
-  const isAgent = tool.name === 'Agent' || tool.name === 'Task';
-  const id = (isAgent ? text.match(ASYNC_AGENT_ID_RE) : text.match(BACKGROUND_ID_RE))?.[1];
+  const isAgent = isAgentTool(tool.name);
+  if (!isAgent && !BACKGROUND_TOOLS.has(tool.name)) return;
+  const text = toolResultText(block.content);
+  const id = text.match(isAgent ? ASYNC_AGENT_ID_RE : BACKGROUND_ID_RE)?.[1];
   if (id) {
     const description = (tool.input as { description?: unknown } | undefined)?.description;
     existing.backgroundTasks.set(id, {
       kind: isAgent ? 'agent' : tool.name === 'Bash' ? 'bash' : 'other',
-      description: typeof description === 'string' ? oneLine(description, PROMPT_MAX_CHARS) : tool.target,
+      description: typeof description === 'string' ? oneLine(description, LINE_MAX_CHARS) : tool.target,
       startedAt: at,
       status: 'running',
     });
@@ -499,13 +516,12 @@ function tokenCount(value: unknown): number {
  * are excluded: they are billed at a fraction of input and re-read the whole prefix on
  * every call, so including them made the figure track context size, not spend.
  */
-function accountTokens(existing: ParsedTranscript, entry: TranscriptEntry, isMain: boolean): void {
+function accountTokens(existing: ParsedTranscript, entry: TranscriptEntry, isMain: boolean, t: number): void {
   // Subagent records interleave with the main thread and would both move the
   // boundary and switch the tracked request id.
   if (!isMain) return;
   if (entry.type !== 'user' && entry.type !== 'assistant') return;
 
-  const t = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
 
   if (entry.type === 'user') {
     // Only user entries start a request. system/attachment/progress entries can land
@@ -689,10 +705,7 @@ async function isResumable(state: TranscriptState, fileSize: number): Promise<bo
  * Uses incremental parsing: only reads new bytes since last parse. State comes from
  * this process first, then from the persisted file cache, else a full parse.
  */
-export async function parseTranscript(
-  transcriptPath: string,
-  options: { sidechain?: boolean } = {}
-): Promise<ParsedTranscript | null> {
+export async function parseTranscript(transcriptPath: string): Promise<ParsedTranscript | null> {
   try {
     const fileSize = (await stat(transcriptPath)).size;
 
@@ -705,7 +718,7 @@ export async function parseTranscript(
     if (state.size < fileSize) {
       const { content, nextOffset } = await readCompleteLines(transcriptPath, state.size, fileSize);
       if (nextOffset > state.size) {
-        processEntries(parseJsonlContent(content), state.data, options.sidechain);
+        processEntries(parseJsonlContent(content), state.data, SUBAGENT_TRANSCRIPT_RE.test(transcriptPath));
         // The fingerprint only widens until HEAD_BYTES; past that it is fixed.
         if (state.size < HEAD_BYTES) state.head = await readHead(transcriptPath, nextOffset);
         state.size = nextOffset;
@@ -983,7 +996,7 @@ export function getActiveSlashCommand(
   return transcript.activeSlashCommand;
 }
 
-export interface TodoItem {
+interface TodoItem {
   content: string;
   status: string;
 }

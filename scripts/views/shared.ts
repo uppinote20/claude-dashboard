@@ -1,6 +1,7 @@
 /**
  * Shared pieces of the pane views: the per-render context and line helpers.
  * @handbook 9.5-pane-views
+ * @tested scripts/__tests__/pane-views.test.ts
  */
 
 import { relative, isAbsolute, sep } from 'path';
@@ -36,8 +37,14 @@ export function header(v: ViewContext, icon: string, title: string, ...extra: st
   return [head, ...extra.filter(Boolean)].join(colorize(' · ', v.theme.secondary));
 }
 
-export function emptyLine(v: ViewContext, text: string): string {
-  return colorize(`  ${text}`, v.theme.secondary);
+/** A view with nothing to list: its header and a dim empty-state line. */
+export function emptyView(v: ViewContext, icon: string, title: string, empty: string): string[] {
+  return [header(v, icon, title), colorize(`  ${empty}`, v.theme.secondary)];
+}
+
+/** `▶` for a live item, `? stale` once it stopped reporting. */
+export function runningMarker(v: ViewContext, stale: boolean): string {
+  return stale ? colorize(`? ${v.t.stale}`, v.theme.warning) : colorize('▶', v.theme.safe);
 }
 
 export function dim(v: ViewContext, text: string): string {

@@ -226,20 +226,21 @@ async function selectView($: EngineInterface, view: PaneView) {
   await requestRefresh($)
 }
 
-// An open pane switching views redraws in place; otherwise this is an ordinary open/close.
 async function runPaneCommand($: EngineInterface, args: string): Promise<string> {
   const cmd = resolvePaneCommand(args, isPaneOpen, paneView)
   if (cmd === null) return strings().paneUsage
-  const switched = cmd.view !== paneView
-  paneView = cmd.view
-  if (cmd.open && isPaneOpen) {
-    if (!switched) return strings().paneOpened
-    syncTicker($)
-    await requestRefresh($)
-    return `${strings().paneViewSwitched} ${paneView}`
+  if (!cmd.open) {
+    await setPane($, false)
+    return strings().paneClosed
   }
-  await setPane($, cmd.open)
-  if (!cmd.open) return strings().paneClosed
+  const switched = cmd.view !== paneView
+  if (isPaneOpen) {
+    await selectView($, cmd.view)
+  } else {
+    // Set before opening so the first render already draws the asked-for view.
+    paneView = cmd.view
+    await setPane($, true)
+  }
   return switched ? `${strings().paneViewSwitched} ${paneView}` : strings().paneOpened
 }
 

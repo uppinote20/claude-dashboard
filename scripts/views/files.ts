@@ -1,15 +1,16 @@
 /**
  * Files view: what Edit/Write changed this session, across the main thread and subagents.
  * @handbook 9.5-pane-views
+ * @tested scripts/__tests__/pane-views.test.ts
  */
 
 import type { TouchedFile } from '../types.js';
 import { colorize } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import type { SubagentInfo } from '../utils/subagents.js';
-import { displayPath, emptyLine, header, type ViewContext } from './shared.js';
+import { displayPath, emptyView, header, type ViewContext } from './shared.js';
 
-export const MAX_FILE_LINES = 30;
+const MAX_FILE_LINES = 30;
 
 interface FileRow {
   path: string;
@@ -19,7 +20,7 @@ interface FileRow {
   lastAt: number;
 }
 
-export function collectFiles(main: Map<string, TouchedFile>, agents: SubagentInfo[]): FileRow[] {
+function collectFiles(main: Map<string, TouchedFile>, agents: SubagentInfo[]): FileRow[] {
   const rows = new Map<string, FileRow>();
   const row = (path: string) => {
     let r = rows.get(path);
@@ -47,7 +48,7 @@ export function collectFiles(main: Map<string, TouchedFile>, agents: SubagentInf
 export function renderFiles(v: ViewContext, agents: SubagentInfo[]): string[] {
   const { t, theme, ctx } = v;
   const rows = collectFiles(v.transcript.touchedFiles, agents);
-  if (rows.length === 0) return [header(v, ICON.pencil, t.files), emptyLine(v, t.emptyFiles)];
+  if (rows.length === 0) return emptyView(v, ICON.pencil, t.files, t.emptyFiles);
 
   const base = ctx.stdin.workspace?.project_dir ?? ctx.stdin.workspace?.current_dir;
   const lines = [header(v, ICON.pencil, t.files, String(rows.length))];

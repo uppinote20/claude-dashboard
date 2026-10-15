@@ -11,10 +11,10 @@
 
 import { readdir, readFile, stat } from 'fs/promises';
 import { join } from 'path';
-import type { TouchedFile } from '../types.js';
-import { getRunningTools, parseTranscript } from './transcript-parser.js';
+import type { BackgroundTask, TouchedFile } from '../types.js';
+import { getRunningTools, parseTranscript, toolLabel } from './transcript-parser.js';
 
-export type SubagentStatus = 'running' | 'done' | 'stale';
+type SubagentStatus = 'running' | 'done' | 'stale';
 
 export interface SubagentInfo {
   id: string;
@@ -33,11 +33,11 @@ export interface SubagentInfo {
 
 /** A running agent with no transcript write for this long is shown as stale. */
 export const STALE_AFTER_MS = 10 * 60 * 1000;
-export const MAX_SUBAGENTS = 20;
+const MAX_SUBAGENTS = 20;
 
 const META_SUFFIX = '.meta.json';
 
-export function subagentsDir(transcriptPath: string): string {
+function subagentsDir(transcriptPath: string): string {
   return join(transcriptPath.replace(/\.jsonl$/, ''), 'subagents');
 }
 
@@ -50,19 +50,15 @@ async function readMeta(path: string): Promise<{ agentType?: string; description
   }
 }
 
-async function scanOne(dir: string, metaFile: string, now: number): Promise<SubagentInfo | null> {
-  const base = metaFile.slice(0, -META_SUFFIX.length);
-  const jsonlPath = join(dir, `${base}.jsonl`);
-  const [meta, parsed, fileStat] = await Promise.all([
-    readMeta(join(dir, metaFile)),
-    parseTranscript(jsonlPath, { sidechain: true }),
-    stat(jsonlPath).catch(() => null),
+async function scanOne(dir: string, base: string, mtime: number, now: number): Promise<SubagentInfo | null> {
+  const [meta, parsed] = await Promise.all([
+    readMeta(join(dir, `${base}${META_SUFFIX}`)),
+    parseTranscript(join(dir, `${base}.jsonl`)),
   ]);
   if (!meta || !parsed) return null;
 
-  const lastAt = parsed.lastEntryAt ?? fileStat?.mtimeMs;
   let status: SubagentStatus = parsed.lastStopReason === 'end_turn' ? 'done' : 'running';
-  if (status === 'running' && fileStat && now - fileStat.mtimeMs > STALE_AFTER_MS) status = 'stale';
+  if (status === 'running' && now - mtime > STALE_AFTER_MS) status = 'stale';
 
   const running = getRunningTools(parsed).at(-1);
   return {
@@ -72,24 +68,33 @@ async function scanOne(dir: string, metaFile: string, now: number): Promise<Suba
     model: parsed.lastModel,
     status,
     startedAt: parsed.sessionStartTime,
-    lastAt,
+    lastAt: parsed.lastEntryAt ?? mtime,
     tools: parsed.completedToolCount,
-    runningTool: running ? (running.target ? `${running.name}(${running.target})` : running.name) : undefined,
+    runningTool: running ? toolLabel(running.name, running.target) : undefined,
     touchedFiles: parsed.touchedFiles,
   };
+}
+
+/**
+ * The main transcript's `<task-notification>` for an async agent (task id = agent id) is
+ * authoritative: an agent the user stopped never writes a final end_turn record of its own.
+ */
+function applyNotification(agent: SubagentInfo, notified: BackgroundTask | undefined): SubagentInfo {
+  return agent.status !== 'done' && notified && notified.status !== 'running' ? { ...agent, status: 'done' } : agent;
 }
 
 const STATUS_ORDER: Record<SubagentStatus, number> = { running: 0, stale: 1, done: 2 };
 
 /**
  * The `limit` most recently written subagents of the session at `transcriptPath`:
- * running first, then newest start.
+ * running first, then newest start. `notifications` is the main transcript's backgroundTasks.
  * A missing directory (no subagents yet) or an unreadable entry is skipped, never thrown.
  */
 export async function listSubagents(
   transcriptPath: string,
   now = Date.now(),
-  limit = MAX_SUBAGENTS
+  limit = MAX_SUBAGENTS,
+  notifications: Map<string, BackgroundTask> = new Map()
 ): Promise<SubagentInfo[]> {
   const dir = subagentsDir(transcriptPath);
   let files: string[];
@@ -100,23 +105,22 @@ export async function listSubagents(
   }
   // Only the most recently written transcripts are parsed: a long session can hold
   // hundreds, and a running agent is always among the newest writes.
-  const metas = files.filter((f) => f.endsWith(META_SUFFIX));
+  const bases = files.filter((f) => f.endsWith(META_SUFFIX)).map((f) => f.slice(0, -META_SUFFIX.length));
   const withMtime = await Promise.all(
-    metas.map(async (f) => {
-      const s = await stat(join(dir, `${f.slice(0, -META_SUFFIX.length)}.jsonl`)).catch(() => null);
-      return { f, mtime: s?.mtimeMs ?? 0 };
-    })
+    bases.map(async (base) => ({ base, mtime: (await stat(join(dir, `${base}.jsonl`)).catch(() => null))?.mtimeMs }))
   );
-  const recent = withMtime.sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+  const recent = withMtime
+    .filter((x): x is { base: string; mtime: number } => x.mtime !== undefined)
+    .sort((a, b) => b.mtime - a.mtime)
+    .slice(0, limit);
 
-  // parseTranscript keeps one in-process state slot; run sequentially so each file
-  // resumes from its persisted state rather than racing on that slot.
-  const agents: SubagentInfo[] = [];
-  for (const { f } of recent) {
-    const info = await scanOne(dir, f, now);
-    if (info) agents.push(info);
-  }
-  return agents.sort(
+  // Each file has its own persisted parse state, so the parses are independent.
+  const scanned = await Promise.all(recent.map(({ base, mtime }) => scanOne(dir, base, mtime, now)));
+  return scanned
+    .filter((a): a is SubagentInfo => a !== null)
+    .map((a) => applyNotification(a, notifications.get(a.id)))
+    .sort(
     (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.startedAt ?? 0) - (a.startedAt ?? 0)
   );
 }
+
