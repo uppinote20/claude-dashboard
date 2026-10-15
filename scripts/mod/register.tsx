@@ -58,6 +58,8 @@ let isPaneOpen = false
 // Session-scoped like the band: a new session opens on the dashboard.
 let paneView: PaneView = 'dashboard'
 let isBandOn = false
+// A /clear or resume ended the session with the band on: switchSession re-applies it under the new id.
+let bandCarriesOver = false
 // Band runs re-mark the session when they finish; off must wait for them before clearing.
 const bandRuns = new Set<Promise<void>>()
 let ticker: Timer | null = null
@@ -266,9 +268,12 @@ async function setPane($: EngineInterface, open: boolean) {
 // /clear, /resume and /branch replace the session without a new session.start: move the band
 // marker to the new id and re-read the session-scoped figures.
 async function switchSession($: EngineInterface, sessionId: string) {
-  const wasBandOn = isBandOn
-  if (wasBandOn) await stopBand($)
+  const wasBandOn = isBandOn || bandCarriesOver
+  bandCarriesOver = false
+  if (isBandOn) await stopBand($)
   snapshot.sessionId = sessionId
+  // The view is session-scoped: the new session starts on the dashboard (the ticker follows).
+  paneView = 'dashboard'
   // A failed read keeps the last value; the band must still be re-applied under the new id.
   const [usage, model] = await Promise.allSettled([$.session.usage(), $.session.model()])
   if (usage.status === 'fulfilled') applyUsage(usage.value)
@@ -408,9 +413,15 @@ export function register(on: Parameters<Register>[0]) {
   })
 
   on('session.end', async ($, e, next) => {
-    // Give statusLine back now rather than after the marker TTL.
-    if (isBandOn) await stopBand($)
-    isPaneOpen = false
+    // /clear and resume go on in this process under a new id (classic.SessionStart → switchSession):
+    // the pane stays on screen, so keep refreshing it, and carry the band over to the new id.
+    const continues = e.reason === 'clear' || e.reason === 'resume'
+    if (isBandOn) {
+      // Give statusLine back now rather than after the marker TTL.
+      await stopBand($)
+      bandCarriesOver = continues
+    }
+    if (!continues) isPaneOpen = false
     syncTicker($)
     return next(e)
   })

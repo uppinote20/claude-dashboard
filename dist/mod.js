@@ -426,6 +426,7 @@ var snapshot = { sessionId: "", model: "", cwd: "", rateLimits: [] };
 var isPaneOpen = false;
 var paneView = "dashboard";
 var isBandOn = false;
+var bandCarriesOver = false;
 var bandRuns = /* @__PURE__ */ new Set();
 var ticker = null;
 var tickerMs = 0;
@@ -606,10 +607,12 @@ async function setPane($, open) {
     await requestRefresh($);
 }
 async function switchSession($, sessionId) {
-  const wasBandOn = isBandOn;
-  if (wasBandOn)
+  const wasBandOn = isBandOn || bandCarriesOver;
+  bandCarriesOver = false;
+  if (isBandOn)
     await stopBand($);
   snapshot.sessionId = sessionId;
+  paneView = "dashboard";
   const [usage, model] = await Promise.allSettled([$.session.usage(), $.session.model()]);
   if (usage.status === "fulfilled")
     applyUsage(usage.value);
@@ -719,9 +722,13 @@ function register(on) {
     return drawLines(Box, Text, lines);
   });
   on("session.end", async ($, e, next) => {
-    if (isBandOn)
+    const continues = e.reason === "clear" || e.reason === "resume";
+    if (isBandOn) {
       await stopBand($);
-    isPaneOpen = false;
+      bandCarriesOver = continues;
+    }
+    if (!continues)
+      isPaneOpen = false;
     syncTicker($);
     return next(e);
   });

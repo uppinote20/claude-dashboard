@@ -5310,9 +5310,11 @@ async function scanOne(dir, base, mtime, now) {
   };
 }
 function applyNotification(agent, notified) {
-  return agent.status !== "done" && notified && notified.status !== "running" ? { ...agent, status: "done" } : agent;
+  if (agent.status === "done" || !notified || notified.status === "running")
+    return agent;
+  return notified.status === "completed" ? { ...agent, status: "done" } : { ...agent, status: "failed", endStatus: notified.status };
 }
-var STATUS_ORDER = { running: 0, stale: 1, done: 2 };
+var STATUS_ORDER = { running: 0, stale: 1, failed: 2, done: 3 };
 async function listSubagents(transcriptPath, now = Date.now(), limit = MAX_SUBAGENTS, notifications = /* @__PURE__ */ new Map()) {
   const dir = subagentsDir(transcriptPath);
   let files;
@@ -5339,7 +5341,8 @@ function makeViewContext(ctx, transcript, now) {
   return { ctx, transcript, t: ctx.translations.paneViews, theme: getTheme(), now };
 }
 function isSessionIdle(v) {
-  return v.now - (v.transcript.lastEntryAt ?? 0) > STALE_AFTER_MS;
+  const last = v.transcript.lastEntryAt;
+  return last !== void 0 && v.now - last > STALE_AFTER_MS;
 }
 function header(v, icon, title, ...extra) {
   const head = `${icon} ${v.theme.bold}${title}${RESET}`;
@@ -5389,7 +5392,7 @@ function renderTurns(v) {
     const isLast = i === recent.length - 1;
     const number = transcript.turnCount - (recent.length - 1 - i);
     const elapsed = formatElapsed((isLast && lastRunning ? now : turn.lastAt) - turn.at);
-    const marker = isLast ? colorize("\u25B6", theme.accent) : " ";
+    const marker = isLast && lastRunning ? colorize("\u25B6", theme.accent) : " ";
     const prompt = colorize(truncate(turn.prompt, PROMPT_CHARS), isLast ? theme.accent : theme.model);
     const meta = [
       elapsed,
@@ -5421,6 +5424,10 @@ function renderAgents(v, agents) {
     ].filter(Boolean).join("  ");
     if (a.status === "done") {
       lines.push(dim(v, `\u2713 ${a.type}  ${details}`));
+      continue;
+    }
+    if (a.status === "failed") {
+      lines.push(`${colorize(`\u2717 ${a.endStatus}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
       continue;
     }
     const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : "";
