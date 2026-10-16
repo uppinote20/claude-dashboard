@@ -57,14 +57,44 @@
     "errorFetching": "데이터 가져오기 오류",
     "noData": "사용량 데이터 없음"
   },
+  "paneViews": {
+    "turns": "턴",
+    "agents": "에이전트",
+    "files": "파일",
+    "todos": "할 일",
+    "errors": "에러",
+    "background": "백그라운드",
+    "emptyTurns": "아직 입력이 없습니다",
+    "emptyAgents": "이 세션에 서브에이전트가 없습니다",
+    "emptyFiles": "아직 수정한 파일이 없습니다",
+    "emptyTodos": "아직 할 일 목록이 없습니다",
+    "emptyErrors": "실패한 도구가 없습니다",
+    "emptyBackground": "백그라운드 작업이 없습니다",
+    "noTranscript": "아직 transcript가 없습니다",
+    "running": "진행 중",
+    "done": "완료",
+    "stale": "멈춤",
+    "main": "메인",
+    "agentsSuffix": "에이전트"
+  },
   "mod": {
     "paneTitle": "대시보드",
     "paneOpened": "대시보드 패널을 열었습니다.",
     "paneClosed": "대시보드 패널을 닫았습니다.",
     "bandOn": "대시보드 밴드 켜짐 — 이 세션의 statusLine을 숨깁니다 (터미널/데스크톱 전용).",
     "bandOff": "대시보드 밴드 꺼짐 — statusLine을 복원했습니다.",
-    "paneUsage": "사용법: /claude-dashboard-pane [on|off]",
+    "paneUsage": "사용법: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     "bandUsage": "사용법: /claude-dashboard-band [on|off]",
-    "renderFailed": "대시보드 렌더 실패"
+    "renderFailed": "대시보드 렌더 실패",
+    "paneViewSwitched": "대시보드 패널 보기:",
+    "tabs": {
+      "dashboard": "대시",
+      "turns": "턴",
+      "agents": "에이전트",
+      "files": "파일",
+      "todos": "할 일",
+      "errors": "에러",
+      "bg": "백그라운드"
+    }
   }
 }

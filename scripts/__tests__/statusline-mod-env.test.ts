@@ -54,6 +54,13 @@ describe('renderer under mod env', () => {
     expect(run().trim()).toBe('');
   });
 
+  it('pane session view replaces the widget dashboard', () => {
+    // STDIN carries no transcript_path, so the view reports it instead of widgets.
+    const out = run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane', CLAUDE_DASHBOARD_PANE_VIEW: 'turns' });
+    expect(out).toContain('Transcript not available yet');
+    expect(out).not.toContain('42%');
+  });
+
   it('pane render is not suppressed by an active band', () => {
     run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_BAND_SESSION: SID });
     const out = run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane' });

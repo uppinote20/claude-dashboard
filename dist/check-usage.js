@@ -2129,7 +2129,12 @@ var ICON = {
   snowflake: "\u2744\uFE0F",
   speech: "\u{1F4AC}\uFE0F",
   target: "\u{1F3AF}\uFE0F",
-  key: "\u{1F511}\uFE0F"
+  key: "\u{1F511}\uFE0F",
+  scroll: "\u{1F4DC}\uFE0F",
+  wrench: "\u{1F527}\uFE0F",
+  pencil: "\u270F\uFE0F",
+  clipboard: "\u{1F4CB}\uFE0F",
+  noEntry: "\u{1F6AB}\uFE0F"
 };
 
 // locales/en.json
@@ -2192,15 +2197,45 @@ var en_default = {
     errorFetching: "Error fetching data",
     noData: "No usage data available"
   },
+  paneViews: {
+    turns: "Turns",
+    agents: "Agents",
+    files: "Files",
+    todos: "Todos",
+    errors: "Errors",
+    background: "Background",
+    emptyTurns: "No prompts yet",
+    emptyAgents: "No subagents in this session",
+    emptyFiles: "No files written yet",
+    emptyTodos: "No todo list yet",
+    emptyErrors: "No failed tools",
+    emptyBackground: "No background jobs",
+    noTranscript: "Transcript not available yet",
+    running: "running",
+    done: "done",
+    stale: "stale",
+    main: "main",
+    agentsSuffix: "agents"
+  },
   mod: {
     paneTitle: "Dashboard",
     paneOpened: "Dashboard pane opened.",
     paneClosed: "Dashboard pane closed.",
     bandOn: "Dashboard band on \u2014 statusLine hidden for this session (terminal/desktop only).",
     bandOff: "Dashboard band off \u2014 statusLine restored.",
-    paneUsage: "Usage: /claude-dashboard-pane [on|off]",
+    paneUsage: "Usage: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "Usage: /claude-dashboard-band [on|off]",
-    renderFailed: "Dashboard render failed"
+    renderFailed: "Dashboard render failed",
+    paneViewSwitched: "Dashboard pane view:",
+    tabs: {
+      dashboard: "Dash",
+      turns: "Turns",
+      agents: "Agents",
+      files: "Files",
+      todos: "Todos",
+      errors: "Errors",
+      bg: "Bg"
+    }
   }
 };
 
@@ -2264,15 +2299,45 @@ var ko_default = {
     errorFetching: "\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30 \uC624\uB958",
     noData: "\uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130 \uC5C6\uC74C"
   },
+  paneViews: {
+    turns: "\uD134",
+    agents: "\uC5D0\uC774\uC804\uD2B8",
+    files: "\uD30C\uC77C",
+    todos: "\uD560 \uC77C",
+    errors: "\uC5D0\uB7EC",
+    background: "\uBC31\uADF8\uB77C\uC6B4\uB4DC",
+    emptyTurns: "\uC544\uC9C1 \uC785\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyAgents: "\uC774 \uC138\uC158\uC5D0 \uC11C\uBE0C\uC5D0\uC774\uC804\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyFiles: "\uC544\uC9C1 \uC218\uC815\uD55C \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyTodos: "\uC544\uC9C1 \uD560 \uC77C \uBAA9\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyErrors: "\uC2E4\uD328\uD55C \uB3C4\uAD6C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyBackground: "\uBC31\uADF8\uB77C\uC6B4\uB4DC \uC791\uC5C5\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noTranscript: "\uC544\uC9C1 transcript\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    running: "\uC9C4\uD589 \uC911",
+    done: "\uC644\uB8CC",
+    stale: "\uBA48\uCDA4",
+    main: "\uBA54\uC778",
+    agentsSuffix: "\uC5D0\uC774\uC804\uD2B8"
+  },
   mod: {
     paneTitle: "\uB300\uC2DC\uBCF4\uB4DC",
     paneOpened: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uC5F4\uC5C8\uC2B5\uB2C8\uB2E4.",
     paneClosed: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uB2EB\uC558\uC2B5\uB2C8\uB2E4.",
     bandOn: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uCF1C\uC9D0 \u2014 \uC774 \uC138\uC158\uC758 statusLine\uC744 \uC228\uAE41\uB2C8\uB2E4 (\uD130\uBBF8\uB110/\uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9).",
     bandOff: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uAEBC\uC9D0 \u2014 statusLine\uC744 \uBCF5\uC6D0\uD588\uC2B5\uB2C8\uB2E4.",
-    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off]",
+    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-band [on|off]",
-    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328"
+    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328",
+    paneViewSwitched: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110 \uBCF4\uAE30:",
+    tabs: {
+      dashboard: "\uB300\uC2DC",
+      turns: "\uD134",
+      agents: "\uC5D0\uC774\uC804\uD2B8",
+      files: "\uD30C\uC77C",
+      todos: "\uD560 \uC77C",
+      errors: "\uC5D0\uB7EC",
+      bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
+    }
   }
 };
 

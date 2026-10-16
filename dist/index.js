@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 // scripts/statusline.ts
-import { readFile as readFile11, stat as stat12 } from "fs/promises";
-import { join as join8 } from "path";
-import { homedir as homedir4 } from "os";
+import { readFile as readFile12, stat as stat13 } from "fs/promises";
+import { join as join9 } from "path";
+import { homedir as homedir5 } from "os";
 
 // scripts/types.ts
 var DISPLAY_PRESETS = {
@@ -492,7 +492,12 @@ var ICON = {
   snowflake: "\u2744\uFE0F",
   speech: "\u{1F4AC}\uFE0F",
   target: "\u{1F3AF}\uFE0F",
-  key: "\u{1F511}\uFE0F"
+  key: "\u{1F511}\uFE0F",
+  scroll: "\u{1F4DC}\uFE0F",
+  wrench: "\u{1F527}\uFE0F",
+  pencil: "\u270F\uFE0F",
+  clipboard: "\u{1F4CB}\uFE0F",
+  noEntry: "\u{1F6AB}\uFE0F"
 };
 
 // scripts/utils/api-client.ts
@@ -965,15 +970,45 @@ var en_default = {
     errorFetching: "Error fetching data",
     noData: "No usage data available"
   },
+  paneViews: {
+    turns: "Turns",
+    agents: "Agents",
+    files: "Files",
+    todos: "Todos",
+    errors: "Errors",
+    background: "Background",
+    emptyTurns: "No prompts yet",
+    emptyAgents: "No subagents in this session",
+    emptyFiles: "No files written yet",
+    emptyTodos: "No todo list yet",
+    emptyErrors: "No failed tools",
+    emptyBackground: "No background jobs",
+    noTranscript: "Transcript not available yet",
+    running: "running",
+    done: "done",
+    stale: "stale",
+    main: "main",
+    agentsSuffix: "agents"
+  },
   mod: {
     paneTitle: "Dashboard",
     paneOpened: "Dashboard pane opened.",
     paneClosed: "Dashboard pane closed.",
     bandOn: "Dashboard band on \u2014 statusLine hidden for this session (terminal/desktop only).",
     bandOff: "Dashboard band off \u2014 statusLine restored.",
-    paneUsage: "Usage: /claude-dashboard-pane [on|off]",
+    paneUsage: "Usage: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "Usage: /claude-dashboard-band [on|off]",
-    renderFailed: "Dashboard render failed"
+    renderFailed: "Dashboard render failed",
+    paneViewSwitched: "Dashboard pane view:",
+    tabs: {
+      dashboard: "Dash",
+      turns: "Turns",
+      agents: "Agents",
+      files: "Files",
+      todos: "Todos",
+      errors: "Errors",
+      bg: "Bg"
+    }
   }
 };
 
@@ -1037,15 +1072,45 @@ var ko_default = {
     errorFetching: "\uB370\uC774\uD130 \uAC00\uC838\uC624\uAE30 \uC624\uB958",
     noData: "\uC0AC\uC6A9\uB7C9 \uB370\uC774\uD130 \uC5C6\uC74C"
   },
+  paneViews: {
+    turns: "\uD134",
+    agents: "\uC5D0\uC774\uC804\uD2B8",
+    files: "\uD30C\uC77C",
+    todos: "\uD560 \uC77C",
+    errors: "\uC5D0\uB7EC",
+    background: "\uBC31\uADF8\uB77C\uC6B4\uB4DC",
+    emptyTurns: "\uC544\uC9C1 \uC785\uB825\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyAgents: "\uC774 \uC138\uC158\uC5D0 \uC11C\uBE0C\uC5D0\uC774\uC804\uD2B8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyFiles: "\uC544\uC9C1 \uC218\uC815\uD55C \uD30C\uC77C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyTodos: "\uC544\uC9C1 \uD560 \uC77C \uBAA9\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyErrors: "\uC2E4\uD328\uD55C \uB3C4\uAD6C\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    emptyBackground: "\uBC31\uADF8\uB77C\uC6B4\uB4DC \uC791\uC5C5\uC774 \uC5C6\uC2B5\uB2C8\uB2E4",
+    noTranscript: "\uC544\uC9C1 transcript\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4",
+    running: "\uC9C4\uD589 \uC911",
+    done: "\uC644\uB8CC",
+    stale: "\uBA48\uCDA4",
+    main: "\uBA54\uC778",
+    agentsSuffix: "\uC5D0\uC774\uC804\uD2B8"
+  },
   mod: {
     paneTitle: "\uB300\uC2DC\uBCF4\uB4DC",
     paneOpened: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uC5F4\uC5C8\uC2B5\uB2C8\uB2E4.",
     paneClosed: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110\uC744 \uB2EB\uC558\uC2B5\uB2C8\uB2E4.",
     bandOn: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uCF1C\uC9D0 \u2014 \uC774 \uC138\uC158\uC758 statusLine\uC744 \uC228\uAE41\uB2C8\uB2E4 (\uD130\uBBF8\uB110/\uB370\uC2A4\uD06C\uD1B1 \uC804\uC6A9).",
     bandOff: "\uB300\uC2DC\uBCF4\uB4DC \uBC34\uB4DC \uAEBC\uC9D0 \u2014 statusLine\uC744 \uBCF5\uC6D0\uD588\uC2B5\uB2C8\uB2E4.",
-    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off]",
+    paneUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     bandUsage: "\uC0AC\uC6A9\uBC95: /claude-dashboard-band [on|off]",
-    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328"
+    renderFailed: "\uB300\uC2DC\uBCF4\uB4DC \uB80C\uB354 \uC2E4\uD328",
+    paneViewSwitched: "\uB300\uC2DC\uBCF4\uB4DC \uD328\uB110 \uBCF4\uAE30:",
+    tabs: {
+      dashboard: "\uB300\uC2DC",
+      turns: "\uD134",
+      agents: "\uC5D0\uC774\uC804\uD2B8",
+      files: "\uD30C\uC77C",
+      todos: "\uD560 \uC77C",
+      errors: "\uC5D0\uB7EC",
+      bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
+    }
   }
 };
 
@@ -1188,6 +1253,24 @@ function formatWindowLabel(windowSeconds, fallback, t) {
 }
 function osc8Link(url, text) {
   return `\x1B]8;;${url}\x1B\\${text}\x1B]8;;\x1B\\`;
+}
+var SPARK_BARS = "\u2581\u2582\u2583\u2584\u2585\u2586\u2587\u2588";
+function sparkline(values) {
+  const max = Math.max(0, ...values);
+  return values.map((v) => {
+    if (max === 0 || !(v > 0))
+      return SPARK_BARS[0];
+    return SPARK_BARS[Math.min(SPARK_BARS.length - 1, Math.round(v / max * (SPARK_BARS.length - 1)))];
+  }).join("");
+}
+function formatElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1e3));
+  if (totalSeconds < 60)
+    return `${totalSeconds}s`;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 60)
+    return `${totalMinutes}m${String(totalSeconds % 60).padStart(2, "0")}s`;
+  return `${Math.floor(totalMinutes / 60)}h${String(totalMinutes % 60).padStart(2, "0")}m`;
 }
 
 // scripts/utils/provider.ts
@@ -1926,6 +2009,7 @@ var sessionDurationWidget = {
 import { open as open2, readFile as readFile6, stat as stat6 } from "fs/promises";
 import { basename as basename2 } from "path";
 var cachedTranscript = null;
+var SUBAGENT_TRANSCRIPT_RE = /[\\/]subagents[\\/]agent-[^\\/]+\.jsonl$/;
 var HEAD_BYTES = 1024;
 function createParsedTranscript() {
   return {
@@ -1944,8 +2028,109 @@ function createParsedTranscript() {
     sessionRequestMs: 0,
     sessionConsumedTokens: 0,
     lastRequestOutput: 0,
-    lastRequestInput: 0
+    lastRequestInput: 0,
+    turns: [],
+    turnCount: 0,
+    touchedFiles: /* @__PURE__ */ new Map(),
+    toolErrors: [],
+    backgroundTasks: /* @__PURE__ */ new Map()
   };
+}
+var MAX_TURNS = 50;
+var MAX_TOUCHED_FILES = 200;
+var MAX_TOOL_ERRORS = 30;
+var MAX_BACKGROUND_TASKS = 30;
+var LINE_MAX_CHARS = 120;
+var FILE_WRITE_TOOLS = {
+  Edit: "file_path",
+  Write: "file_path",
+  MultiEdit: "file_path",
+  NotebookEdit: "notebook_path"
+};
+var COMMAND_ARGS_RE = /<command-args>([^<]*)<\/command-args>/;
+var BASH_INPUT_RE = /^<bash-input>([\s\S]*?)<\/bash-input>/;
+var SYSTEM_REMINDER_RE = /<system-reminder>[\s\S]*?<\/system-reminder>/g;
+var BACKGROUND_ID_RE = /running in background with ID: ([\w-]+)/;
+var BACKGROUND_TOOLS = /* @__PURE__ */ new Set(["Bash", "Monitor"]);
+var ASYNC_AGENT_ID_RE = /launched[\s\S]*?agentId: ([\w-]+)/i;
+function isAgentTool(name) {
+  return name === "Agent" || name === "Task";
+}
+function toolLabel(name, target) {
+  return target ? `${name}(${target})` : name;
+}
+function oneLine(text, max) {
+  return truncate(text.replace(/\s+/g, " ").trim(), max);
+}
+function promptText(content) {
+  if (typeof content === "string")
+    return content;
+  if (content.some((b) => b.type === "tool_result"))
+    return null;
+  return content.filter((b) => b.type === "text" && typeof b.text === "string").map((b) => b.text).join("\n");
+}
+function classifyText(raw) {
+  const text = (raw.includes("<system-reminder>") ? raw.replace(SYSTEM_REMINDER_RE, "") : raw).trim();
+  if (!text)
+    return null;
+  const cmd = text.match(SLASH_COMMAND_TAG_RE);
+  if (cmd) {
+    const name = cmd[1].trim();
+    if (!name.startsWith("/"))
+      return null;
+    const args = text.match(COMMAND_ARGS_RE)?.[1] ?? "";
+    return oneLine(`${name} ${args}`, LINE_MAX_CHARS);
+  }
+  const bash = text.match(BASH_INPUT_RE);
+  if (bash)
+    return oneLine(`!${bash[1]}`, LINE_MAX_CHARS);
+  if (text.startsWith("<"))
+    return null;
+  return oneLine(text, LINE_MAX_CHARS);
+}
+function toolResultText(content) {
+  if (typeof content === "string")
+    return content;
+  if (!Array.isArray(content))
+    return "";
+  return content.map((b) => b && typeof b === "object" && typeof b.text === "string" ? b.text : "").join("\n");
+}
+function errorMessage(text) {
+  const cleaned = text.replace(/<\/?tool_use_error>/g, "").trim();
+  return oneLine(cleaned.split("\n")[0] ?? "", LINE_MAX_CHARS);
+}
+function capMap(map, max) {
+  for (const key of map.keys()) {
+    if (map.size <= max)
+      break;
+    map.delete(key);
+  }
+}
+function pushCapped(list, item, max) {
+  list.push(item);
+  if (list.length > max)
+    list.splice(0, list.length - max);
+}
+function xmlTag(text, tag) {
+  const open4 = `<${tag}>`;
+  const start = text.indexOf(open4);
+  if (start < 0)
+    return void 0;
+  const end = text.indexOf(`</${tag}>`, start);
+  return end < 0 ? void 0 : text.slice(start + open4.length, end).trim();
+}
+function applyTaskNotification(existing, text, at) {
+  const id = xmlTag(text, "task-id");
+  if (!id)
+    return;
+  const task = existing.backgroundTasks.get(id);
+  if (!task)
+    return;
+  task.status = xmlTag(text, "status") ?? "completed";
+  const summary = xmlTag(text, "summary");
+  if (summary)
+    task.summary = oneLine(summary, LINE_MAX_CHARS);
+  task.endedAt = at;
 }
 var SLASH_COMMAND_TAG_RE = /<command-name>([^<]+)<\/command-name>/;
 function parseJsonlContent(content) {
@@ -1960,8 +2145,12 @@ function parseJsonlContent(content) {
   }
   return entries;
 }
-function processEntries(entries, existing) {
+function processEntries(entries, existing, sidechain = false) {
   for (const entry of entries) {
+    const isMain = sidechain || !entry.isSidechain;
+    const at = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
+    if (isMain)
+      trackThread(existing, entry, at);
     if (!existing.sessionStartTime && entry.timestamp) {
       existing.sessionStartTime = new Date(entry.timestamp).getTime();
     }
@@ -1978,7 +2167,13 @@ function processEntries(entries, existing) {
             input: retainToolInput(block.name, block.input)
           });
           existing.runningToolIds.add(block.id);
-          if (block.name === "Agent" || block.name === "Task") {
+          const turn = isMain ? existing.turns.at(-1) : void 0;
+          if (turn) {
+            turn.tools++;
+            if (isAgentTool(block.name))
+              turn.agents++;
+          }
+          if (isAgentTool(block.name)) {
             existing.activeAgentIds.add(block.id);
           }
           if (block.name === "TaskCreate") {
@@ -2056,6 +2251,8 @@ function processEntries(entries, existing) {
           if (tool?.name === "TodoWrite") {
             existing.lastTodoWriteInput = tool.input;
           }
+          if (isMain)
+            trackToolResult(existing, block, tool, Number.isFinite(at) ? at : Date.now());
           const pendingCreate = existing.pendingTaskCreates.get(block.tool_use_id);
           if (pendingCreate) {
             existing.tasks.set(pendingCreate.seqId, {
@@ -2079,7 +2276,69 @@ function processEntries(entries, existing) {
         }
       }
     }
-    accountTokens(existing, entry);
+    accountTokens(existing, entry, isMain, at);
+  }
+}
+function trackThread(existing, entry, at) {
+  if (Number.isFinite(at))
+    existing.lastEntryAt = at;
+  if (entry.type === "assistant") {
+    const model = entry.message?.model;
+    if (model && !model.startsWith("<"))
+      existing.lastModel = model;
+    existing.lastStopReason = entry.message?.stop_reason ?? void 0;
+    const turn2 = existing.turns.at(-1);
+    if (turn2 && Number.isFinite(at))
+      turn2.lastAt = at;
+    return;
+  }
+  if (entry.type !== "user" || entry.message?.content === void 0)
+    return;
+  const text = promptText(entry.message.content);
+  const isNotification = text?.trimStart().startsWith("<task-notification>") ?? false;
+  if (isNotification)
+    applyTaskNotification(existing, text, Number.isFinite(at) ? at : Date.now());
+  const prompt = text === null || isNotification || entry.isMeta ? null : classifyText(text);
+  if (text === null || isNotification || prompt !== null)
+    existing.lastStopReason = void 0;
+  if (prompt === null || !Number.isFinite(at))
+    return;
+  const turn = { at, prompt, lastAt: at, tokensIn: 0, tokensOut: 0, tools: 0, agents: 0 };
+  pushCapped(existing.turns, turn, MAX_TURNS);
+  existing.turnCount++;
+}
+function trackToolResult(existing, block, tool, at) {
+  if (block.is_error) {
+    pushCapped(
+      existing.toolErrors,
+      { at, tool: tool?.name ?? "Tool", target: tool?.target, message: errorMessage(toolResultText(block.content)) },
+      MAX_TOOL_ERRORS
+    );
+    return;
+  }
+  if (!tool)
+    return;
+  const pathField = FILE_WRITE_TOOLS[tool.name];
+  const filePath = pathField ? tool.input?.[pathField] : void 0;
+  if (typeof filePath === "string") {
+    const prev = existing.touchedFiles.get(filePath);
+    existing.touchedFiles.set(filePath, { edits: (prev?.edits ?? 0) + 1, lastAt: at });
+    capMap(existing.touchedFiles, MAX_TOUCHED_FILES);
+  }
+  const isAgent = isAgentTool(tool.name);
+  if (!isAgent && !BACKGROUND_TOOLS.has(tool.name))
+    return;
+  const text = toolResultText(block.content);
+  const id = text.match(isAgent ? ASYNC_AGENT_ID_RE : BACKGROUND_ID_RE)?.[1];
+  if (id) {
+    const description = tool.input?.description;
+    existing.backgroundTasks.set(id, {
+      kind: isAgent ? "agent" : tool.name === "Bash" ? "bash" : "other",
+      description: typeof description === "string" ? oneLine(description, LINE_MAX_CHARS) : tool.target,
+      startedAt: at,
+      status: "running"
+    });
+    capMap(existing.backgroundTasks, MAX_BACKGROUND_TASKS);
   }
 }
 function isMeasured(outputTokens, durationMs) {
@@ -2088,12 +2347,11 @@ function isMeasured(outputTokens, durationMs) {
 function tokenCount(value) {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
-function accountTokens(existing, entry) {
-  if (entry.isSidechain)
+function accountTokens(existing, entry, isMain, t) {
+  if (!isMain)
     return;
   if (entry.type !== "user" && entry.type !== "assistant")
     return;
-  const t = entry.timestamp ? Date.parse(entry.timestamp) : NaN;
   if (entry.type === "user") {
     if (Number.isFinite(t))
       existing.lastBoundaryAt = t;
@@ -2120,6 +2378,11 @@ function accountTokens(existing, entry) {
     tokenCount(usage?.input_tokens) + tokenCount(usage?.cache_creation_input_tokens)
   );
   existing.sessionConsumedTokens += existing.lastRequestInput - prevIn + existing.lastRequestOutput - prevOut;
+  const turn = existing.turns.at(-1);
+  if (turn) {
+    turn.tokensIn += existing.lastRequestInput - prevIn;
+    turn.tokensOut += existing.lastRequestOutput - prevOut;
+  }
   const start = existing.lastRequestStartAt;
   if (Number.isFinite(t) && start !== void 0 && t > start) {
     existing.lastRequestDurationMs = t - start;
@@ -2223,7 +2486,7 @@ async function parseTranscript(transcriptPath) {
     if (state.size < fileSize) {
       const { content, nextOffset } = await readCompleteLines(transcriptPath, state.size, fileSize);
       if (nextOffset > state.size) {
-        processEntries(parseJsonlContent(content), state.data);
+        processEntries(parseJsonlContent(content), state.data, SUBAGENT_TRANSCRIPT_RE.test(transcriptPath));
         if (state.size < HEAD_BYTES)
           state.head = await readHead(transcriptPath, nextOffset);
         state.size = nextOffset;
@@ -2246,6 +2509,15 @@ function retainToolInput(name, input) {
       return { description: inp.description, subagent_type: inp.subagent_type, model: inp.model };
     case "TodoWrite":
       return { todos: inp.todos };
+    case "Bash":
+    case "Monitor":
+      return typeof inp.description === "string" ? { description: inp.description } : void 0;
+    case "Edit":
+    case "Write":
+    case "MultiEdit":
+      return { file_path: inp.file_path };
+    case "NotebookEdit":
+      return { notebook_path: inp.notebook_path };
     default:
       return void 0;
   }
@@ -2258,7 +2530,10 @@ function extractToolTarget(name, input) {
     case "Read":
     case "Write":
     case "Edit":
+    case "MultiEdit":
       return typeof inp.file_path === "string" ? basename2(inp.file_path) : void 0;
+    case "NotebookEdit":
+      return typeof inp.notebook_path === "string" ? basename2(inp.notebook_path) : void 0;
     case "Glob":
     case "Grep":
       return typeof inp.pattern === "string" ? truncate(inp.pattern, 20) : void 0;
@@ -2380,6 +2655,15 @@ function resolveSubagentModel(subagentType, explicitModel, env = process.env) {
 }
 function getActiveSlashCommand(transcript) {
   return transcript.activeSlashCommand;
+}
+function extractTodoList(transcript) {
+  if (transcript.tasks.size > 0) {
+    return [...transcript.tasks.values()].map((t) => ({ content: t.subject, status: t.status }));
+  }
+  const input = transcript.lastTodoWriteInput;
+  if (!input || !Array.isArray(input.todos))
+    return [];
+  return input.todos.filter((t) => typeof t.content === "string").map((t) => ({ content: t.content, status: normalizeTaskStatus(String(t.status ?? "pending")) }));
 }
 
 // scripts/widgets/tool-activity.ts
@@ -4935,6 +5219,12 @@ async function formatOutput(ctx) {
   return lines.join("\n");
 }
 
+// scripts/mod/toggle.ts
+var PANE_VIEWS = ["dashboard", "turns", "agents", "files", "todos", "errors", "bg"];
+function isPaneView(value) {
+  return value !== void 0 && PANE_VIEWS.includes(value);
+}
+
 // scripts/utils/render-mode.ts
 var MOD_UNAVAILABLE_WIDGETS = ["cacheHit"];
 var SURFACES = ["pane", "band"];
@@ -4951,7 +5241,10 @@ function resolveRenderMode(env) {
     return { fromMod: true, surface: "band", markSession: env.CLAUDE_DASHBOARD_BAND_SESSION };
   }
   const requested = env.CLAUDE_DASHBOARD_SURFACE;
-  return requested && SURFACES.includes(requested) ? { fromMod: true, surface: requested } : { fromMod: true };
+  if (!requested || !SURFACES.includes(requested))
+    return { fromMod: true };
+  const view = env.CLAUDE_DASHBOARD_PANE_VIEW;
+  return requested === "pane" && isPaneView(view) && view !== "dashboard" ? { fromMod: true, surface: requested, paneView: view } : { fromMod: true, surface: requested };
 }
 function resolveModLayout(config, surface, isWidget = () => true) {
   const fallback = surface === "pane" ? { displayMode: "detailed", lines: void 0 } : {};
@@ -4975,8 +5268,329 @@ function customLines(value, isWidget) {
   ).filter((line) => line.length > 0);
 }
 
+// scripts/utils/subagents.ts
+import { readdir as readdir4, readFile as readFile11, stat as stat11 } from "fs/promises";
+import { join as join8 } from "path";
+var STALE_AFTER_MS = 10 * 60 * 1e3;
+var MAX_SUBAGENTS = 20;
+var META_SUFFIX = ".meta.json";
+function subagentsDir(transcriptPath) {
+  return join8(transcriptPath.replace(/\.jsonl$/, ""), "subagents");
+}
+async function readMeta(path6) {
+  try {
+    const meta = JSON.parse(await readFile11(path6, "utf-8"));
+    return meta && typeof meta === "object" ? meta : null;
+  } catch {
+    return null;
+  }
+}
+async function scanOne(dir, base, mtime, now) {
+  const [meta, parsed] = await Promise.all([
+    readMeta(join8(dir, `${base}${META_SUFFIX}`)),
+    parseTranscript(join8(dir, `${base}.jsonl`))
+  ]);
+  if (!meta || !parsed)
+    return null;
+  let status = parsed.lastStopReason === "end_turn" ? "done" : "running";
+  if (status === "running" && now - mtime > STALE_AFTER_MS)
+    status = "stale";
+  const running = getRunningTools(parsed).at(-1);
+  return {
+    id: base.replace(/^agent-/, ""),
+    type: typeof meta.agentType === "string" ? meta.agentType : "agent",
+    description: typeof meta.description === "string" ? meta.description : void 0,
+    model: parsed.lastModel,
+    status,
+    startedAt: parsed.sessionStartTime,
+    lastAt: parsed.lastEntryAt ?? mtime,
+    tools: parsed.completedToolCount,
+    runningTool: running ? toolLabel(running.name, running.target) : void 0,
+    touchedFiles: parsed.touchedFiles
+  };
+}
+function applyNotification(agent, notified) {
+  if (agent.status === "done" || !notified || notified.status === "running")
+    return agent;
+  return notified.status === "completed" ? { ...agent, status: "done" } : { ...agent, status: "failed", endStatus: notified.status };
+}
+var STATUS_ORDER = { running: 0, stale: 1, failed: 2, done: 3 };
+async function listSubagents(transcriptPath, now = Date.now(), limit = MAX_SUBAGENTS, notifications = /* @__PURE__ */ new Map()) {
+  const dir = subagentsDir(transcriptPath);
+  let files;
+  try {
+    files = await readdir4(dir);
+  } catch {
+    return [];
+  }
+  const bases = files.filter((f) => f.endsWith(META_SUFFIX)).map((f) => f.slice(0, -META_SUFFIX.length));
+  const withMtime = await Promise.all(
+    bases.map(async (base) => ({ base, mtime: (await stat11(join8(dir, `${base}.jsonl`)).catch(() => null))?.mtimeMs }))
+  );
+  const recent = withMtime.filter((x) => x.mtime !== void 0).sort((a, b) => b.mtime - a.mtime).slice(0, limit);
+  const scanned = await Promise.all(recent.map(({ base, mtime }) => scanOne(dir, base, mtime, now)));
+  return scanned.filter((a) => a !== null).map((a) => applyNotification(a, notifications.get(a.id))).sort(
+    (a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || (b.startedAt ?? 0) - (a.startedAt ?? 0)
+  );
+}
+
+// scripts/views/shared.ts
+import { relative as relative2, isAbsolute, sep } from "path";
+import { homedir as homedir4 } from "os";
+function makeViewContext(ctx, transcript, now) {
+  return { ctx, transcript, t: ctx.translations.paneViews, theme: getTheme(), now };
+}
+function isSessionIdle(v) {
+  const last = v.transcript.lastEntryAt;
+  return last !== void 0 && v.now - last > STALE_AFTER_MS;
+}
+function header(v, icon, title, ...extra) {
+  const head = `${icon} ${v.theme.bold}${title}${RESET}`;
+  return [head, ...extra.filter(Boolean)].join(colorize(" \xB7 ", v.theme.secondary));
+}
+function emptyView(v, icon, title, empty) {
+  return [header(v, icon, title), colorize(`  ${empty}`, v.theme.secondary)];
+}
+function runningMarker(v, stale) {
+  return stale ? colorize(`? ${v.t.stale}`, v.theme.warning) : colorize("\u25B6", v.theme.safe);
+}
+function dim(v, text) {
+  return `${v.theme.dim}${text}${RESET}`;
+}
+function clock(ms) {
+  const d = new Date(ms);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+function modelLabel(model) {
+  const { family, version } = parseModelName(model);
+  return version ? `${family} ${version}` : family;
+}
+function displayPath(path6, base) {
+  if (base && isAbsolute(path6)) {
+    const rel = relative2(base, path6);
+    if (rel && !rel.startsWith("..") && !isAbsolute(rel))
+      return rel;
+  }
+  const home = homedir4();
+  return path6.startsWith(home + sep) ? `~${path6.slice(home.length)}` : path6;
+}
+
+// scripts/views/turns.ts
+var MAX_TURN_LINES = 20;
+var PROMPT_CHARS = 48;
+function renderTurns(v) {
+  const { transcript, t, theme, now } = v;
+  const turns = transcript.turns;
+  if (turns.length === 0)
+    return emptyView(v, ICON.scroll, t.turns, t.emptyTurns);
+  const recent = turns.slice(-MAX_TURN_LINES);
+  const spark = colorize(sparkline(recent.map((x) => x.tokensIn + x.tokensOut)), theme.info);
+  const lines = [header(v, ICON.scroll, t.turns, String(transcript.turnCount), spark)];
+  const lastRunning = transcript.lastStopReason !== "end_turn" && !isSessionIdle(v);
+  for (let i = recent.length - 1; i >= 0; i--) {
+    const turn = recent[i];
+    const isLast = i === recent.length - 1;
+    const number = transcript.turnCount - (recent.length - 1 - i);
+    const elapsed = formatElapsed((isLast && lastRunning ? now : turn.lastAt) - turn.at);
+    const marker = isLast && lastRunning ? colorize("\u25B6", theme.accent) : " ";
+    const prompt = colorize(truncate(turn.prompt, PROMPT_CHARS), isLast ? theme.accent : theme.model);
+    const meta = [
+      elapsed,
+      `\u2191${formatTokens(turn.tokensIn)} \u2193${formatTokens(turn.tokensOut)}`,
+      // turn.tools counts every call, agents included; show them in their own column only.
+      turn.tools > turn.agents ? `${ICON.wrench}${turn.tools - turn.agents}` : "",
+      turn.agents > 0 ? `${ICON.robot}${turn.agents}` : ""
+    ].filter(Boolean).join("  ");
+    lines.push(`${marker} ${colorize(`#${number} ${clock(turn.at)}`, theme.secondary)}  ${prompt}  ${colorize(meta, theme.secondary)}`);
+  }
+  return lines;
+}
+
+// scripts/views/agents.ts
+var DESCRIPTION_CHARS = 32;
+function renderAgents(v, agents) {
+  const { t, theme, now } = v;
+  if (agents.length === 0)
+    return emptyView(v, ICON.robot, t.agents, t.emptyAgents);
+  const running = agents.filter((a) => a.status === "running").length;
+  const lines = [header(v, ICON.robot, t.agents, `${running} ${t.running}`, `${agents.length}`)];
+  for (const a of agents) {
+    const end = a.status === "running" ? now : a.lastAt ?? now;
+    const elapsed = a.startedAt ? formatElapsed(end - a.startedAt) : "";
+    const details = [
+      a.model ? modelLabel(a.model) : "",
+      a.description ? `"${truncate(a.description, DESCRIPTION_CHARS)}"` : "",
+      elapsed,
+      `${ICON.wrench}${a.tools}`
+    ].filter(Boolean).join("  ");
+    if (a.status === "done") {
+      lines.push(dim(v, `\u2713 ${a.type}  ${details}`));
+      continue;
+    }
+    if (a.status === "failed") {
+      lines.push(`${colorize(`\u2717 ${a.endStatus ?? "failed"}`, theme.danger)} ${a.type}  ${colorize(details, theme.secondary)}`);
+      continue;
+    }
+    const tool = a.runningTool ? `  ${colorize(a.runningTool, theme.info)}` : "";
+    lines.push(`${runningMarker(v, a.status === "stale")} ${colorize(a.type, theme.model)}  ${colorize(details, theme.secondary)}${tool}`);
+  }
+  return lines;
+}
+
+// scripts/views/files.ts
+var MAX_FILE_LINES = 30;
+function collectFiles(main2, agents) {
+  const rows = /* @__PURE__ */ new Map();
+  const row = (path6) => {
+    let r = rows.get(path6);
+    if (!r)
+      rows.set(path6, r = { path: path6, mainEdits: 0, agentEdits: 0, agentCount: 0, lastAt: 0 });
+    return r;
+  };
+  for (const [path6, f] of main2) {
+    const r = row(path6);
+    r.mainEdits += f.edits;
+    r.lastAt = Math.max(r.lastAt, f.lastAt);
+  }
+  for (const a of agents) {
+    for (const [path6, f] of a.touchedFiles) {
+      const r = row(path6);
+      r.agentEdits += f.edits;
+      r.agentCount++;
+      r.lastAt = Math.max(r.lastAt, f.lastAt);
+    }
+  }
+  return [...rows.values()].sort(
+    (a, b) => b.mainEdits + b.agentEdits - (a.mainEdits + a.agentEdits) || b.lastAt - a.lastAt
+  );
+}
+function renderFiles(v, agents) {
+  const { t, theme, ctx } = v;
+  const rows = collectFiles(v.transcript.touchedFiles, agents);
+  if (rows.length === 0)
+    return emptyView(v, ICON.pencil, t.files, t.emptyFiles);
+  const base = ctx.stdin.workspace?.project_dir ?? ctx.stdin.workspace?.current_dir;
+  const lines = [header(v, ICON.pencil, t.files, String(rows.length))];
+  for (const r of rows.slice(0, MAX_FILE_LINES)) {
+    const source = [
+      r.mainEdits > 0 ? t.main : "",
+      r.agentCount > 0 ? `${r.mainEdits > 0 ? "+" : ""}${r.agentCount} ${t.agentsSuffix}` : ""
+    ].filter(Boolean).join(" ");
+    const count = colorize(`\u270E${r.mainEdits + r.agentEdits}`.padEnd(4), theme.accent);
+    lines.push(`${count} ${colorize(displayPath(r.path, base), theme.folder)}  ${colorize(source, theme.secondary)}`);
+  }
+  if (rows.length > MAX_FILE_LINES)
+    lines.push(colorize(`  +${rows.length - MAX_FILE_LINES}`, theme.secondary));
+  return lines;
+}
+
+// scripts/views/todos.ts
+function renderTodos(v) {
+  const { t, theme } = v;
+  const items = extractTodoList(v.transcript);
+  if (items.length === 0)
+    return emptyView(v, ICON.clipboard, t.todos, t.emptyTodos);
+  const done = items.filter((i) => i.status === "completed").length;
+  const lines = [header(v, ICON.clipboard, t.todos, `${done}/${items.length}`)];
+  for (const item of items) {
+    if (item.status === "completed")
+      lines.push(dim(v, `\u2713 ${item.content}`));
+    else if (item.status === "in_progress")
+      lines.push(colorize(`\u25B6 ${item.content}`, theme.accent));
+    else
+      lines.push(`${colorize("\u25CB", theme.secondary)} ${item.content}`);
+  }
+  return lines;
+}
+
+// scripts/views/errors.ts
+var MAX_ERROR_LINES = 15;
+var MESSAGE_CHARS = 60;
+var DENIED_RE = /denied|not allowed|blocked/i;
+function renderErrors(v) {
+  const { t, theme } = v;
+  const errors = v.transcript.toolErrors;
+  if (errors.length === 0)
+    return emptyView(v, ICON.warning, t.errors, t.emptyErrors);
+  const lines = [header(v, ICON.warning, t.errors, String(errors.length))];
+  for (const e of errors.slice(-MAX_ERROR_LINES).reverse()) {
+    const marker = DENIED_RE.test(e.message) ? ICON.noEntry : colorize("\u2717", theme.danger);
+    const tool = toolLabel(e.tool, e.target);
+    lines.push(
+      `${marker} ${colorize(clock(e.at), theme.secondary)}  ${colorize(tool, theme.model)}  ${colorize(truncate(e.message, MESSAGE_CHARS), theme.secondary)}`
+    );
+  }
+  return lines;
+}
+
+// scripts/views/background.ts
+var DESCRIPTION_CHARS2 = 40;
+var SUMMARY_CHARS = 48;
+function renderBackground(v) {
+  const { t, theme, now } = v;
+  const tasks = [...v.transcript.backgroundTasks.values()];
+  if (tasks.length === 0)
+    return emptyView(v, ICON.hourglass, t.background, t.emptyBackground);
+  tasks.sort((a, b) => Number(b.status === "running") - Number(a.status === "running") || b.startedAt - a.startedAt);
+  const idle = isSessionIdle(v);
+  const running = idle ? 0 : tasks.filter((x) => x.status === "running").length;
+  const lines = [header(v, ICON.hourglass, t.background, `${running} ${t.running}`, String(tasks.length))];
+  for (const task of tasks) {
+    const description = task.description ? `"${truncate(task.description, DESCRIPTION_CHARS2)}"` : "";
+    const elapsed = formatElapsed((task.endedAt ?? now) - task.startedAt);
+    if (task.status === "running") {
+      const shown = idle ? "" : `  ${colorize(elapsed, theme.secondary)}`;
+      lines.push(`${runningMarker(v, idle)} ${colorize(task.kind, theme.model)}  ${description}${shown}`);
+      continue;
+    }
+    const summary = task.summary ? `  ${truncate(task.summary, SUMMARY_CHARS)}` : "";
+    if (task.status === "completed") {
+      lines.push(dim(v, `\u2713 ${task.kind}  ${description}  ${elapsed}${summary}`));
+    } else {
+      lines.push(`${colorize(`\u2717 ${task.status}`, theme.danger)} ${task.kind}  ${description}  ${colorize(elapsed + summary, theme.secondary)}`);
+    }
+  }
+  return lines;
+}
+
+// scripts/views/index.ts
+var MAX_FILE_AGENTS = 100;
+async function renderPaneView(view, ctx, now = Date.now()) {
+  const transcript = await getTranscript(ctx);
+  if (!transcript)
+    return colorize(ctx.translations.paneViews.noTranscript, getTheme().secondary);
+  const v = makeViewContext(ctx, transcript, now);
+  const transcriptPath = ctx.stdin.transcript_path;
+  let lines;
+  switch (view) {
+    case "turns":
+      lines = renderTurns(v);
+      break;
+    case "agents":
+      lines = renderAgents(v, await listSubagents(transcriptPath, now, void 0, transcript.backgroundTasks));
+      break;
+    case "files":
+      lines = renderFiles(v, await listSubagents(transcriptPath, now, MAX_FILE_AGENTS, transcript.backgroundTasks));
+      break;
+    case "todos":
+      lines = renderTodos(v);
+      break;
+    case "errors":
+      lines = renderErrors(v);
+      break;
+    case "bg":
+      lines = renderBackground(v);
+      break;
+    default: {
+      const unhandled = view;
+      throw new Error(`unhandled pane view: ${String(unhandled)}`);
+    }
+  }
+  return lines.join("\n");
+}
+
 // scripts/utils/band-marker.ts
-import { mkdir as mkdir5, writeFile as writeFile5, unlink as unlink3, stat as stat11 } from "fs/promises";
+import { mkdir as mkdir5, writeFile as writeFile5, unlink as unlink3, stat as stat12 } from "fs/promises";
 import path5 from "path";
 var BAND_MARKER_TTL_MS = 18e4;
 var SAFE_SESSION_ID = /^[A-Za-z0-9-]{1,128}$/;
@@ -5008,7 +5622,7 @@ async function isBandActive(sessionId, now = Date.now(), dir = FILE_CACHE_DIR) {
   if (!file)
     return false;
   try {
-    const { mtimeMs } = await stat11(file);
+    const { mtimeMs } = await stat12(file);
     return now - mtimeMs < BAND_MARKER_TTL_MS;
   } catch (err) {
     if (!isErrnoException(err, "ENOENT"))
@@ -5018,7 +5632,7 @@ async function isBandActive(sessionId, now = Date.now(), dir = FILE_CACHE_DIR) {
 }
 
 // scripts/statusline.ts
-var CONFIG_PATH = join8(homedir4(), ".claude", "claude-dashboard.local.json");
+var CONFIG_PATH = join9(homedir5(), ".claude", "claude-dashboard.local.json");
 var configCache = null;
 async function readStdin() {
   try {
@@ -5034,12 +5648,12 @@ async function readStdin() {
 }
 async function loadConfig() {
   try {
-    const fileStat = await stat12(CONFIG_PATH);
+    const fileStat = await stat13(CONFIG_PATH);
     const mtime = fileStat.mtimeMs;
     if (configCache?.mtime === mtime) {
       return configCache.config;
     }
-    const content = await readFile11(CONFIG_PATH, "utf-8");
+    const content = await readFile12(CONFIG_PATH, "utf-8");
     const userConfig = JSON.parse(content);
     const config = {
       ...DEFAULT_CONFIG,
@@ -5111,6 +5725,10 @@ async function main() {
       ...config,
       disabledWidgets: [...config.disabledWidgets ?? [], ...MOD_UNAVAILABLE_WIDGETS]
     };
+  }
+  if (renderMode.paneView) {
+    console.log(await renderPaneView(renderMode.paneView, { stdin, config, translations, rateLimits: null }));
+    return;
   }
   const stdinLimits = parseStdinRateLimits(stdin);
   let rateLimits;
