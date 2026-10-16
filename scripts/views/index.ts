@@ -48,6 +48,11 @@ export async function renderPaneView(view: SessionView, ctx: WidgetContext, now 
     case 'bg':
       lines = renderBackground(v);
       break;
+    default: {
+      // Compile-time exhaustiveness: a new SessionView without a case fails to build here.
+      const unhandled: never = view;
+      throw new Error(`unhandled pane view: ${String(unhandled)}`);
+    }
   }
   return lines.join('\n');
 }

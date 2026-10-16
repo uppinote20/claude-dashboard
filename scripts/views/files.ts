@@ -16,7 +16,8 @@ interface FileRow {
   path: string;
   mainEdits: number;
   agentEdits: number;
-  agents: number;
+  /** Distinct subagents that wrote the file (agentEdits counts their edits) */
+  agentCount: number;
   lastAt: number;
 }
 
@@ -24,7 +25,7 @@ function collectFiles(main: Map<string, TouchedFile>, agents: SubagentInfo[]): F
   const rows = new Map<string, FileRow>();
   const row = (path: string) => {
     let r = rows.get(path);
-    if (!r) rows.set(path, (r = { path, mainEdits: 0, agentEdits: 0, agents: 0, lastAt: 0 }));
+    if (!r) rows.set(path, (r = { path, mainEdits: 0, agentEdits: 0, agentCount: 0, lastAt: 0 }));
     return r;
   };
   for (const [path, f] of main) {
@@ -36,7 +37,7 @@ function collectFiles(main: Map<string, TouchedFile>, agents: SubagentInfo[]): F
     for (const [path, f] of a.touchedFiles) {
       const r = row(path);
       r.agentEdits += f.edits;
-      r.agents++;
+      r.agentCount++;
       r.lastAt = Math.max(r.lastAt, f.lastAt);
     }
   }
@@ -55,7 +56,7 @@ export function renderFiles(v: ViewContext, agents: SubagentInfo[]): string[] {
   for (const r of rows.slice(0, MAX_FILE_LINES)) {
     const source = [
       r.mainEdits > 0 ? t.main : '',
-      r.agents > 0 ? `${r.mainEdits > 0 ? '+' : ''}${r.agents} ${t.agentsSuffix}` : '',
+      r.agentCount > 0 ? `${r.mainEdits > 0 ? '+' : ''}${r.agentCount} ${t.agentsSuffix}` : '',
     ].filter(Boolean).join(' ');
     const count = colorize(`✎${r.mainEdits + r.agentEdits}`.padEnd(4), theme.accent);
     lines.push(`${count} ${colorize(displayPath(r.path, base), theme.folder)}  ${colorize(source, theme.secondary)}`);

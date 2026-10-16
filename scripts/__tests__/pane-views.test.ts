@@ -132,6 +132,19 @@ describe('renderPaneView', () => {
     expect(out).toMatch(/✎2 +src\/a\.ts {2}main \+1 agents/);
   });
 
+  it('files: caps the list and says how many more there are', async () => {
+    const edits = Array.from({ length: 33 }, (_, i) => i);
+    await writeJsonl(SESSION, [
+      { type: 'assistant', timestamp: ts(1), message: { content: edits.map((i) => ({ type: 'tool_use', id: `w${i}`, name: 'Write', input: { file_path: path.join(PROJECT, `f${i}.ts`) } })) } },
+      { type: 'user', timestamp: ts(2), message: { content: edits.map((i) => ({ type: 'tool_result', tool_use_id: `w${i}`, content: 'ok' })) } },
+    ]);
+    const lines = strip(await render('files')).split('\n');
+    // 33 main writes plus the fixture subagent's src/a.ts.
+    expect(lines[0]).toContain('Files · 34');
+    expect(lines).toHaveLength(1 + 30 + 1);
+    expect(lines.at(-1)).toBe('  +4');
+  });
+
   it('todos: every item with its state', async () => {
     expect(strip(await render('todos')).split('\n')).toEqual(['📋️ Todos · 1/3', '✓ plan', '▶ build', '○ ship']);
   });

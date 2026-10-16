@@ -299,6 +299,7 @@ function drawTabs($: EngineInterface, Box: any, Text: any, Button: any) {
         <Button
           key={`tab:${view}`}
           plain
+          // Hotkeys follow PANE_VIEWS order (toggle.ts): reordering it renumbers every tab after.
           hotkey={String(i + 1)}
           dimColor={view !== paneView}
           onPress={() => void selectView($, view)}

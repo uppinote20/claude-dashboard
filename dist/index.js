@@ -5444,7 +5444,7 @@ function collectFiles(main2, agents) {
   const row = (path6) => {
     let r = rows.get(path6);
     if (!r)
-      rows.set(path6, r = { path: path6, mainEdits: 0, agentEdits: 0, agents: 0, lastAt: 0 });
+      rows.set(path6, r = { path: path6, mainEdits: 0, agentEdits: 0, agentCount: 0, lastAt: 0 });
     return r;
   };
   for (const [path6, f] of main2) {
@@ -5456,7 +5456,7 @@ function collectFiles(main2, agents) {
     for (const [path6, f] of a.touchedFiles) {
       const r = row(path6);
       r.agentEdits += f.edits;
-      r.agents++;
+      r.agentCount++;
       r.lastAt = Math.max(r.lastAt, f.lastAt);
     }
   }
@@ -5474,7 +5474,7 @@ function renderFiles(v, agents) {
   for (const r of rows.slice(0, MAX_FILE_LINES)) {
     const source = [
       r.mainEdits > 0 ? t.main : "",
-      r.agents > 0 ? `${r.mainEdits > 0 ? "+" : ""}${r.agents} ${t.agentsSuffix}` : ""
+      r.agentCount > 0 ? `${r.mainEdits > 0 ? "+" : ""}${r.agentCount} ${t.agentsSuffix}` : ""
     ].filter(Boolean).join(" ");
     const count = colorize(`\u270E${r.mainEdits + r.agentEdits}`.padEnd(4), theme.accent);
     lines.push(`${count} ${colorize(displayPath(r.path, base), theme.folder)}  ${colorize(source, theme.secondary)}`);
@@ -5581,6 +5581,10 @@ async function renderPaneView(view, ctx, now = Date.now()) {
     case "bg":
       lines = renderBackground(v);
       break;
+    default: {
+      const unhandled = view;
+      throw new Error(`unhandled pane view: ${String(unhandled)}`);
+    }
   }
   return lines.join("\n");
 }

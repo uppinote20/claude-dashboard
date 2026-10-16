@@ -45,13 +45,18 @@ interface TranscriptState {
   data: ParsedTranscript;
 }
 
-/** In-process tier: reused while one process renders repeatedly (tests, check-usage). */
+/**
+ * In-process tier: one slot, reused while one process renders the same transcript repeatedly
+ * (tests, check-usage). Parsing another path (a pane view scanning subagents) replaces it; that
+ * is only a speed loss, never a correctness one: every path also resumes from its persisted state.
+ */
 let cachedTranscript: TranscriptState | null = null;
 
 /**
  * A subagent's own transcript (`<session>/subagents/agent-<id>.jsonl`): every record there is
  * marked isSidechain, yet it is that file's main thread. Read from the path so a caller can
- * never parse one file both ways under the same persisted state.
+ * never parse one file both ways under the same persisted state. Either separator: POSIX `/`
+ * and Windows `\\`, as path.join produces on each.
  */
 const SUBAGENT_TRANSCRIPT_RE = /[\\/]subagents[\\/]agent-[^\\/]+\.jsonl$/;
 
