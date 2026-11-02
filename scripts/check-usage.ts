@@ -313,6 +313,10 @@ function createErrorResult(name: string): CLIUsageInfo {
   };
 }
 
+function windowPercent(window: UsageLimits['five_hour']): number | null {
+  return window ? Math.round(window.utilization) : null;
+}
+
 /**
  * Parse Claude usage limits
  * Note: API returns utilization as percentage (0-100), not fraction (0-1)
@@ -322,16 +326,14 @@ export function parseClaudeUsage(limits: UsageLimits | null): CLIUsageInfo {
     return createErrorResult('Claude');
   }
 
-  // A plan without a 5h window (verified Ultra) is scored on the only limit it has.
-  const primary = limits.five_hour ?? limits.seven_day;
-
   return {
     name: 'Claude',
     available: true,
     error: false,
-    primaryPercent: primary ? Math.round(primary.utilization) : null,
-    fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
-    sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
+    // A plan without a 5h window (verified Ultra) is scored on the only limit it has.
+    primaryPercent: windowPercent(limits.five_hour ?? limits.seven_day),
+    fiveHourPercent: windowPercent(limits.five_hour),
+    sevenDayPercent: windowPercent(limits.seven_day),
     fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
     sevenDayReset: normalizeToISO(limits.seven_day?.resets_at ?? null),
   };
