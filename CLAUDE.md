@@ -161,10 +161,10 @@ interface Widget<T extends WidgetData> {
 | `contextPercentage` | stdin | Percentage only (sub-widget of `context`) |
 | `contextUsage` | stdin | Token count only, e.g. `42K/200K` (sub-widget of `context`) |
 | `cost` | stdin | Session cost |
-| `rateLimit5h` | API | 5-hour rate limit |
-| `rateLimit7d` | API | 7-day rate limit (Pro/Max) |
+| `rateLimit5h` | API | 5-hour rate limit. Hidden when the response has a 7-day window but no 5-hour one (verified Ultra accounts); `⚠️` only when neither exists |
+| `rateLimit7d` | API | 7-day rate limit (Pro/Max/Ultra) |
 | `rateLimit7dSonnet` | API | 7-day Sonnet limit (Max). Deprecated ~2026-06: merged into the unified weekly bucket at Sonnet 5 launch; API returns null so the widget stays hidden until the field returns |
-| `rateLimit7dFable` | API | 7-day Fable limit (Max) |
+| `rateLimit7dFable` | API | 7-day Fable limit (Max/Ultra) |
 | `projectInfo` | stdin + git | Directory + branch + ahead/behind (↑↓), subpath when CWD differs from project_dir, worktree indicator |
 | `configCounts` | filesystem + stdin | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs |
 | `sessionDuration` | file | Session duration |
@@ -327,7 +327,7 @@ echo '{"model":{"display_name":"Opus"},"workspace":{"current_dir":"/tmp"},...}' 
 Before committing:
 - [ ] `npm run build` succeeds
 - [ ] All display modes (compact/normal/detailed) work
-- [ ] Pro/Max plan output format correct
+- [ ] Pro/Max/Ultra plan output format correct
 - [ ] Korean/English switching works
 - [ ] API error shows ⚠️ instead of crash
 - [ ] Missing data gracefully hides widgets

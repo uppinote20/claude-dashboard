@@ -27,8 +27,9 @@ Configure the claude-dashboard status line plugin with widget system support.
   - `ko`: Korean
 
 - `$3`: Subscription plan
-  - `max` (default): Shows 5h + 7d rate limits
-  - `pro`: Shows 5h only
+  - `max` (default): Shows 5h + 7d rate limits, plus model-scoped weekly limits (Fable)
+  - `ultra`: Same as `max`. Verified accounts have no 5h limit, so that widget hides itself
+  - `pro`: Shows 5h + 7d rate limits
 
 - `$4`: Custom lines (only for `custom` mode)
   - Format: `"widget1,widget2|widget3,widget4"`
@@ -45,10 +46,10 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `contextPercentage` | Percentage only (sub-widget of `context`) |
 | `contextUsage` | Token count only, e.g. `42K/200K` (sub-widget of `context`) |
 | `cost` | Session cost in USD |
-| `rateLimit5h` | 5-hour rate limit |
-| `rateLimit7d` | 7-day rate limit (Pro/Max) |
+| `rateLimit5h` | 5-hour rate limit (hidden on verified Ultra accounts) |
+| `rateLimit7d` | 7-day rate limit (Pro/Max/Ultra) |
 | `rateLimit7dSonnet` | 7-day Sonnet limit (Max) — deprecated ~2026-06, merged into the unified weekly bucket at Sonnet 5 launch; stays hidden while the API returns null |
-| `rateLimit7dFable` | 7-day Fable limit (Max) |
+| `rateLimit7dFable` | 7-day Fable limit (Max/Ultra) |
 | `projectInfo` | Directory name + git branch + ahead/behind (↑↓), subpath from project_dir, worktree indicator |
 | `configCounts` | CLAUDE.md, AGENTS.md, rules, MCPs, hooks, +Dirs counts |
 | `sessionId` | Session ID (short 8 chars) |
@@ -120,7 +121,7 @@ Use AskUserQuestion to ask the user. Batch independent questions into a single A
      Full control over layout and ordering.
      ```
 2. Language: auto (recommended), en, ko
-3. Plan: max (recommended), pro
+3. Plan: max (recommended), ultra, pro
 4. Theme: default (recommended), minimal, "catppuccin (mocha / latte — light)", "dracula / gruvbox / nord / tokyoNight / solarized"
    - All themes are dark except `catppuccinLatte`, which is designed for light-mode terminals
    - If multi-option selected: ask in next turn which one
