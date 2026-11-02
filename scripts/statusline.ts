@@ -182,7 +182,7 @@ async function main(): Promise<void> {
     // Stdin rate_limits not yet available — full API fallback
     rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
   } else if (hasScopedWeeklyLimits(config.plan)) {
-    // Hybrid: stdin for 5h/7d, API only for seven_day_sonnet + seven_day_fable
+    // Hybrid: stdin for available windows, API only for seven_day_sonnet + seven_day_fable
     const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
     rateLimits = {
       ...stdinLimits,
