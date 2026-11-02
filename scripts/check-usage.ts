@@ -322,11 +322,14 @@ export function parseClaudeUsage(limits: UsageLimits | null): CLIUsageInfo {
     return createErrorResult('Claude');
   }
 
+  // A plan without a 5h window (verified Ultra) is scored on the only limit it has.
+  const primary = limits.five_hour ?? limits.seven_day;
+
   return {
     name: 'Claude',
     available: true,
     error: false,
-    primaryPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
+    primaryPercent: primary ? Math.round(primary.utilization) : null,
     fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
     sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
     fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
