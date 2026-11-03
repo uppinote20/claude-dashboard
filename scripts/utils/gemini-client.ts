@@ -399,9 +399,10 @@ async function getValidCredentials(): Promise<GeminiCredentials | null> {
 }
 
 /**
- * Cached project ID from loadCodeAssist API (per token hash for multi-account support)
+ * Cached project ID from loadCodeAssist API (per token hash for multi-account support).
+ * Also holds a retired verdict, so a process asks once even before the file cache exists.
  */
-const projectIdCacheMap: Map<string, { data: string; timestamp: number }> = new Map();
+const projectIdCacheMap: Map<string, { data: string | typeof GEMINI_RETIRED; timestamp: number }> = new Map();
 const PROJECT_ID_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -502,6 +503,7 @@ async function getProjectId(credentials: GeminiCredentials): Promise<string | ty
     }
     if (!data?.currentTier && data?.ineligibleTiers?.some((tier) => tier.reasonCode === RETIRED_REASON)) {
       debugLog('gemini', 'loadCodeAssist: account tier retired for this client');
+      projectIdCacheMap.set(tokenHash, { data: GEMINI_RETIRED, timestamp: Date.now() });
       return GEMINI_RETIRED;
     }
   } catch (err) {

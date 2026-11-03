@@ -452,6 +452,22 @@ describe('gemini-client retired tier', () => {
     expect(save).toHaveBeenCalledWith(expect.stringContaining('gemini-tier-'), { retired: true });
   });
 
+  it('remembers a retired verdict in-process before the file cache exists', async () => {
+    mockFileCache(() => null); // file cache never hits: only the in-process cache can answer
+    let calls = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+      // First loadCodeAssist says retired; anything after would report a live project.
+      const retired = String(url).includes('loadCodeAssist') && calls++ === 0;
+      return new Response(JSON.stringify(retired ? RETIRED_BODY : { cloudaicompanionProject: 'live-project', buckets: [] }), { status: 200 });
+    });
+
+    const { fetchGeminiUsage, clearGeminiCache, GEMINI_RETIRED } = await import('../utils/gemini-client.js');
+    clearGeminiCache();
+
+    expect(await fetchGeminiUsage()).toBe(GEMINI_RETIRED);
+    expect(await fetchGeminiUsage()).toBe(GEMINI_RETIRED);
+  });
+
   it('skips the network when a retired verdict is cached', async () => {
     mockFileCache((file) => (file.includes('gemini-tier-') ? { data: { retired: true }, timestamp: Date.now() } : null));
     // The network would answer with a live project and quota: only the cached verdict can say retired.
