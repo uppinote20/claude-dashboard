@@ -140,7 +140,7 @@ Open or close a pane beside the transcript (mod, tested on Claude Code 2.1.289).
 /claude-dashboard-pane turns   # dashboard | turns | agents | files | todos | errors | bg
 ```
 
-Views: `dashboard` (widget layout, default), `turns` (per-prompt tokens/tools), `agents` (subagents), `files` (files edited), `todos`, `errors` (failed tool calls), `bg` (background jobs). The view lasts for the session only. For the `dashboard` view, layout comes from the `modPane` config key (default `detailed`). See [Mods](/guides/mods/) for details on each view.
+Views: `dashboard` (sectioned overview, default), `turns` (per-prompt tokens/tools), `agents` (subagents), `files` (files edited), `todos`, `errors` (failed tool calls), `bg` (background jobs). The view lasts for the session only. For the `dashboard` view, the `modPane` config key switches it to widget lines (unset = the overview). See [Mods](/guides/mods/) for details on each view.
 
 ## /claude-dashboard-band
 

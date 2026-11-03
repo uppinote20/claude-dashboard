@@ -24,7 +24,7 @@ The pane has a tab bar (`1: Dash  2: Turns  3: Agents  4: Files  5: Todos  6: Er
 
 | View | Shows |
 |------|-------|
-| `dashboard` | The widget layout from `modPane` (default view; refreshes every 60s) |
+| `dashboard` | Sectioned overview (usage gauges, context, cost, session), or the widget lines from `modPane` when set (default view; refreshes every 60s) |
 | `turns` | One line per user prompt, newest first (last 20): `#N HH:MM prompt elapsed ↑in ↓out 🔧tools 🤖agents`, with a per-turn token sparkline in the header. Slash commands show as `/name args`, shell input as `!cmd`; skill bodies, task notifications and command output are excluded. Tokens only, no $ |
 | `agents` | Subagents of this session (20 most recently active): type, real model, description, elapsed, tool count, current running tool. Running first, `✓` done, `? stale` = running but no transcript write for 10 min |
 | `files` | Files written by Edit/Write/MultiEdit/NotebookEdit this session (successful results only, main thread + subagents): project-relative path, count, source (`main`, `+N agents`). Up to 30 |
@@ -44,7 +44,7 @@ The selected view is kept for the session only (a new session starts on `dashboa
 }
 ```
 
-- `modPane` and `modBand` accept a display mode name (`compact`, `normal`, `detailed`), a preset string such as `"MC$R|BDO"`, or custom widget lines such as `[["model", "context"], ["sessionIdFull"]]` — the same form as the status line's `lines`, so widgets without a preset character work too. Unknown widget ids are dropped; if nothing is left, the default is used.
+- `modPane` and `modBand` accept a display mode name (`compact`, `normal`, `detailed`), a preset string such as `"MC$R|BDO"`, or custom widget lines such as `[["model", "context"], ["sessionIdFull"]]` — the same form as the status line's `lines`, so widgets without a preset character work too. Unknown widget ids are dropped; if nothing is left, the default is used. For the pane, the default is the sectioned overview rather than a widget layout.
 - `"modBandDefault": true` turns the band on at session start.
 - Interactive `/claude-dashboard:setup` asks how you want to use the mod dashboard (status line only, peek with pane, replace with band, or both) and writes these keys for you; rerunning setup keeps keys it does not ask about.
 - Theme, language, and `disabledWidgets` follow your normal configuration.
