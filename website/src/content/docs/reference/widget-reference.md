@@ -391,7 +391,7 @@ codex o4-mini 5h:30% 7d:45%
 |----------|-------|
 | **Widget ID** | `geminiUsage` |
 | **Data Source** | Gemini API (Code Assist) |
-| **Description** | Shows Google Gemini CLI usage for the current model only. Auto-hides if `~/.gemini/oauth_creds.json` is not found. (Gemini CLI personal tiers retired 2026-06-18; enterprise still supported) |
+| **Description** | Shows Google Gemini CLI usage for the current model only. Auto-hides if `~/.gemini/oauth_creds.json` is not found, or when the account is on a retired personal tier (Gemini CLI personal tiers retired 2026-06-18; enterprise still supported). Not part of the `detailed` preset; add it with `G` or custom lines. |
 
 **Example output:**
 ```

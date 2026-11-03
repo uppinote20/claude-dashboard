@@ -66,7 +66,7 @@ claude-dashboard는 49개의 위젯을 제공합니다. 각 위젯은 독립적�
 | 위젯 | ID | 설명 |
 |------|-----|------|
 | Codex 사용량 | `codexUsage` | OpenAI Codex CLI 사용량 (미설치 시 자동 숨김)[2] |
-| Gemini 사용량 | `geminiUsage` | Google Gemini CLI - 현재 모델 (미설치 시 자동 숨김)[3] |
+| Gemini 사용량 | `geminiUsage` | Google Gemini CLI - 현재 모델 (미설치 시 자동 숨김, 종료된 개인 요금제도 숨김. `detailed`에는 없음)[3] |
 | Gemini 전체 | `geminiUsageAll` | Google Gemini CLI - 전체 모델 (미설치 시 자동 숨김)[3] |
 | Antigravity 사용량 | `antigravityUsage` | Google Antigravity CLI — 모델 패밀리별 주간 quota 그룹 (Gemini / Claude+GPT), 미설치 시 자동 숨김[4] |
 | Antigravity 전체 | `antigravityUsageAll` | Google Antigravity CLI — 모델별 quota 상세, 미설치 시 자동 숨김[4] |

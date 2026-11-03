@@ -223,7 +223,7 @@ sidebar:
 
 - **ID**: `geminiUsage`
 - **데이터 소스**: Gemini API (Google Code Assist)
-- **표시 내용**: Google Gemini CLI의 현재 모델 사용률. `~/.gemini/oauth_creds.json`이 없으면 자동 숨김됩니다. (Gemini CLI 개인 티어는 2026-06-18 종료, enterprise는 계속 지원)
+- **표시 내용**: Google Gemini CLI의 현재 모델 사용률. `~/.gemini/oauth_creds.json`이 없거나 계정이 종료된 개인 티어이면 자동 숨김됩니다(Gemini CLI 개인 티어는 2026-06-18 종료, enterprise는 계속 지원). `detailed` 프리셋에는 없으며 `G`나 위젯 배열로 추가합니다.
 - **출력 예시**: `💎 gemini 2.5-pro 45%`
 
 ### geminiUsageAll

@@ -18,7 +18,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 - `$1`: Display mode
   - `compact` (default): 1 line (model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet, zaiUsage)
   - `normal`: 2 lines (+ projectInfo, sessionId, sessionDuration, burnRate, todoProgress)
-  - `detailed`: 6 lines (+ sessionName, tokenSpeed, depletionTime, configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance, tokenBreakdown, forecast, budget, todayCost, codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus)
+  - `detailed`: 6 lines (+ sessionName, tokenSpeed, depletionTime, configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance, tokenBreakdown, forecast, budget, todayCost, codexUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours, lastPrompt, vimMode, apiDuration, tagStatus)
   - `custom`: Custom widget configuration (requires `$4`)
 
 - `$2`: Language preference
@@ -66,7 +66,7 @@ Configure the claude-dashboard status line plugin with widget system support.
 | `promptCacheMisses` | Miss count only (sub-widget of `promptCache`) |
 | `depletionTime` | Estimated time to rate limit |
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) |
-| `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed) |
+| `geminiUsage` | Google Gemini CLI usage - current model (auto-hide if not installed or on a retired personal tier; not in `detailed`, opt in with `G`) |
 | `geminiUsageAll` | Google Gemini CLI usage - all models (auto-hide if not installed) |
 | `antigravityUsage` | Google Antigravity CLI - weekly quota by model family (auto-hide if not installed) |
 | `antigravityUsageAll` | Google Antigravity CLI - per-model quota (auto-hide if not installed) |

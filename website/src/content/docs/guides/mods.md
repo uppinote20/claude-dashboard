@@ -24,7 +24,7 @@ The pane has a tab bar (`1: Dash  2: Turns  3: Agents  4: Files  5: Todos  6: Er
 
 | View | Shows |
 |------|-------|
-| `dashboard` | Sectioned overview (usage gauges, context, cost, session), or the widget lines from `modPane` when set (default view; refreshes every 60s) |
+| `dashboard` | Sectioned overview (usage gauges, context, cost, session; other CLIs in an error state are left out), or the widget lines from `modPane` when set (default view; refreshes every 60s) |
 | `turns` | One line per user prompt, newest first (last 20): `#N HH:MM prompt elapsed ↑in ↓out 🔧tools 🤖agents`, with a per-turn token sparkline in the header. Slash commands show as `/name args`, shell input as `!cmd`; skill bodies, task notifications and command output are excluded. Tokens only, no $ |
 | `agents` | Subagents of this session (20 most recently active): type, real model, description, elapsed, tool count, current running tool. Running first, `✓` done, `? stale` = running but no transcript write for 10 min |
 | `files` | Files written by Edit/Write/MultiEdit/NotebookEdit this session (successful results only, main thread + subagents): project-relative path, count, source (`main`, `+N agents`). Up to 30 |
