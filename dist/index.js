@@ -3518,6 +3518,7 @@ async function getProjectId(credentials) {
     }
     if (!data?.currentTier && data?.ineligibleTiers?.some((tier) => tier.reasonCode === RETIRED_REASON)) {
       debugLog("gemini", "loadCodeAssist: account tier retired for this client");
+      projectIdCacheMap.set(tokenHash, { data: GEMINI_RETIRED, timestamp: Date.now() });
       return GEMINI_RETIRED;
     }
   } catch (err) {
@@ -5677,7 +5678,7 @@ async function section(title, rows) {
 async function usageRows(ctx) {
   const [limits, others] = await Promise.all([
     Promise.all(LIMIT_ROWS.map((row) => widgetData(row.id, ctx))),
-    Promise.all(OTHER_CLI_WIDGETS.map((id) => otherCliText(id, ctx)))
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx, true)))
   ]);
   if (limits[LIMIT_ROWS.findIndex((row) => row.id === "rateLimit5h")]?.isError) {
     return [colorize(`  ${ICON.warning} ${ctx.translations.overview.usageUnavailable}`, getTheme().warning)];
@@ -5720,16 +5721,11 @@ async function widgetData(id, ctx) {
     return null;
   return (await loadWidgetData(id, ctx))?.data ?? null;
 }
-async function widgetText(id, ctx) {
-  if (isDisabled(id, ctx))
-    return null;
-  return (await renderWidget(id, ctx))?.output || null;
-}
-async function otherCliText(id, ctx) {
+async function widgetText(id, ctx, hideErrors = false) {
   if (isDisabled(id, ctx))
     return null;
   const loaded = await loadWidgetData(id, ctx);
-  if (!loaded || loaded.data.isError)
+  if (!loaded || hideErrors && loaded.data.isError)
     return null;
   return renderLoadedWidget(id, loaded, ctx)?.output || null;
 }

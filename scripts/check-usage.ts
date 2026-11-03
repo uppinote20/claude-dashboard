@@ -401,6 +401,18 @@ export function parseCodexUsage(limits: CodexUsageLimits | null, installed: bool
 }
 
 /**
+ * A retired personal tier is not an error: report it like Gemini CLI not being set up.
+ * A failed fetch (null) stays active so it is still shown as an error.
+ */
+export function resolveGemini(
+  limits: GeminiUsageLimits | typeof GEMINI_RETIRED | null,
+  installed: boolean
+): { active: boolean; data: GeminiUsageLimits | null } {
+  const retired = limits === GEMINI_RETIRED;
+  return { active: installed && !retired, data: retired ? null : limits };
+}
+
+/**
  * Parse Gemini usage limits
  */
 export function parseGeminiUsage(limits: GeminiUsageLimits | null, installed: boolean): CLIUsageInfo {
@@ -537,9 +549,7 @@ async function main(): Promise<void> {
   // Parse usage data
   const claudeUsage = parseClaudeUsage(claudeLimits);
   const codexUsage = parseCodexUsage(codexLimits, codexInstalled);
-  // A retired personal tier is not an error: treat it like Gemini CLI not being set up.
-  const geminiActive = geminiInstalled && geminiLimits !== GEMINI_RETIRED;
-  const geminiData = geminiLimits === GEMINI_RETIRED ? null : geminiLimits;
+  const { active: geminiActive, data: geminiData } = resolveGemini(geminiLimits, geminiInstalled);
   const geminiUsage = parseGeminiUsage(geminiData, geminiActive);
   const antigravityUsage = parseAntigravityUsage(antigravityLimits, antigravityInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);

@@ -945,6 +945,7 @@ async function getProjectId(credentials) {
     }
     if (!data?.currentTier && data?.ineligibleTiers?.some((tier) => tier.reasonCode === RETIRED_REASON)) {
       debugLog("gemini", "loadCodeAssist: account tier retired for this client");
+      projectIdCacheMap.set(tokenHash, { data: GEMINI_RETIRED, timestamp: Date.now() });
       return GEMINI_RETIRED;
     }
   } catch (err) {
@@ -2611,6 +2612,10 @@ function parseCodexUsage(limits, installed) {
     plan: limits.planType
   };
 }
+function resolveGemini(limits, installed) {
+  const retired = limits === GEMINI_RETIRED;
+  return { active: installed && !retired, data: retired ? null : limits };
+}
 function parseGeminiUsage(limits, installed) {
   if (!installed)
     return createNotInstalledResult("Gemini");
@@ -2722,8 +2727,7 @@ async function main() {
   ]);
   const claudeUsage = parseClaudeUsage(claudeLimits);
   const codexUsage = parseCodexUsage(codexLimits, codexInstalled);
-  const geminiActive = geminiInstalled && geminiLimits !== GEMINI_RETIRED;
-  const geminiData = geminiLimits === GEMINI_RETIRED ? null : geminiLimits;
+  const { active: geminiActive, data: geminiData } = resolveGemini(geminiLimits, geminiInstalled);
   const geminiUsage = parseGeminiUsage(geminiData, geminiActive);
   const antigravityUsage = parseAntigravityUsage(antigravityLimits, antigravityInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
@@ -2822,5 +2826,6 @@ export {
   parseClaudeUsage,
   parseCodexUsage,
   parseGeminiUsage,
-  parseZaiUsage
+  parseZaiUsage,
+  resolveGemini
 };
