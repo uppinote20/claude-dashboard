@@ -386,3 +386,94 @@ describe('gemini-client', () => {
     });
   });
 });
+
+describe('gemini-client retired tier', () => {
+  const credsJson = JSON.stringify({
+    access_token: 'gemini-token',
+    refresh_token: 'gemini-refresh',
+    expiry_date: Date.now() + 3_600_000,
+  });
+  // loadCodeAssist for a personal account after the Gemini CLI individual tier was retired
+  const RETIRED_BODY = {
+    allowedTiers: [{ id: 'standard-tier', isDefault: true }],
+    ineligibleTiers: [{ reasonCode: 'UNSUPPORTED_CLIENT', tierId: 'free-tier' }],
+  };
+  let originalProject: string | undefined;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    originalProject = process.env.GOOGLE_CLOUD_PROJECT;
+    delete process.env.GOOGLE_CLOUD_PROJECT;
+    delete process.env.GOOGLE_CLOUD_PROJECT_ID;
+    const { execFileSync } = await import('child_process');
+    vi.mocked(execFileSync).mockImplementation(() => {
+      throw new Error('mock: keychain unavailable');
+    });
+    vi.doMock('fs/promises', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('fs/promises')>();
+      return {
+        ...actual,
+        stat: vi.fn().mockResolvedValue({ mtimeMs: 12345 }),
+        readFile: vi.fn().mockImplementation((p: unknown) =>
+          typeof p === 'string' && p.includes('oauth_creds.json') ? Promise.resolve(credsJson) : Promise.reject(new Error('ENOENT')),
+        ),
+      };
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.doUnmock('../utils/file-cache.js');
+    vi.doUnmock('fs/promises');
+    if (originalProject === undefined) delete process.env.GOOGLE_CLOUD_PROJECT;
+    else process.env.GOOGLE_CLOUD_PROJECT = originalProject;
+  });
+
+  function mockFileCache(load: (name: string) => unknown) {
+    const saveFileCache = vi.fn().mockResolvedValue(undefined);
+    vi.doMock('../utils/file-cache.js', () => ({
+      loadFileCache: vi.fn().mockImplementation(async (file: string) => load(file)),
+      saveFileCache,
+      fileCachePath: (name: string) => `/tmp/${name}`,
+      FILE_CACHE_DIR: '/tmp',
+      STALE_CACHE_TTL_SECONDS: 3600,
+    }));
+    return saveFileCache;
+  }
+
+  it('reports a retired tier instead of failing, and remembers it across processes', async () => {
+    const save = mockFileCache(() => null);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify(RETIRED_BODY), { status: 200 }));
+
+    const { fetchGeminiUsage, clearGeminiCache, GEMINI_RETIRED } = await import('../utils/gemini-client.js');
+    clearGeminiCache();
+
+    expect(await fetchGeminiUsage()).toBe(GEMINI_RETIRED);
+    expect(save).toHaveBeenCalledWith(expect.stringContaining('gemini-tier-'), { retired: true });
+  });
+
+  it('skips the network when a retired verdict is cached', async () => {
+    mockFileCache((file) => (file.includes('gemini-tier-') ? { data: { retired: true }, timestamp: Date.now() } : null));
+    // The network would answer with a live project and quota: only the cached verdict can say retired.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      new Response(JSON.stringify(String(url).includes('loadCodeAssist')
+        ? { cloudaicompanionProject: 'live-project' }
+        : { buckets: [{ modelId: 'gemini-2.5-pro', remainingFraction: 0.5 }] }), { status: 200 }));
+
+    const { fetchGeminiUsage, clearGeminiCache, GEMINI_RETIRED } = await import('../utils/gemini-client.js');
+    clearGeminiCache();
+
+    expect(await fetchGeminiUsage()).toBe(GEMINI_RETIRED);
+  });
+
+  it('still fails (warning) when loadCodeAssist gives no project for another reason', async () => {
+    const save = mockFileCache(() => null);
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ allowedTiers: [] }), { status: 200 }));
+
+    const { fetchGeminiUsage, clearGeminiCache } = await import('../utils/gemini-client.js');
+    clearGeminiCache();
+
+    expect(await fetchGeminiUsage()).toBeNull();
+    expect(save).not.toHaveBeenCalledWith(expect.stringContaining('gemini-tier-'), expect.anything());
+  });
+});
