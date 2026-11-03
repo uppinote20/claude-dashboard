@@ -21,7 +21,7 @@ sidebar:
 | `preset` | `string` | - | 프리셋 단축키 문자열. 설정 시 `displayMode`를 `'custom'`으로 변경합니다. |
 | `dailyBudget` | `number` | - | 일일 예산 한도 (USD). 설정 시 `budget` 위젯이 활성화됩니다. |
 | `tagPatterns` | `string[]` | `["v*"]` | `tagStatus` 위젯용 glob 패턴 목록. 각 패턴은 HEAD에서 도달 가능한 최신 태그 하나에 매칭됩니다. 어떤 패턴도 매칭되지 않으면 위젯이 숨겨집니다. |
-| `modPane` | `DisplayMode \| string \| WidgetId[][]` | `'detailed'` | `/claude-dashboard-pane` 패널 레이아웃. 디스플레이 모드 이름(`compact`/`normal`/`detailed`) , `"MC$R|BDO"` 같은 프리셋 문자열, 또는 위젯 배열(`[["model","context"],["sessionIdFull"]]`). |
+| `modPane` | `DisplayMode \| string \| WidgetId[][]` | 미설정(개요) | `/claude-dashboard-pane` dashboard 탭 레이아웃. 미설정이면 섹션형 개요를 표시합니다. 지정할 때는 디스플레이 모드 이름(`compact`/`normal`/`detailed`) , `"MC$R|BDO"` 같은 프리셋 문자열, 또는 위젯 배열(`[["model","context"],["sessionIdFull"]]`). |
 | `modBand` | `DisplayMode \| string \| WidgetId[][]` | statusLine 레이아웃 | `/claude-dashboard-band` 밴드 레이아웃. `modPane`과 같은 형식. |
 | `modBandDefault` | `boolean` | `false` | 세션 시작 시 밴드를 자동으로 켭니다. |
 | `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 300 }` | API 캐시 설정. |

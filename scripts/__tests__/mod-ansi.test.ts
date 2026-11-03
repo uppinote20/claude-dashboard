@@ -2,7 +2,7 @@
  * @covers scripts/mod/ansi.ts
  */
 import { describe, it, expect } from 'vitest';
-import { parseAnsi, ansi256ToHex } from '../mod/ansi.js';
+import { parseAnsi, parseOutput, ansi256ToHex } from '../mod/ansi.js';
 
 describe('parseAnsi', () => {
   it('returns plain text as one segment', () => {
@@ -44,4 +44,15 @@ describe('ansi256ToHex', () => {
   it.each([[0, '#000000'], [15, '#ffffff'], [16, '#000000'], [231, '#ffffff'], [232, '#080808'], [255, '#eeeeee']])(
     '%i -> %s', (n, hex) => { expect(ansi256ToHex(n)).toBe(hex); },
   );
+});
+
+describe('parseOutput', () => {
+  it('keeps blank lines between content as one-space rows so they take height', () => {
+    expect(parseOutput('a\n\nb')).toEqual([[{ text: 'a' }], [{ text: ' ' }], [{ text: 'b' }]]);
+  });
+
+  it('drops blank lines at either end, including the trailing newline', () => {
+    expect(parseOutput('\na\n\n')).toEqual([[{ text: 'a' }]]);
+    expect(parseOutput('')).toEqual([]);
+  });
 });

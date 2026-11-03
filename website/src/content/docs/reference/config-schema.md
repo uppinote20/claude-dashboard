@@ -21,7 +21,7 @@ The configuration file is located at `~/.claude/claude-dashboard.local.json`. Th
 | `preset` | `string` | -- | Preset shorthand string for quick layout. When set, overrides `displayMode` with `"custom"` and generates `lines` from the string. |
 | `dailyBudget` | `number` | -- | Daily budget limit in USD. Enables the `budget` widget. |
 | `tagPatterns` | `string[]` | `["v*"]` | Glob patterns for the `tagStatus` widget. Each pattern resolves to at most one tag (the most recent reachable from HEAD). Widget hides when no pattern matches a tag. |
-| `modPane` | `DisplayMode \| string \| WidgetId[][]` | `"detailed"` | Layout of the `/claude-dashboard-pane` pane: a display mode name (`compact`/`normal`/`detailed`), a preset string like `"MC$R|BDO"`, or custom widget lines (`[["model","context"],["sessionIdFull"]]`). |
+| `modPane` | `DisplayMode \| string \| WidgetId[][]` | unset (overview) | Layout of the `/claude-dashboard-pane` dashboard tab; unset, it shows a sectioned overview. Otherwise a display mode name (`compact`/`normal`/`detailed`), a preset string like `"MC$R|BDO"`, or custom widget lines (`[["model","context"],["sessionIdFull"]]`). |
 | `modBand` | `DisplayMode \| string \| WidgetId[][]` | status line layout | Layout of the `/claude-dashboard-band` band. Same format as `modPane`. |
 | `modBandDefault` | `boolean` | `false` | Turn the band on at session start. |
 | `cache` | `{ ttlSeconds: number }` | `{ ttlSeconds: 300 }` | Cache settings. `ttlSeconds` controls how long API responses are cached. |

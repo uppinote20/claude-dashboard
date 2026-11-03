@@ -1009,6 +1009,13 @@ var en_default = {
       errors: "Errors",
       bg: "Bg"
     }
+  },
+  overview: {
+    usage: "USAGE",
+    context: "CONTEXT",
+    cost: "COST",
+    session: "SESSION",
+    usageUnavailable: "Usage data unavailable"
   }
 };
 
@@ -1111,6 +1118,13 @@ var ko_default = {
       errors: "\uC5D0\uB7EC",
       bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
     }
+  },
+  overview: {
+    usage: "\uC0AC\uC6A9\uB7C9",
+    context: "\uCEE8\uD14D\uC2A4\uD2B8",
+    cost: "\uBE44\uC6A9",
+    session: "\uC138\uC158",
+    usageUnavailable: "\uC0AC\uC6A9\uB7C9 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC74C"
   }
 };
 
@@ -5190,18 +5204,26 @@ function getLines(config) {
   const disabledSet = new Set(disabled);
   return lines.map((line) => line.filter((id) => !disabledSet.has(id))).filter((line) => line.length > 0);
 }
-async function renderWidget(widgetId, ctx) {
+async function loadWidgetData(widgetId, ctx) {
   const widget = getWidget(widgetId);
   if (!widget) {
     return null;
   }
   try {
     const data = await widget.getData(ctx);
-    if (!data) {
-      return null;
-    }
-    const output = widget.render(data, ctx);
-    return { id: widgetId, output };
+    return data ? { widget, data } : null;
+  } catch (error) {
+    debugLog("widget", `Widget '${widgetId}' failed`, error);
+    return null;
+  }
+}
+async function renderWidget(widgetId, ctx) {
+  const loaded = await loadWidgetData(widgetId, ctx);
+  if (!loaded) {
+    return null;
+  }
+  try {
+    return { id: widgetId, output: loaded.widget.render(loaded.data, ctx) };
   } catch (error) {
     debugLog("widget", `Widget '${widgetId}' failed`, error);
     return null;
@@ -5254,19 +5276,24 @@ function resolveRenderMode(env) {
 }
 function resolveModLayout(config, surface, isWidget = () => true) {
   const fallback = surface === "pane" ? { displayMode: "detailed", lines: void 0 } : {};
-  const value = surface === "pane" ? config.modPane : config.modBand;
+  return configuredLayout(surface === "pane" ? config.modPane : config.modBand, isWidget) ?? fallback;
+}
+function isPaneOverview(config, isWidget = () => true) {
+  return configuredLayout(config.modPane, isWidget) === null;
+}
+function configuredLayout(value, isWidget) {
   if (typeof value === "string") {
     if (NAMED_MODES.includes(value)) {
       return { displayMode: value, lines: void 0 };
     }
     const lines = parsePreset(value);
-    return lines.length > 0 ? { displayMode: "custom", lines } : fallback;
+    return lines.length > 0 ? { displayMode: "custom", lines } : null;
   }
   if (Array.isArray(value)) {
     const lines = customLines(value, isWidget);
-    return lines.length > 0 ? { displayMode: "custom", lines } : fallback;
+    return lines.length > 0 ? { displayMode: "custom", lines } : null;
   }
-  return fallback;
+  return null;
 }
 function customLines(value, isWidget) {
   return value.filter((line) => Array.isArray(line)).map(
@@ -5595,6 +5622,101 @@ async function renderPaneView(view, ctx, now = Date.now()) {
   return lines.join("\n");
 }
 
+// scripts/views/overview.ts
+var RULE_WIDTH = 48;
+var LABEL_WIDTH = 8;
+var GAUGE = { ...DEFAULT_PROGRESS_BAR_CONFIG, width: 20 };
+var LIMIT_ROWS = [
+  { id: "rateLimit5h", label: "5h" },
+  { id: "rateLimit7d", label: "7d_all" },
+  { id: "rateLimit7dSonnet", label: "7d_sonnet" },
+  { id: "rateLimit7dFable", label: "7d_fable" }
+];
+var OTHER_CLI_WIDGETS = ["codexUsage", "geminiUsage", "antigravityUsage", "zaiUsage"];
+var COST_WIDGETS = ["cost", "todayCost", "forecast", "budget"];
+var SESSION_LINES = [
+  ["model", "sessionDuration", "promptCache"],
+  ["projectInfo", "linesChanged"]
+];
+async function renderOverview(ctx) {
+  const t = ctx.translations.overview;
+  const sections = await Promise.all([
+    section(t.usage, usageRows(ctx)),
+    section(t.context, contextRows(ctx)),
+    section(t.cost, joinedRows([COST_WIDGETS], ctx)),
+    section(t.session, joinedRows(SESSION_LINES, ctx))
+  ]);
+  return sections.filter((s) => s.length > 0).map((s) => s.join("\n")).join("\n\n");
+}
+async function section(title, rows) {
+  const body = await rows;
+  if (body.length === 0)
+    return [];
+  const rule = "\u2500".repeat(Math.max(0, RULE_WIDTH - displayWidth(title) - 2));
+  return [colorize(` ${title} ${rule}`, getTheme().secondary), ...body];
+}
+async function usageRows(ctx) {
+  const [limits, others] = await Promise.all([
+    Promise.all(LIMIT_ROWS.map((row) => widgetData(row.id, ctx))),
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx)))
+  ]);
+  if (limits[LIMIT_ROWS.findIndex((row) => row.id === "rateLimit5h")]?.isError) {
+    return [colorize(`  ${ICON.warning} ${ctx.translations.overview.usageUnavailable}`, getTheme().warning)];
+  }
+  const rows = LIMIT_ROWS.flatMap((row, i) => {
+    const data = limits[i];
+    if (!data)
+      return [];
+    const reset = data.resetsAt ? `  ${formatTimeRemaining(data.resetsAt, ctx.translations)}` : "";
+    return [`  ${padDisplay(ctx.translations.labels[row.label], LABEL_WIDTH)}${gauge(data.utilization)}${reset}`];
+  });
+  return [...rows, ...others.filter((s) => s !== null).map((s) => `  ${s}`)];
+}
+async function contextRows(ctx) {
+  const [context, breakdown] = await Promise.all([
+    widgetData("context", ctx),
+    widgetText("tokenBreakdown", ctx)
+  ]);
+  const rows = [];
+  if (context) {
+    const usage = `${formatTokens(context.inputTokens)} / ${formatTokens(context.contextSize)}`;
+    rows.push(`  ${gauge(context.percentage)}  ${colorize(usage, getTheme().secondary)}`);
+  }
+  if (breakdown)
+    rows.push(`  ${breakdown}`);
+  return rows;
+}
+async function joinedRows(groups, ctx) {
+  const rendered = await Promise.all(groups.map((ids) => Promise.all(ids.map((id) => widgetText(id, ctx)))));
+  const dot = colorize(" \xB7 ", getTheme().secondary);
+  return rendered.map((texts) => texts.filter((s) => s !== null).join(dot)).filter((row) => row.length > 0).map((row) => `  ${row}`);
+}
+function gauge(percent) {
+  const pct = `${Math.round(percent)}%`.padStart(5);
+  return `${renderProgressBar(percent, GAUGE)}${colorize(pct, getColorForPercent(percent))}`;
+}
+var isDisabled = (id, ctx) => ctx.config.disabledWidgets?.includes(id) ?? false;
+async function widgetData(id, ctx) {
+  if (isDisabled(id, ctx))
+    return null;
+  return (await loadWidgetData(id, ctx))?.data ?? null;
+}
+async function widgetText(id, ctx) {
+  if (isDisabled(id, ctx))
+    return null;
+  return (await renderWidget(id, ctx))?.output || null;
+}
+function padDisplay(text, width) {
+  return text + " ".repeat(Math.max(1, width - displayWidth(text)));
+}
+var WIDE_CHAR = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\uff00-\uff60]/;
+function displayWidth(text) {
+  let width = 0;
+  for (const ch of text)
+    width += WIDE_CHAR.test(ch) ? 2 : 1;
+  return width;
+}
+
 // scripts/utils/band-marker.ts
 import { mkdir as mkdir5, writeFile as writeFile5, unlink as unlink3, stat as stat12 } from "fs/promises";
 import path5 from "path";
@@ -5722,8 +5844,9 @@ async function main() {
     console.log("");
     return;
   }
+  const isWidget = (id) => getWidget(id) !== void 0;
+  const paneOverview = renderMode.surface === "pane" && isPaneOverview(config, isWidget);
   if (renderMode.surface) {
-    const isWidget = (id) => getWidget(id) !== void 0;
     config = { ...config, ...resolveModLayout(config, renderMode.surface, isWidget) };
   }
   if (renderMode.fromMod) {
@@ -5756,7 +5879,7 @@ async function main() {
     translations,
     rateLimits
   };
-  const output = await formatOutput(ctx);
+  const output = paneOverview ? await renderOverview(ctx) : await formatOutput(ctx);
   console.log(output);
 }
 main().catch(() => {

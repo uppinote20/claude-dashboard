@@ -22,8 +22,9 @@ import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput, getWidget } from './widgets/index.js';
 import { hasScopedWeeklyLimits } from './widgets/rate-limit.js';
-import { resolveRenderMode, resolveModLayout, MOD_UNAVAILABLE_WIDGETS } from './utils/render-mode.js';
+import { resolveRenderMode, resolveModLayout, isPaneOverview, MOD_UNAVAILABLE_WIDGETS } from './utils/render-mode.js';
 import { renderPaneView } from './views/index.js';
+import { renderOverview } from './views/overview.js';
 import { markBand, clearBand, isBandActive } from './utils/band-marker.js';
 
 // The plugin's own config, not one of Claude Code's files, so it deliberately
@@ -164,8 +165,9 @@ async function main(): Promise<void> {
   }
 
   // Spread, not mutation: loadConfig() returns a cached object.
+  const isWidget = (id: string) => getWidget(id as WidgetId) !== undefined;
+  const paneOverview = renderMode.surface === 'pane' && isPaneOverview(config, isWidget);
   if (renderMode.surface) {
-    const isWidget = (id: string) => getWidget(id as WidgetId) !== undefined;
     config = { ...config, ...resolveModLayout(config, renderMode.surface, isWidget) };
   }
   if (renderMode.fromMod) {
@@ -209,7 +211,7 @@ async function main(): Promise<void> {
   };
 
   // Format output using widget system
-  const output = await formatOutput(ctx);
+  const output = paneOverview ? await renderOverview(ctx) : await formatOutput(ctx);
 
   console.log(output);
 }

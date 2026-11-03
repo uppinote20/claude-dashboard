@@ -2,7 +2,7 @@
  * @covers scripts/utils/render-mode.ts
  */
 import { describe, it, expect } from 'vitest';
-import { resolveRenderMode, resolveModLayout } from '../utils/render-mode.js';
+import { resolveRenderMode, resolveModLayout, isPaneOverview } from '../utils/render-mode.js';
 import { DEFAULT_CONFIG, type Config } from '../types.js';
 
 describe('resolveRenderMode', () => {
@@ -79,6 +79,14 @@ describe('resolveModLayout', () => {
       .toEqual({ displayMode: 'custom', lines: [['model', 'context'], ['sessionIdFull']] });
     expect(resolveModLayout(config({ modBand: [['cost']] }), 'band', known))
       .toEqual({ displayMode: 'custom', lines: [['cost']] });
+  });
+
+  it('uses the sectioned overview only when modPane yields no widgets', () => {
+    expect(isPaneOverview(config(), known)).toBe(true);
+    expect(isPaneOverview(config({ modPane: [['ghost']] as unknown as Config['modPane'] }), known)).toBe(true);
+    expect(isPaneOverview(config({ modPane: 'detailed' }), known)).toBe(false);
+    expect(isPaneOverview(config({ modPane: 'MC' }), known)).toBe(false);
+    expect(isPaneOverview(config({ modPane: [['cost']] }), known)).toBe(false);
   });
 
   it('drops unknown widget ids and lines left empty', () => {

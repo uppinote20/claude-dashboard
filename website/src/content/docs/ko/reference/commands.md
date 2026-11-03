@@ -137,7 +137,7 @@ statusLine shim을 복구하거나 상태를 확인합니다 (보통은 자동�
 /claude-dashboard-pane turns   # dashboard | turns | agents | files | todos | errors | bg
 ```
 
-뷰: `dashboard`(위젯 레이아웃, 기본), `turns`(프롬프트별 토큰/도구), `agents`(서브에이전트), `files`(수정한 파일), `todos`, `errors`(실패한 도구 호출), `bg`(백그라운드 작업). 뷰는 해당 세션에서만 유지됩니다. `dashboard` 뷰의 레이아웃은 `modPane` 설정(기본값 `detailed`)을 따릅니다. 각 뷰의 자세한 내용은 [Mod](/ko/guides/mods/)를 참고하세요.
+뷰: `dashboard`(섹션형 개요, 기본), `turns`(프롬프트별 토큰/도구), `agents`(서브에이전트), `files`(수정한 파일), `todos`, `errors`(실패한 도구 호출), `bg`(백그라운드 작업). 뷰는 해당 세션에서만 유지됩니다. `dashboard` 뷰는 `modPane`을 지정하면 그 위젯 줄로 바뀝니다(미설정 = 개요). 각 뷰의 자세한 내용은 [Mod](/ko/guides/mods/)를 참고하세요.
 
 ## /claude-dashboard-band
 

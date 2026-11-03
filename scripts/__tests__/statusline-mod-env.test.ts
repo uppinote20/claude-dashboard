@@ -73,6 +73,16 @@ describe('renderer under mod env', () => {
     expect(run({ CLAUDE_DASHBOARD_DISPLAY_MODE: 'detailed' })).toBe(run());
   });
 
+  it('pane draws the sectioned overview when modPane is unset', () => {
+    writeConfig({ language: 'en' });
+    const out = run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane' });
+    expect(out).toMatch(/ CONTEXT ─+/);
+    expect(out).toContain('42%');
+    // A session view still wins over the overview.
+    expect(run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane', CLAUDE_DASHBOARD_PANE_VIEW: 'turns' }))
+      .not.toMatch(/ CONTEXT ─+/);
+  });
+
   it('pane uses modPane from the config', () => {
     writeConfig({ modPane: 'M|C' });
     const lines = run({ CLAUDE_DASHBOARD_MOD: '1', CLAUDE_DASHBOARD_SURFACE: 'pane' }).split('\n').filter(Boolean);

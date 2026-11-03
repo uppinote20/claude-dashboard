@@ -193,7 +193,7 @@ Or use preset shorthand for quick configuration:
 
 **Widget Toggle:** Add widget IDs to `disabledWidgets` to hide them from any display mode.
 
-**Mod Layouts:** `modPane` (the `/claude-dashboard-pane` pane, default `detailed`) and `modBand` (the `/claude-dashboard-band` band, default = your status line layout) take a display mode name (`compact` / `normal` / `detailed`), a preset string like `"MC$R|BDO"`, or custom widget lines like `[["model","context"],["sessionIdFull"]]` (same as the status line's `lines`). Set `"modBandDefault": true` to turn the band on at session start. See [Mods](#mods-pane--band).
+**Mod Layouts:** `modPane` (the `/claude-dashboard-pane` pane; unset, its dashboard tab shows a sectioned overview of usage, context, cost and session) and `modBand` (the `/claude-dashboard-band` band, default = your status line layout) take a display mode name (`compact` / `normal` / `detailed`), a preset string like `"MC$R|BDO"`, or custom widget lines like `[["model","context"],["sessionIdFull"]]` (same as the status line's `lines`). Set `"modBandDefault": true` to turn the band on at session start. See [Mods](#mods-pane--band).
 
 **Color Legend:** 🟢 0-50% Safe / 🟡 51-80% Warning / 🔴 81-100% Critical
 
@@ -256,7 +256,7 @@ The pane has a tab bar (`1: Dash  2: Turns  3: Agents  4: Files  5: Todos  6: Er
 
 | View | Shows |
 |------|-------|
-| `dashboard` | The widget layout from `modPane` (default view; refreshes every 60s) |
+| `dashboard` | Sectioned overview (usage gauges, context, cost, session), or the widget lines from `modPane` when set (default view; refreshes every 60s) |
 | `turns` | One line per user prompt, newest first (last 20): `#N HH:MM prompt elapsed ↑in ↓out 🔧tools 🤖agents`, with a per-turn token sparkline in the header. Slash commands show as `/name args`, shell input as `!cmd`; skill bodies, task notifications and command output are excluded. Tokens only, no $ |
 | `agents` | Subagents of this session (20 most recently active): type, real model, description, elapsed, tool count, current running tool. Running first, `✓` done, `? stale` = running but no transcript write for 10 min |
 | `files` | Files written by Edit/Write/MultiEdit/NotebookEdit this session (successful results only, main thread + subagents): project-relative path, count, source (`main`, `+N agents`). Up to 30 |

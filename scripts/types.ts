@@ -449,6 +449,14 @@ export interface Translations {
     main: string;
     agentsSuffix: string;
   };
+  /** Section titles of the pane dashboard overview (scripts/views/overview.ts) */
+  overview: {
+    usage: string;
+    context: string;
+    cost: string;
+    session: string;
+    usageUnavailable: string;
+  };
 }
 
 /**

@@ -36,6 +36,7 @@ claude-dashboard/
 │   │   └── toggle.ts        # on/off/toggle + pane view argument rules
 │   ├── views/               # Pane session views (/claude-dashboard-pane <view>)
 │   │   ├── index.ts         # View registry
+│   │   ├── overview.ts      # dashboard tab overview (sections; used when modPane is unset)
 │   │   ├── shared.ts        # Shared view helpers
 │   │   ├── turns.ts         # turns view (per-prompt tokens/tools)
 │   │   ├── agents.ts        # agents view (subagent status)
@@ -146,6 +147,7 @@ claude-dashboard/
 | mod (renderer 하위 프로세스 + ANSI 변환) | `scripts/mod/register.tsx`, `scripts/mod/ansi.ts` |
 | 세션 마커 (TTL heartbeat) | `scripts/utils/band-marker.ts` |
 | pane session view (transcript-derived) | `scripts/views/turns.ts` |
+| layout over widget data (pane overview) | `scripts/views/overview.ts` |
 | subagent transcript scan | `scripts/utils/subagents.ts` |
 
 ## Widget Architecture

@@ -183,21 +183,10 @@ describe('rate-limit widgets', () => {
       expect(data).toBeNull();
     });
 
-    it('should return data for max plan when seven_day_fable is available', async () => {
+    it.each(['max', 'ultra'] as const)('should return data for %s plan when seven_day_fable is available', async (plan) => {
       const ctx = createContext(
         { five_hour: null, seven_day: null, seven_day_sonnet: null, seven_day_fable: { utilization: 52, resets_at: null } },
-        { plan: 'max' }
-      );
-      const data = await rateLimit7dFableWidget.getData(ctx);
-
-      expect(data).not.toBeNull();
-      expect(data?.utilization).toBe(52);
-    });
-
-    it('should return data for ultra plan when seven_day_fable is available', async () => {
-      const ctx = createContext(
-        { five_hour: null, seven_day: null, seven_day_sonnet: null, seven_day_fable: { utilization: 52, resets_at: null } },
-        { plan: 'ultra' }
+        { plan }
       );
       const data = await rateLimit7dFableWidget.getData(ctx);
 
