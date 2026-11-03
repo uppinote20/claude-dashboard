@@ -96,6 +96,16 @@ describe('parseClaudeUsage', () => {
     expect(result.fiveHourReset).toBeNull();
     expect(result.sevenDayPercent).toBe(50);
   });
+
+  it('should score a plan without a 5h window on its weekly limit', () => {
+    const limits: UsageLimits = {
+      five_hour: null,
+      seven_day: { utilization: 4, resets_at: '2025-01-20T00:00:00Z' },
+      seven_day_sonnet: null,
+    };
+
+    expect(parseClaudeUsage(limits).primaryPercent).toBe(4);
+  });
 });
 
 describe('parseCodexUsage', () => {

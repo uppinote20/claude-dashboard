@@ -21,6 +21,7 @@ import { ICON } from './utils/emoji.js';
 import { fetchUsageLimits } from './utils/api-client.js';
 import { getTranslations } from './utils/i18n.js';
 import { formatOutput, getWidget } from './widgets/index.js';
+import { hasScopedWeeklyLimits } from './widgets/rate-limit.js';
 import { resolveRenderMode, resolveModLayout, MOD_UNAVAILABLE_WIDGETS } from './utils/render-mode.js';
 import { renderPaneView } from './views/index.js';
 import { markBand, clearBand, isBandActive } from './utils/band-marker.js';
@@ -187,8 +188,8 @@ async function main(): Promise<void> {
   if (!stdinLimits) {
     // Stdin rate_limits not yet available — full API fallback
     rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
-  } else if (config.plan === 'max') {
-    // Hybrid: stdin for 5h/7d, API only for seven_day_sonnet + seven_day_fable
+  } else if (hasScopedWeeklyLimits(config.plan)) {
+    // Hybrid: stdin for available windows, API only for seven_day_sonnet + seven_day_fable
     const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
     rateLimits = {
       ...stdinLimits,

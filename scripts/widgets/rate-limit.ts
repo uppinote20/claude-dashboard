@@ -9,7 +9,7 @@
  */
 
 import type { Widget } from './base.js';
-import type { WidgetContext, RateLimitData, UsageLimits } from '../types.js';
+import type { Config, WidgetContext, RateLimitData, UsageLimits } from '../types.js';
 import { getColorForPercent, colorize, getTheme } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import { formatTimeRemaining } from '../utils/formatters.js';
@@ -49,6 +49,13 @@ function shouldHideAnthropicLimits(): boolean {
 }
 
 /**
+ * Check if the plan has model-scoped weekly limits (only available from the OAuth API, not stdin)
+ */
+export function hasScopedWeeklyLimits(plan: Config['plan']): boolean {
+  return plan !== 'pro';
+}
+
+/**
  * 5-hour rate limit widget
  */
 export const rateLimit5hWidget: Widget<RateLimitData> = {
@@ -57,9 +64,13 @@ export const rateLimit5hWidget: Widget<RateLimitData> = {
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
     if (shouldHideAnthropicLimits()) return null;
-    const data = getLimitData(ctx.rateLimits, 'five_hour');
+    const { rateLimits } = ctx;
     // Show warning if API failed (only in this widget to avoid duplicates)
-    return data ?? { utilization: 0, resetsAt: null, isError: true };
+    if (!rateLimits?.five_hour && !rateLimits?.seven_day) {
+      return { utilization: 0, resetsAt: null, isError: true };
+    }
+    // A weekly window alone means no 5h limit (verified Ultra accounts), not a failure
+    return getLimitData(rateLimits, 'five_hour');
   },
 
   render(data: RateLimitData, ctx: WidgetContext): string {
@@ -68,7 +79,7 @@ export const rateLimit5hWidget: Widget<RateLimitData> = {
 };
 
 /**
- * 7-day rate limit widget (Pro and Max plans)
+ * 7-day rate limit widget (Pro, Max and Ultra plans)
  */
 export const rateLimit7dWidget: Widget<RateLimitData> = {
   id: 'rateLimit7d',
@@ -85,7 +96,7 @@ export const rateLimit7dWidget: Widget<RateLimitData> = {
 };
 
 /**
- * 7-day Sonnet-only rate limit widget (Max plan only).
+ * 7-day Sonnet-only rate limit widget (Max and Ultra plans).
  *
  * DEPRECATED (~2026-06): with the Sonnet 5 launch Anthropic merged the separate
  * Sonnet weekly limit into the unified all-models weekly bucket, so the usage API
@@ -99,7 +110,7 @@ export const rateLimit7dSonnetWidget: Widget<RateLimitData> = {
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
     if (shouldHideAnthropicLimits()) return null;
-    if (ctx.config.plan !== 'max') return null;
+    if (!hasScopedWeeklyLimits(ctx.config.plan)) return null;
     return getLimitData(ctx.rateLimits, 'seven_day_sonnet');
   },
 
@@ -109,7 +120,7 @@ export const rateLimit7dSonnetWidget: Widget<RateLimitData> = {
 };
 
 /**
- * 7-day Fable-only rate limit widget (Max plan only).
+ * 7-day Fable-only rate limit widget (Max and Ultra plans).
  *
  * Unlike Sonnet, Fable never had a flat `seven_day_fable` field — the API
  * only exposes it as a `weekly_scoped` entry in `limits[]`, so this widget's
@@ -121,7 +132,7 @@ export const rateLimit7dFableWidget: Widget<RateLimitData> = {
 
   async getData(ctx: WidgetContext): Promise<RateLimitData | null> {
     if (shouldHideAnthropicLimits()) return null;
-    if (ctx.config.plan !== 'max') return null;
+    if (!hasScopedWeeklyLimits(ctx.config.plan)) return null;
     return getLimitData(ctx.rateLimits, 'seven_day_fable');
   },
 

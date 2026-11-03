@@ -20,7 +20,7 @@ claude-dashboard는 4개의 커맨드를 제공합니다.
 |------|------|--------|
 | `$1` | 디스플레이 모드 (`compact`, `normal`, `detailed`, `custom`) | `compact` |
 | `$2` | 언어 (`auto`, `en`, `ko`) | `auto` |
-| `$3` | 플랜 (`max`, `pro`) | `max` |
+| `$3` | 플랜 (`max`, `ultra`, `pro`) | `max` |
 | `$4` | 커스텀 위젯 (custom 모드 전용, `"widget1,widget2\|widget3"`) | - |
 
 ### 사용 예시

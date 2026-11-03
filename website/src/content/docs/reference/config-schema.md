@@ -12,7 +12,7 @@ The configuration file is located at `~/.claude/claude-dashboard.local.json`. Th
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `language` | `"en" \| "ko" \| "auto"` | `"auto"` | UI language. `"auto"` detects from system locale. |
-| `plan` | `"pro" \| "max"` | `"max"` | Subscription plan. Affects which rate limit widgets are available. |
+| `plan` | `"pro" \| "max" \| "ultra"` | `"max"` | Subscription plan. Affects which rate limit widgets are available. |
 | `displayMode` | `DisplayMode` | `"compact"` | Display preset or `"custom"` for manual layout. |
 | `lines` | `WidgetId[][]` | -- | Custom line configuration. Only used when `displayMode` is `"custom"`. Each inner array represents one line of widgets. |
 | `disabledWidgets` | `WidgetId[]` | `[]` | Widget IDs to hide from any display mode. Empty lines after filtering are automatically removed. |

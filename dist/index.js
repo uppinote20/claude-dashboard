@@ -596,7 +596,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.35.1";
+var VERSION = "1.35.2";
 
 // scripts/utils/debug.ts
 var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
@@ -1538,14 +1538,20 @@ function getLimitData(limits, key) {
 function shouldHideAnthropicLimits() {
   return isZaiProvider();
 }
+function hasScopedWeeklyLimits(plan) {
+  return plan !== "pro";
+}
 var rateLimit5hWidget = {
   id: "rateLimit5h",
   name: "5h Rate Limit",
   async getData(ctx) {
     if (shouldHideAnthropicLimits())
       return null;
-    const data = getLimitData(ctx.rateLimits, "five_hour");
-    return data ?? { utilization: 0, resetsAt: null, isError: true };
+    const { rateLimits } = ctx;
+    if (!rateLimits?.five_hour && !rateLimits?.seven_day) {
+      return { utilization: 0, resetsAt: null, isError: true };
+    }
+    return getLimitData(rateLimits, "five_hour");
   },
   render(data, ctx) {
     return renderRateLimit(data, ctx, "5h");
@@ -1569,7 +1575,7 @@ var rateLimit7dSonnetWidget = {
   async getData(ctx) {
     if (shouldHideAnthropicLimits())
       return null;
-    if (ctx.config.plan !== "max")
+    if (!hasScopedWeeklyLimits(ctx.config.plan))
       return null;
     return getLimitData(ctx.rateLimits, "seven_day_sonnet");
   },
@@ -1583,7 +1589,7 @@ var rateLimit7dFableWidget = {
   async getData(ctx) {
     if (shouldHideAnthropicLimits())
       return null;
-    if (ctx.config.plan !== "max")
+    if (!hasScopedWeeklyLimits(ctx.config.plan))
       return null;
     return getLimitData(ctx.rateLimits, "seven_day_fable");
   },
@@ -5734,7 +5740,7 @@ async function main() {
   let rateLimits;
   if (!stdinLimits) {
     rateLimits = await fetchUsageLimits(config.cache.ttlSeconds);
-  } else if (config.plan === "max") {
+  } else if (hasScopedWeeklyLimits(config.plan)) {
     const apiLimits = await fetchUsageLimits(config.cache.ttlSeconds);
     rateLimits = {
       ...stdinLimits,

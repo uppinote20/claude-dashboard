@@ -69,10 +69,10 @@ Multi-provider support: z.ai/ZHIPU, Codex, Gemini, Antigravity auto-detected whe
 | | `contextUsage` | Token count only, e.g. `42K/200K` (sub-widget of `context`) |
 | | `cost` | Session cost in USD |
 | | `projectInfo` | Directory + git branch (clickable OSC8 link) + ahead/behind (↑↓), subpath from project_dir, worktree indicator (🌳) |
-| **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown |
-| | `rateLimit7d` | 7-day rate limit (Pro and Max) |
+| **Rate Limits** | `rateLimit5h` | 5-hour rate limit with reset countdown; hidden on verified Ultra accounts, which have no 5h limit |
+| | `rateLimit7d` | 7-day rate limit (Pro, Max and Ultra) |
 | | `rateLimit7dSonnet` | 7-day Sonnet limit (Max only) — deprecated ~2026-06: Anthropic merged it into the unified weekly bucket at the Sonnet 5 launch, so the API returns `null` and the widget stays hidden until/unless the field returns |
-| | `rateLimit7dFable` | 7-day Fable limit (Max only) |
+| | `rateLimit7dFable` | 7-day Fable limit (Max and Ultra) |
 | **Session** | `sessionId` | Session ID (short 8-char) |
 | | `sessionIdFull` | Session ID (full UUID) |
 | | `sessionName` | Session name from /rename command |

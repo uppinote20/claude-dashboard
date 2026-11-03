@@ -95,7 +95,7 @@ function hashToken(token) {
 }
 
 // scripts/version.ts
-var VERSION = "1.35.1";
+var VERSION = "1.35.2";
 
 // scripts/utils/debug.ts
 var DEBUG = process.env.DEBUG === "claude-dashboard" || process.env.DEBUG === "1" || process.env.DEBUG === "true";
@@ -2534,6 +2534,9 @@ function createErrorResult(name) {
     sevenDayReset: null
   };
 }
+function windowPercent(window) {
+  return window ? Math.round(window.utilization) : null;
+}
 function parseClaudeUsage(limits) {
   if (!limits) {
     return createErrorResult("Claude");
@@ -2542,9 +2545,10 @@ function parseClaudeUsage(limits) {
     name: "Claude",
     available: true,
     error: false,
-    primaryPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
-    fiveHourPercent: limits.five_hour ? Math.round(limits.five_hour.utilization) : null,
-    sevenDayPercent: limits.seven_day ? Math.round(limits.seven_day.utilization) : null,
+    // A plan without a 5h window (verified Ultra) is scored on the only limit it has.
+    primaryPercent: windowPercent(limits.five_hour ?? limits.seven_day),
+    fiveHourPercent: windowPercent(limits.five_hour),
+    sevenDayPercent: windowPercent(limits.seven_day),
     fiveHourReset: normalizeToISO(limits.five_hour?.resets_at ?? null),
     sevenDayReset: normalizeToISO(limits.seven_day?.resets_at ?? null)
   };

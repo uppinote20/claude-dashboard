@@ -96,7 +96,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit5h` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 5-hour rate limit utilization percentage with reset countdown timer. Available on both Pro and Max plans. |
+| **Description** | Shows the 5-hour rate limit utilization percentage with reset countdown timer. Available on Pro and Max plans. Hidden on verified Ultra accounts, which have no 5-hour limit. |
 
 **Example output:**
 ```
@@ -110,7 +110,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit7d` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 7-day rate limit utilization. Available on Pro and Max plans. |
+| **Description** | Shows the 7-day rate limit utilization. Available on Pro, Max and Ultra plans. |
 
 **Example output:**
 ```
@@ -136,7 +136,7 @@ $0.03
 |----------|-------|
 | **Widget ID** | `rateLimit7dFable` |
 | **Data Source** | API (oauth/usage) |
-| **Description** | Shows the 7-day Fable-specific weekly usage cap. Max plan only. Sourced from the API's generic `limits[]` array (a `weekly_scoped` entry) rather than a flat field, so the widget stays hidden unless the account has a Fable cap. |
+| **Description** | Shows the 7-day Fable-specific weekly usage cap. Max and Ultra plans. Sourced from the API's generic `limits[]` array (a `weekly_scoped` entry) rather than a flat field, so the widget stays hidden unless the account has a Fable cap. |
 
 **Example output:**
 ```

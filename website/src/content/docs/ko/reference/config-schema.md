@@ -12,7 +12,7 @@ sidebar:
 | 필드 | 타입 | 기본값 | 설명 |
 |------|------|--------|------|
 | `language` | `'en' \| 'ko' \| 'auto'` | `'auto'` | 언어 설정. `auto`는 시스템 언어를 자동 감지합니다. |
-| `plan` | `'pro' \| 'max'` | `'max'` | 구독 플랜. 표시되는 속도 제한 위젯에 영향을 줍니다. |
+| `plan` | `'pro' \| 'max' \| 'ultra'` | `'max'` | 구독 플랜. 표시되는 속도 제한 위젯에 영향을 줍니다. |
 | `displayMode` | `DisplayMode` | `'compact'` | 디스플레이 모드. `preset` 사용 시 자동으로 `'custom'`이 됩니다. |
 | `lines` | `WidgetId[][]` | - | 커스텀 줄 구성. `displayMode`가 `'custom'`일 때만 사용됩니다. |
 | `disabledWidgets` | `WidgetId[]` | `[]` | 비활성화할 위젯 ID 목록. 모든 모드에서 필터링됩니다. |
