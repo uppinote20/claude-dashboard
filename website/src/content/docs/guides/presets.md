@@ -80,7 +80,7 @@ Result: model, context, cost, rateLimit5h, rateLimit7d, rateLimit7dSonnet -- all
 - **Line 2:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 - **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance
 - **Line 4:** tokenBreakdown, forecast, budget
-- **Line 5:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version
+- **Line 5:** codexUsage, antigravityUsage, linesChanged, outputStyle, version
 
 ## Combining with Other Options
 

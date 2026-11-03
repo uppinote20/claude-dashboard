@@ -10,7 +10,7 @@ import type { Widget } from './base.js';
 import type { WidgetContext, GeminiUsageData, GeminiUsageAllData } from '../types.js';
 import { colorize, getTheme } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
-import { isGeminiInstalled, fetchGeminiUsage } from '../utils/gemini-client.js';
+import { isGeminiInstalled, fetchGeminiUsage, GEMINI_RETIRED } from '../utils/gemini-client.js';
 import { formatUsageWithReset } from './usage-format.js';
 import { debugLog } from '../utils/debug.js';
 
@@ -27,6 +27,8 @@ export const geminiUsageWidget: Widget<GeminiUsageData> = {
 
     const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
     debugLog('gemini', 'fetchGeminiUsage result:', limits);
+    // Leftover credentials of a retired personal tier: hide, it is not a failure.
+    if (limits === GEMINI_RETIRED) return null;
     if (!limits) {
       // Return error state instead of null to show warning indicator
       return {
@@ -76,6 +78,7 @@ export const geminiUsageAllWidget: Widget<GeminiUsageAllData> = {
 
     const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
     debugLog('gemini', 'geminiUsageAll - fetchGeminiUsage result:', limits);
+    if (limits === GEMINI_RETIRED) return null;
     if (!limits) {
       return {
         buckets: [],

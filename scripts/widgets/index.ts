@@ -183,10 +183,17 @@ export async function renderWidget(
   ctx: WidgetContext
 ): Promise<WidgetRenderResult | null> {
   const loaded = await loadWidgetData(widgetId, ctx);
-  if (!loaded) {
-    return null;
-  }
+  return loaded ? renderLoadedWidget(widgetId, loaded, ctx) : null;
+}
 
+/**
+ * Render data already fetched with loadWidgetData (lets a caller inspect it first)
+ */
+export function renderLoadedWidget(
+  widgetId: WidgetId,
+  loaded: NonNullable<Awaited<ReturnType<typeof loadWidgetData>>>,
+  ctx: WidgetContext
+): WidgetRenderResult | null {
   try {
     return { id: widgetId, output: loaded.widget.render(loaded.data, ctx) };
   } catch (error) {

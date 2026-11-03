@@ -225,7 +225,7 @@ export const DISPLAY_PRESETS: Record<Exclude<DisplayMode, 'custom'>, WidgetId[][
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'promptCache', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
-    ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
+    ['codexUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
   ],
 };

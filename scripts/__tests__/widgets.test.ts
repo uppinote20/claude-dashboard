@@ -66,7 +66,7 @@ import {
 } from '../widgets/prompt-cache.js';
 import { depletionTimeWidget } from '../widgets/depletion-time.js';
 import { codexUsageWidget } from '../widgets/codex-usage.js';
-import { geminiUsageWidget } from '../widgets/gemini-usage.js';
+import { geminiUsageWidget, geminiUsageAllWidget } from '../widgets/gemini-usage.js';
 import { antigravityUsageWidget, antigravityUsageAllWidget } from '../widgets/antigravity-usage.js';
 import { getWidget } from '../widgets/index.js';
 import { configCountsWidget } from '../widgets/config-counts.js';
@@ -1556,6 +1556,15 @@ describe('widgets', () => {
       expect(data?.isError).toBe(true);
       expect(data?.model).toBe('gemini');
       expect(data?.usedPercent).toBeNull();
+    });
+
+    it('hides instead of warning when the account tier is retired', async () => {
+      vi.spyOn(geminiClient, 'isGeminiInstalled').mockResolvedValue(true);
+      vi.spyOn(geminiClient, 'fetchGeminiUsage').mockResolvedValue(geminiClient.GEMINI_RETIRED);
+
+      const ctx = createContext();
+      expect(await geminiUsageWidget.getData(ctx)).toBeNull();
+      expect(await geminiUsageAllWidget.getData(ctx)).toBeNull();
     });
 
     it('should return usage data when API call succeeds', async () => {
@@ -3145,5 +3154,14 @@ describe('widgets', () => {
       expect(result).toContain('API');
       expect(result).toContain('45%');
     });
+  });
+});
+
+describe('DISPLAY_PRESETS.detailed', () => {
+  it('leaves geminiUsage out (superseded by antigravityUsage) but keeps antigravityUsage', async () => {
+    const { DISPLAY_PRESETS } = await import('../types.js');
+    const ids = DISPLAY_PRESETS.detailed.flat();
+    expect(ids).not.toContain('geminiUsage');
+    expect(ids).toContain('antigravityUsage');
   });
 });

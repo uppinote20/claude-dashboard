@@ -80,7 +80,7 @@ sidebar:
 - **2줄:** projectInfo, sessionId, sessionDuration, burnRate, todoProgress
 - **3줄:** configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance
 - **4줄:** tokenBreakdown, forecast, budget
-- **5줄:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version
+- **5줄:** codexUsage, antigravityUsage, linesChanged, outputStyle, version
 
 ## 다른 설정과 조합
 

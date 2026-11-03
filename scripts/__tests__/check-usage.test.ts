@@ -8,6 +8,7 @@ import {
   parseClaudeUsage,
   parseCodexUsage,
   parseGeminiUsage,
+  resolveGemini,
   parseAntigravityUsage,
   parseZaiUsage,
   calculateRecommendation,
@@ -449,5 +450,23 @@ describe('calculateRecommendation', () => {
     // Should pick first one alphabetically after sort (all have same score)
     expect(result.name).not.toBeNull();
     expect(result.reason).toContain('25%');
+  });
+});
+
+describe('resolveGemini', () => {
+  const limits = { model: 'gemini-2.5-pro', usedPercent: 10, resetAt: null, buckets: [] };
+
+  it('treats a retired personal tier like Gemini CLI not being set up', () => {
+    expect(resolveGemini('retired', true)).toEqual({ active: false, data: null });
+    expect(parseGeminiUsage(resolveGemini('retired', true).data, false).available).toBe(false);
+  });
+
+  it('keeps a failed fetch active so it still reports an error', () => {
+    expect(resolveGemini(null, true)).toEqual({ active: true, data: null });
+  });
+
+  it('passes live data through', () => {
+    expect(resolveGemini(limits, true)).toEqual({ active: true, data: limits });
+    expect(resolveGemini(null, false).active).toBe(false);
   });
 });

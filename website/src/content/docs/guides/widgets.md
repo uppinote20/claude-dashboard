@@ -66,7 +66,7 @@ claude-dashboard provides 49 widgets organized by category. Each widget can be i
 | Widget | Description |
 |--------|-------------|
 | `codexUsage` | OpenAI Codex CLI usage (auto-hide if not installed) [2] |
-| `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed) [3] |
+| `geminiUsage` | Google Gemini CLI - current model (auto-hide if not installed or on a retired personal tier; not in `detailed`) [3] |
 | `geminiUsageAll` | Google Gemini CLI - all models (auto-hide if not installed) [3] |
 | `antigravityUsage` | Google Antigravity CLI - weekly quota per model family, Gemini vs Claude+GPT (auto-hide if not installed) [4] |
 | `antigravityUsageAll` | Google Antigravity CLI - all model buckets (auto-hide if not installed) [4] |

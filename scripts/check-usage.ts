@@ -9,7 +9,7 @@
 
 import { fetchUsageLimits } from './utils/api-client.js';
 import { fetchCodexUsage, isCodexInstalled } from './utils/codex-client.js';
-import { fetchGeminiUsage, isGeminiInstalled } from './utils/gemini-client.js';
+import { fetchGeminiUsage, isGeminiInstalled, GEMINI_RETIRED } from './utils/gemini-client.js';
 import { fetchAntigravityUsage, isAntigravityInstalled } from './utils/antigravity-client.js';
 import { fetchZaiUsage, isZaiInstalled, type ZaiUsageLimits } from './utils/zai-api-client.js';
 import { isZaiProvider } from './utils/provider.js';
@@ -401,6 +401,18 @@ export function parseCodexUsage(limits: CodexUsageLimits | null, installed: bool
 }
 
 /**
+ * A retired personal tier is not an error: report it like Gemini CLI not being set up.
+ * A failed fetch (null) stays active so it is still shown as an error.
+ */
+export function resolveGemini(
+  limits: GeminiUsageLimits | typeof GEMINI_RETIRED | null,
+  installed: boolean
+): { active: boolean; data: GeminiUsageLimits | null } {
+  const retired = limits === GEMINI_RETIRED;
+  return { active: installed && !retired, data: retired ? null : limits };
+}
+
+/**
  * Parse Gemini usage limits
  */
 export function parseGeminiUsage(limits: GeminiUsageLimits | null, installed: boolean): CLIUsageInfo {
@@ -537,7 +549,8 @@ async function main(): Promise<void> {
   // Parse usage data
   const claudeUsage = parseClaudeUsage(claudeLimits);
   const codexUsage = parseCodexUsage(codexLimits, codexInstalled);
-  const geminiUsage = parseGeminiUsage(geminiLimits, geminiInstalled);
+  const { active: geminiActive, data: geminiData } = resolveGemini(geminiLimits, geminiInstalled);
+  const geminiUsage = parseGeminiUsage(geminiData, geminiActive);
   const antigravityUsage = parseAntigravityUsage(antigravityLimits, antigravityInstalled);
   const zaiUsage = parseZaiUsage(zaiLimits, zaiInstalled);
 
@@ -547,7 +560,7 @@ async function main(): Promise<void> {
     [
       isZaiProvider() ? null : claudeUsage,
       codexInstalled ? codexUsage : null,
-      geminiInstalled ? geminiUsage : null,
+      geminiActive ? geminiUsage : null,
       antigravityInstalled ? antigravityUsage : null,
       zaiInstalled ? zaiUsage : null,
     ],
@@ -559,7 +572,7 @@ async function main(): Promise<void> {
     const output: CheckUsageOutput = {
       claude: claudeUsage,
       codex: codexInstalled ? codexUsage : null,
-      gemini: geminiInstalled ? geminiUsage : null,
+      gemini: geminiActive ? geminiUsage : null,
       antigravity: antigravityInstalled ? antigravityUsage : null,
       zai: zaiInstalled ? zaiUsage : null,
       recommendation: recommendation.name,
@@ -597,8 +610,8 @@ async function main(): Promise<void> {
   }
 
   // Gemini section
-  if (geminiInstalled) {
-    const geminiLines = renderGeminiSection(geminiUsage, geminiLimits, t);
+  if (geminiActive) {
+    const geminiLines = renderGeminiSection(geminiUsage, geminiData, t);
     if (geminiLines.length > 0) {
       outputLines.push(...geminiLines);
       outputLines.push('');

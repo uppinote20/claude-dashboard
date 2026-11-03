@@ -47,7 +47,7 @@ Shows all available widgets across six lines, including analytics, tool activity
 **Line 2:** projectInfo, sessionName, sessionId, sessionDuration, burnRate, tokenSpeed, depletionTime, todoProgress<br/>
 **Line 3:** configCounts, toolActivity, agentStatus, cacheHit, promptCache, performance<br/>
 **Line 4:** tokenBreakdown, forecast, budget, todayCost<br/>
-**Line 5:** codexUsage, geminiUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours<br/>
+**Line 5:** codexUsage, antigravityUsage, linesChanged, outputStyle, version, peakHours<br/>
 **Line 6:** lastPrompt, vimMode, apiDuration, tagStatus
 
 ```

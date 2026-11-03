@@ -193,7 +193,7 @@ interface Widget<T extends WidgetData> {
 | `promptCacheMisses` | stdin | `miss N` only, empty at 0 (sub-widget of `promptCache`) |
 | `depletionTime` | API + session | Estimated time to rate limit |
 | `codexUsage` | Codex API | OpenAI Codex CLI usage (model + rate-limit windows). Windows are labeled from `limit_window_seconds`, not response position — Plus returns 5h + 7d, Pro a single 7d |
-| `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json` |
+| `geminiUsage` | Gemini API | Google Gemini CLI usage (current model only). Personal tiers retired 2026-06-18 → see `antigravityUsage`; enterprise still supported. Auto-hides without `~/.gemini/oauth_creds.json`, and when the account tier is retired (loadCodeAssist `UNSUPPORTED_CLIENT`; verdict cached a day). Not in the `detailed` preset; opt in with `G` |
 | `geminiUsageAll` | Gemini API | Google Gemini CLI usage (all model buckets) |
 | `antigravityUsage` | Antigravity API | Google Antigravity CLI weekly quota by model family (Gemini / Claude+GPT). Auto-hides without `~/.gemini/antigravity-cli/antigravity-oauth-token` |
 | `antigravityUsageAll` | Antigravity API | Google Antigravity CLI per-model quota buckets |
@@ -236,7 +236,7 @@ const DISPLAY_PRESETS = {
     ['projectInfo', 'sessionName', 'sessionId', 'sessionDuration', 'burnRate', 'tokenSpeed', 'depletionTime', 'todoProgress'],
     ['configCounts', 'toolActivity', 'agentStatus', 'cacheHit', 'promptCache', 'performance'],
     ['tokenBreakdown', 'forecast', 'budget', 'todayCost'],
-    ['codexUsage', 'geminiUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
+    ['codexUsage', 'antigravityUsage', 'linesChanged', 'outputStyle', 'version', 'peakHours'],
     ['lastPrompt', 'vimMode', 'apiDuration', 'tagStatus'],
   ],
 };

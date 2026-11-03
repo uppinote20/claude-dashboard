@@ -94,7 +94,20 @@ interface LoadCodeAssistResponse {
     name?: string;
   } | null;
   cloudaicompanionProject?: string | null;
+  ineligibleTiers?: Array<{ reasonCode?: string; tierId?: string }> | null;
 }
+
+/**
+ * fetchGeminiUsage result for an account whose tier no longer serves the Gemini CLI: the
+ * personal tiers were retired on 2026-06-18 (users moved to Antigravity), and loadCodeAssist
+ * then answers 200 with no project and an UNSUPPORTED_CLIENT ineligible tier. Not an error:
+ * widgets hide instead of showing ⚠️ for credentials left on disk.
+ */
+export const GEMINI_RETIRED = 'retired' as const;
+const RETIRED_REASON = 'UNSUPPORTED_CLIENT';
+// The verdict does not change once a tier is retired, so one check a day is enough. Not in
+// CLEANABLE_PREFIXES: the hourly sweep would defeat the long TTL (same as antigravity's meta).
+const RETIRED_FILE_TTL_SECONDS = 86_400;
 
 interface BucketInfo {
   remainingAmount?: string;
@@ -386,9 +399,10 @@ async function getValidCredentials(): Promise<GeminiCredentials | null> {
 }
 
 /**
- * Cached project ID from loadCodeAssist API (per token hash for multi-account support)
+ * Cached project ID from loadCodeAssist API (per token hash for multi-account support).
+ * Also holds a retired verdict, so a process asks once even before the file cache exists.
  */
-const projectIdCacheMap: Map<string, { data: string; timestamp: number }> = new Map();
+const projectIdCacheMap: Map<string, { data: string | typeof GEMINI_RETIRED; timestamp: number }> = new Map();
 const PROJECT_ID_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
@@ -432,7 +446,7 @@ export async function getGeminiModel(): Promise<string | null> {
  * Get project ID via loadCodeAssist API
  * Falls back to environment variable or settings
  */
-async function getProjectId(credentials: GeminiCredentials): Promise<string | null> {
+async function getProjectId(credentials: GeminiCredentials): Promise<string | typeof GEMINI_RETIRED | null> {
   // Check environment variable first
   const envProjectId = process.env['GOOGLE_CLOUD_PROJECT'] || process.env['GOOGLE_CLOUD_PROJECT_ID'];
   if (envProjectId) {
@@ -487,6 +501,11 @@ async function getProjectId(credentials: GeminiCredentials): Promise<string | nu
       projectIdCacheMap.set(tokenHash, { data: projectId, timestamp: Date.now() });
       return projectId;
     }
+    if (!data?.currentTier && data?.ineligibleTiers?.some((tier) => tier.reasonCode === RETIRED_REASON)) {
+      debugLog('gemini', 'loadCodeAssist: account tier retired for this client');
+      projectIdCacheMap.set(tokenHash, { data: GEMINI_RETIRED, timestamp: Date.now() });
+      return GEMINI_RETIRED;
+    }
   } catch (err) {
     debugLog('gemini', 'loadCodeAssist error:', err);
   }
@@ -497,14 +516,26 @@ async function getProjectId(credentials: GeminiCredentials): Promise<string | nu
 /**
  * Fetch Gemini usage limits
  */
-export async function fetchGeminiUsage(ttlSeconds: number = 60): Promise<GeminiUsageLimits | null> {
+export async function fetchGeminiUsage(
+  ttlSeconds: number = 60
+): Promise<GeminiUsageLimits | typeof GEMINI_RETIRED | null> {
   const credentials = await getValidCredentials();
   if (!credentials) {
     debugLog('gemini', 'fetchGeminiUsage: no valid credentials');
     return null;
   }
 
+  // Keyed by the refresh token: the access token rotates hourly, the account does not.
+  const tierFile = fileCachePath(`gemini-tier-${hashToken(credentials.refreshToken ?? credentials.accessToken)}.json`);
+  if ((await loadFileCache<{ retired?: boolean }>(tierFile, RETIRED_FILE_TTL_SECONDS))?.data?.retired === true) {
+    return GEMINI_RETIRED;
+  }
+
   const projectId = await getProjectId(credentials);
+  if (projectId === GEMINI_RETIRED) {
+    await saveFileCache(tierFile, { retired: true });
+    return GEMINI_RETIRED;
+  }
   if (!projectId) {
     debugLog('gemini', 'fetchGeminiUsage: no project ID found');
     return null;
