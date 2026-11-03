@@ -8,9 +8,8 @@
  */
 
 import type { ContextData, RateLimitData, Translations, WidgetContext, WidgetId } from '../types.js';
-import { getWidget } from '../widgets/index.js';
+import { loadWidgetData, renderWidget } from '../widgets/index.js';
 import { colorize, getColorForPercent, getTheme } from '../utils/colors.js';
-import { debugLog } from '../utils/debug.js';
 import { ICON } from '../utils/emoji.js';
 import { formatTimeRemaining, formatTokens } from '../utils/formatters.js';
 import { DEFAULT_PROGRESS_BAR_CONFIG, renderProgressBar } from '../utils/progress-bar.js';
@@ -52,9 +51,12 @@ async function section(title: string, rows: Promise<string[]>): Promise<string[]
 }
 
 async function usageRows(ctx: WidgetContext): Promise<string[]> {
-  const limits = await Promise.all(LIMIT_ROWS.map((row) => widgetData<RateLimitData>(row.id, ctx)));
+  const [limits, others] = await Promise.all([
+    Promise.all(LIMIT_ROWS.map((row) => widgetData<RateLimitData>(row.id, ctx))),
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx))),
+  ]);
   // rateLimit5h alone reports a failed fetch, so its error stands for every limit row.
-  if (limits[0]?.isError) {
+  if (limits[LIMIT_ROWS.findIndex((row) => row.id === 'rateLimit5h')]?.isError) {
     return [colorize(`  ${ICON.warning} ${ctx.translations.overview.usageUnavailable}`, getTheme().warning)];
   }
   const rows = LIMIT_ROWS.flatMap((row, i) => {
@@ -63,7 +65,6 @@ async function usageRows(ctx: WidgetContext): Promise<string[]> {
     const reset = data.resetsAt ? `  ${formatTimeRemaining(data.resetsAt, ctx.translations)}` : '';
     return [`  ${padDisplay(ctx.translations.labels[row.label], LABEL_WIDTH)}${gauge(data.utilization)}${reset}`];
   });
-  const others = await Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx)));
   return [...rows, ...others.filter((s): s is string => s !== null).map((s) => `  ${s}`)];
 }
 
@@ -97,26 +98,18 @@ function gauge(percent: number): string {
   return `${renderProgressBar(percent, GAUGE)}${colorize(pct, getColorForPercent(percent))}`;
 }
 
+// Same fetch and failure policy as the statusLine (widgets/index.ts); only disabledWidgets is
+// checked here, since the overview picks its own widgets instead of going through getLines.
+const isDisabled = (id: WidgetId, ctx: WidgetContext) => ctx.config.disabledWidgets?.includes(id) ?? false;
+
 async function widgetData<T>(id: WidgetId, ctx: WidgetContext): Promise<T | null> {
-  const widget = ctx.config.disabledWidgets?.includes(id) ? undefined : getWidget(id);
-  if (!widget) return null;
-  try {
-    return (await widget.getData(ctx)) as T | null;
-  } catch (error) {
-    debugLog('overview', `Widget '${id}' failed`, error);
-    return null;
-  }
+  if (isDisabled(id, ctx)) return null;
+  return ((await loadWidgetData(id, ctx))?.data as T | undefined) ?? null;
 }
 
 async function widgetText(id: WidgetId, ctx: WidgetContext): Promise<string | null> {
-  const data = await widgetData<never>(id, ctx);
-  if (data === null) return null;
-  try {
-    return getWidget(id)!.render(data, ctx) || null;
-  } catch (error) {
-    debugLog('overview', `Widget '${id}' render failed`, error);
-    return null;
-  }
+  if (isDisabled(id, ctx)) return null;
+  return (await renderWidget(id, ctx))?.output || null;
 }
 
 // Hangul and other wide characters take two terminal columns, so localized labels pad by width.
@@ -124,8 +117,10 @@ function padDisplay(text: string, width: number): string {
   return text + ' '.repeat(Math.max(1, width - displayWidth(text)));
 }
 
+const WIDE_CHAR = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\uff00-\uff60]/;
+
 function displayWidth(text: string): number {
   let width = 0;
-  for (const ch of text) width += /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿＀-｠]/.test(ch) ? 2 : 1;
+  for (const ch of text) width += WIDE_CHAR.test(ch) ? 2 : 1;
   return width;
 }

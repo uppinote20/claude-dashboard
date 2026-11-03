@@ -5204,18 +5204,26 @@ function getLines(config) {
   const disabledSet = new Set(disabled);
   return lines.map((line) => line.filter((id) => !disabledSet.has(id))).filter((line) => line.length > 0);
 }
-async function renderWidget(widgetId, ctx) {
+async function loadWidgetData(widgetId, ctx) {
   const widget = getWidget(widgetId);
   if (!widget) {
     return null;
   }
   try {
     const data = await widget.getData(ctx);
-    if (!data) {
-      return null;
-    }
-    const output = widget.render(data, ctx);
-    return { id: widgetId, output };
+    return data ? { widget, data } : null;
+  } catch (error) {
+    debugLog("widget", `Widget '${widgetId}' failed`, error);
+    return null;
+  }
+}
+async function renderWidget(widgetId, ctx) {
+  const loaded = await loadWidgetData(widgetId, ctx);
+  if (!loaded) {
+    return null;
+  }
+  try {
+    return { id: widgetId, output: loaded.widget.render(loaded.data, ctx) };
   } catch (error) {
     debugLog("widget", `Widget '${widgetId}' failed`, error);
     return null;
@@ -5648,8 +5656,11 @@ async function section(title, rows) {
   return [colorize(` ${title} ${rule}`, getTheme().secondary), ...body];
 }
 async function usageRows(ctx) {
-  const limits = await Promise.all(LIMIT_ROWS.map((row) => widgetData(row.id, ctx)));
-  if (limits[0]?.isError) {
+  const [limits, others] = await Promise.all([
+    Promise.all(LIMIT_ROWS.map((row) => widgetData(row.id, ctx))),
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx)))
+  ]);
+  if (limits[LIMIT_ROWS.findIndex((row) => row.id === "rateLimit5h")]?.isError) {
     return [colorize(`  ${ICON.warning} ${ctx.translations.overview.usageUnavailable}`, getTheme().warning)];
   }
   const rows = LIMIT_ROWS.flatMap((row, i) => {
@@ -5659,7 +5670,6 @@ async function usageRows(ctx) {
     const reset = data.resetsAt ? `  ${formatTimeRemaining(data.resetsAt, ctx.translations)}` : "";
     return [`  ${padDisplay(ctx.translations.labels[row.label], LABEL_WIDTH)}${gauge(data.utilization)}${reset}`];
   });
-  const others = await Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx)));
   return [...rows, ...others.filter((s) => s !== null).map((s) => `  ${s}`)];
 }
 async function contextRows(ctx) {
@@ -5685,35 +5695,25 @@ function gauge(percent) {
   const pct = `${Math.round(percent)}%`.padStart(5);
   return `${renderProgressBar(percent, GAUGE)}${colorize(pct, getColorForPercent(percent))}`;
 }
+var isDisabled = (id, ctx) => ctx.config.disabledWidgets?.includes(id) ?? false;
 async function widgetData(id, ctx) {
-  const widget = ctx.config.disabledWidgets?.includes(id) ? void 0 : getWidget(id);
-  if (!widget)
+  if (isDisabled(id, ctx))
     return null;
-  try {
-    return await widget.getData(ctx);
-  } catch (error) {
-    debugLog("overview", `Widget '${id}' failed`, error);
-    return null;
-  }
+  return (await loadWidgetData(id, ctx))?.data ?? null;
 }
 async function widgetText(id, ctx) {
-  const data = await widgetData(id, ctx);
-  if (data === null)
+  if (isDisabled(id, ctx))
     return null;
-  try {
-    return getWidget(id).render(data, ctx) || null;
-  } catch (error) {
-    debugLog("overview", `Widget '${id}' render failed`, error);
-    return null;
-  }
+  return (await renderWidget(id, ctx))?.output || null;
 }
 function padDisplay(text, width) {
   return text + " ".repeat(Math.max(1, width - displayWidth(text)));
 }
+var WIDE_CHAR = /[\u1100-\u115f\u2e80-\ua4cf\uac00-\ud7a3\uf900-\ufaff\uff00-\uff60]/;
 function displayWidth(text) {
   let width = 0;
   for (const ch of text)
-    width += /[ᄀ-ᅟ⺀-꓏가-힣豈-﫿＀-｠]/.test(ch) ? 2 : 1;
+    width += WIDE_CHAR.test(ch) ? 2 : 1;
   return width;
 }
 

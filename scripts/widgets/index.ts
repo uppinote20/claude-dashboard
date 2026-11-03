@@ -154,12 +154,12 @@ export function getLines(config: Config): WidgetId[][] {
 }
 
 /**
- * Render a single widget
+ * Fetch a single widget's data; null when the widget is unknown, has no data, or throws
  */
-async function renderWidget(
+export async function loadWidgetData(
   widgetId: WidgetId,
   ctx: WidgetContext
-): Promise<WidgetRenderResult | null> {
+): Promise<{ widget: Widget; data: NonNullable<Awaited<ReturnType<Widget['getData']>>> } | null> {
   const widget = getWidget(widgetId);
   if (!widget) {
     return null;
@@ -167,14 +167,29 @@ async function renderWidget(
 
   try {
     const data = await widget.getData(ctx);
-    if (!data) {
-      return null;
-    }
-
-    const output = widget.render(data, ctx);
-    return { id: widgetId, output };
+    return data ? { widget, data } : null;
   } catch (error) {
     // Graceful degradation - skip failed widgets, but log for debugging
+    debugLog('widget', `Widget '${widgetId}' failed`, error);
+    return null;
+  }
+}
+
+/**
+ * Render a single widget
+ */
+export async function renderWidget(
+  widgetId: WidgetId,
+  ctx: WidgetContext
+): Promise<WidgetRenderResult | null> {
+  const loaded = await loadWidgetData(widgetId, ctx);
+  if (!loaded) {
+    return null;
+  }
+
+  try {
+    return { id: widgetId, output: loaded.widget.render(loaded.data, ctx) };
+  } catch (error) {
     debugLog('widget', `Widget '${widgetId}' failed`, error);
     return null;
   }
