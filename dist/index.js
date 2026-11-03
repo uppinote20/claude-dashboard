@@ -19,7 +19,7 @@ var DISPLAY_PRESETS = {
     ["projectInfo", "sessionName", "sessionId", "sessionDuration", "burnRate", "tokenSpeed", "depletionTime", "todoProgress"],
     ["configCounts", "toolActivity", "agentStatus", "cacheHit", "promptCache", "performance"],
     ["tokenBreakdown", "forecast", "budget", "todayCost"],
-    ["codexUsage", "geminiUsage", "antigravityUsage", "linesChanged", "outputStyle", "version", "peakHours"],
+    ["codexUsage", "antigravityUsage", "linesChanged", "outputStyle", "version", "peakHours"],
     ["lastPrompt", "vimMode", "apiDuration", "tagStatus"]
   ]
 };
@@ -3254,6 +3254,9 @@ var cachedCredentials = null;
 var keychainCache = null;
 var KEYCHAIN_CACHE_TTL_MS2 = 1e4;
 var cachedSettings = null;
+var GEMINI_RETIRED = "retired";
+var RETIRED_REASON = "UNSUPPORTED_CLIENT";
+var RETIRED_FILE_TTL_SECONDS = 86400;
 function getGeminiDir() {
   return path3.join(os3.homedir(), GEMINI_DIR);
 }
@@ -3513,6 +3516,10 @@ async function getProjectId(credentials) {
       projectIdCacheMap.set(tokenHash, { data: projectId, timestamp: Date.now() });
       return projectId;
     }
+    if (!data?.currentTier && data?.ineligibleTiers?.some((tier) => tier.reasonCode === RETIRED_REASON)) {
+      debugLog("gemini", "loadCodeAssist: account tier retired for this client");
+      return GEMINI_RETIRED;
+    }
   } catch (err) {
     debugLog("gemini", "loadCodeAssist error:", err);
   }
@@ -3524,7 +3531,15 @@ async function fetchGeminiUsage(ttlSeconds = 60) {
     debugLog("gemini", "fetchGeminiUsage: no valid credentials");
     return null;
   }
+  const tierFile = fileCachePath(`gemini-tier-${hashToken(credentials.refreshToken ?? credentials.accessToken)}.json`);
+  if ((await loadFileCache(tierFile, RETIRED_FILE_TTL_SECONDS))?.data?.retired === true) {
+    return GEMINI_RETIRED;
+  }
   const projectId = await getProjectId(credentials);
+  if (projectId === GEMINI_RETIRED) {
+    await saveFileCache(tierFile, { retired: true });
+    return GEMINI_RETIRED;
+  }
   if (!projectId) {
     debugLog("gemini", "fetchGeminiUsage: no project ID found");
     return null;
@@ -3675,6 +3690,8 @@ var geminiUsageWidget = {
     }
     const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
     debugLog("gemini", "fetchGeminiUsage result:", limits);
+    if (limits === GEMINI_RETIRED)
+      return null;
     if (!limits) {
       return {
         model: "gemini",
@@ -3712,6 +3729,8 @@ var geminiUsageAllWidget = {
     }
     const limits = await fetchGeminiUsage(ctx.config.cache.ttlSeconds);
     debugLog("gemini", "geminiUsageAll - fetchGeminiUsage result:", limits);
+    if (limits === GEMINI_RETIRED)
+      return null;
     if (!limits) {
       return {
         buckets: [],
@@ -5219,9 +5238,9 @@ async function loadWidgetData(widgetId, ctx) {
 }
 async function renderWidget(widgetId, ctx) {
   const loaded = await loadWidgetData(widgetId, ctx);
-  if (!loaded) {
-    return null;
-  }
+  return loaded ? renderLoadedWidget(widgetId, loaded, ctx) : null;
+}
+function renderLoadedWidget(widgetId, loaded, ctx) {
   try {
     return { id: widgetId, output: loaded.widget.render(loaded.data, ctx) };
   } catch (error) {
@@ -5658,7 +5677,7 @@ async function section(title, rows) {
 async function usageRows(ctx) {
   const [limits, others] = await Promise.all([
     Promise.all(LIMIT_ROWS.map((row) => widgetData(row.id, ctx))),
-    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx)))
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => otherCliText(id, ctx)))
   ]);
   if (limits[LIMIT_ROWS.findIndex((row) => row.id === "rateLimit5h")]?.isError) {
     return [colorize(`  ${ICON.warning} ${ctx.translations.overview.usageUnavailable}`, getTheme().warning)];
@@ -5705,6 +5724,14 @@ async function widgetText(id, ctx) {
   if (isDisabled(id, ctx))
     return null;
   return (await renderWidget(id, ctx))?.output || null;
+}
+async function otherCliText(id, ctx) {
+  if (isDisabled(id, ctx))
+    return null;
+  const loaded = await loadWidgetData(id, ctx);
+  if (!loaded || loaded.data.isError)
+    return null;
+  return renderLoadedWidget(id, loaded, ctx)?.output || null;
 }
 function padDisplay(text, width) {
   return text + " ".repeat(Math.max(1, width - displayWidth(text)));

@@ -2,8 +2,9 @@
  * @handbook 8.1-test-structure
  * @covers scripts/views/overview.ts
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderOverview } from '../views/overview.js';
+import { codexUsageWidget } from '../widgets/codex-usage.js';
 import type { Config, UsageLimits, WidgetContext, WidgetId } from '../types.js';
 import { MOCK_CONFIG, MOCK_STDIN, MOCK_TRANSLATIONS } from './fixtures.js';
 
@@ -36,6 +37,8 @@ async function render(rateLimits: UsageLimits | null, config: Partial<Config> = 
 }
 
 describe('renderOverview', () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it('draws each rate limit as an aligned gauge row under USAGE', async () => {
     const lines = await render(LIMITS);
     expect(lines[0]).toMatch(/^ USAGE ─+$/);
@@ -69,6 +72,17 @@ describe('renderOverview', () => {
     expect(lines[0]).toMatch(/^ USAGE/);
     expect(lines[1]).toMatch(/⚠️/);
     expect(lines[1]).toContain(MOCK_TRANSLATIONS.overview.usageUnavailable);
+  });
+
+  it('hides another CLI row in its error state but shows it with data', async () => {
+    const enabled = { disabledWidgets: IO_WIDGETS.filter((id) => id !== 'codexUsage') };
+    const codex = { model: 'gpt', planType: 'plus', primaryPercent: 12, primaryResetAt: null, secondaryPercent: null, secondaryResetAt: null };
+
+    vi.spyOn(codexUsageWidget, 'getData').mockResolvedValue({ ...codex, primaryPercent: null, isError: true });
+    expect((await render(LIMITS, enabled)).some((l) => l.includes('⚠️'))).toBe(false);
+
+    vi.spyOn(codexUsageWidget, 'getData').mockResolvedValue(codex);
+    expect(await render(LIMITS, enabled)).toContainEqual(expect.stringMatching(/^ {2}.*gpt.*12%/));
   });
 
   it('drops rows for disabled widgets', async () => {

@@ -8,7 +8,7 @@
  */
 
 import type { ContextData, RateLimitData, Translations, WidgetContext, WidgetId } from '../types.js';
-import { loadWidgetData, renderWidget } from '../widgets/index.js';
+import { loadWidgetData, renderLoadedWidget, renderWidget } from '../widgets/index.js';
 import { colorize, getColorForPercent, getTheme } from '../utils/colors.js';
 import { ICON } from '../utils/emoji.js';
 import { formatTimeRemaining, formatTokens } from '../utils/formatters.js';
@@ -53,7 +53,7 @@ async function section(title: string, rows: Promise<string[]>): Promise<string[]
 async function usageRows(ctx: WidgetContext): Promise<string[]> {
   const [limits, others] = await Promise.all([
     Promise.all(LIMIT_ROWS.map((row) => widgetData<RateLimitData>(row.id, ctx))),
-    Promise.all(OTHER_CLI_WIDGETS.map((id) => widgetText(id, ctx))),
+    Promise.all(OTHER_CLI_WIDGETS.map((id) => otherCliText(id, ctx))),
   ]);
   // rateLimit5h alone reports a failed fetch, so its error stands for every limit row.
   if (limits[LIMIT_ROWS.findIndex((row) => row.id === 'rateLimit5h')]?.isError) {
@@ -110,6 +110,15 @@ async function widgetData<T>(id: WidgetId, ctx: WidgetContext): Promise<T | null
 async function widgetText(id: WidgetId, ctx: WidgetContext): Promise<string | null> {
   if (isDisabled(id, ctx)) return null;
   return (await renderWidget(id, ctx))?.output || null;
+}
+
+// Another CLI in its error state (expired login, unreachable API) is noise beside the Claude
+// gauges, so the overview drops the row; the statusLine still shows that widget's ⚠️.
+async function otherCliText(id: WidgetId, ctx: WidgetContext): Promise<string | null> {
+  if (isDisabled(id, ctx)) return null;
+  const loaded = await loadWidgetData(id, ctx);
+  if (!loaded || (loaded.data as { isError?: boolean }).isError) return null;
+  return renderLoadedWidget(id, loaded, ctx)?.output || null;
 }
 
 // Hangul and other wide characters take two terminal columns, so localized labels pad by width.
