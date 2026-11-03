@@ -2236,6 +2236,13 @@ var en_default = {
       errors: "Errors",
       bg: "Bg"
     }
+  },
+  overview: {
+    usage: "USAGE",
+    context: "CONTEXT",
+    cost: "COST",
+    session: "SESSION",
+    usageUnavailable: "Usage data unavailable"
   }
 };
 
@@ -2338,6 +2345,13 @@ var ko_default = {
       errors: "\uC5D0\uB7EC",
       bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
     }
+  },
+  overview: {
+    usage: "\uC0AC\uC6A9\uB7C9",
+    context: "\uCEE8\uD14D\uC2A4\uD2B8",
+    cost: "\uBE44\uC6A9",
+    session: "\uC138\uC158",
+    usageUnavailable: "\uC0AC\uC6A9\uB7C9 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC74C"
   }
 };
 

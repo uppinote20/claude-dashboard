@@ -96,5 +96,12 @@
       "errors": "Errors",
       "bg": "Bg"
     }
+  },
+  "overview": {
+    "usage": "USAGE",
+    "context": "CONTEXT",
+    "cost": "COST",
+    "session": "SESSION",
+    "usageUnavailable": "Usage data unavailable"
   }
 }

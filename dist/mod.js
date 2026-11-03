@@ -100,6 +100,13 @@ var en_default = {
       errors: "Errors",
       bg: "Bg"
     }
+  },
+  overview: {
+    usage: "USAGE",
+    context: "CONTEXT",
+    cost: "COST",
+    session: "SESSION",
+    usageUnavailable: "Usage data unavailable"
   }
 };
 
@@ -202,6 +209,13 @@ var ko_default = {
       errors: "\uC5D0\uB7EC",
       bg: "\uBC31\uADF8\uB77C\uC6B4\uB4DC"
     }
+  },
+  overview: {
+    usage: "\uC0AC\uC6A9\uB7C9",
+    context: "\uCEE8\uD14D\uC2A4\uD2B8",
+    cost: "\uBE44\uC6A9",
+    session: "\uC138\uC158",
+    usageUnavailable: "\uC0AC\uC6A9\uB7C9 \uC815\uBCF4\uB97C \uAC00\uC838\uC62C \uC218 \uC5C6\uC74C"
   }
 };
 
@@ -271,6 +285,14 @@ var CSI = /\x1b\[([0-9;]*)([A-Za-z])/g;
 var TRUNCATED_CSI = /\x1b\[[0-9;]*$/;
 var CONTROL = /[\x00-\x08\x0a-\x1f\x7f]/g;
 var toText = (raw) => raw.replace(/\t/g, " ").replace(CONTROL, "");
+function parseOutput(stdout) {
+  const lines = stdout.split("\n");
+  const first = lines.findIndex((l) => l.length > 0);
+  if (first < 0)
+    return [];
+  const last = lines.findLastIndex((l) => l.length > 0);
+  return lines.slice(first, last + 1).map((l) => l.length > 0 ? parseAnsi(l) : [{ text: " " }]);
+}
 function parseAnsi(line) {
   const clean = line.replace(OSC, "").replace(TRUNCATED_CSI, "");
   const out = [];
@@ -464,7 +486,7 @@ async function renderLines($, env) {
       $.ui.log(`${strings().renderFailed}: exit ${run.exitCode} ${run.stderr.slice(0, 200)}`);
       return null;
     }
-    return run.stdout.split("\n").filter((l) => l.length > 0).map(parseAnsi);
+    return parseOutput(run.stdout);
   } catch (err) {
     $.ui.log(`${strings().renderFailed}: ${err.message}`);
     return null;

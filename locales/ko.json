@@ -96,5 +96,12 @@
       "errors": "에러",
       "bg": "백그라운드"
     }
+  },
+  "overview": {
+    "usage": "사용량",
+    "context": "컨텍스트",
+    "cost": "비용",
+    "session": "세션",
+    "usageUnavailable": "사용량 정보를 가져올 수 없음"
   }
 }

@@ -13,7 +13,7 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 
 import en from '../../locales/en.json'
 import ko from '../../locales/ko.json'
-import { parseAnsi, type Segment } from './ansi'
+import { parseOutput, type Segment } from './ansi'
 import { PANE_VIEWS, resolvePaneCommand, resolveToggle, type PaneView } from './toggle'
 import { buildStdin, type ModRateLimit, type ModSnapshot } from './stdin-builder'
 import { isMissingExecutable, NODE_LOOKUP_SCRIPT, parseNodePath } from './node-path'
@@ -102,7 +102,7 @@ async function renderLines($: EngineInterface, env: Record<string, string>): Pro
       $.ui.log(`${strings().renderFailed}: exit ${run.exitCode} ${run.stderr.slice(0, 200)}`)
       return null
     }
-    return run.stdout.split('\n').filter(l => l.length > 0).map(parseAnsi)
+    return parseOutput(run.stdout)
   } catch (err) {
     $.ui.log(`${strings().renderFailed}: ${(err as Error).message}`)
     return null

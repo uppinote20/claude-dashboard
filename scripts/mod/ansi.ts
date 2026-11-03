@@ -63,6 +63,18 @@ const TRUNCATED_CSI = /\x1b\[[0-9;]*$/;
 const CONTROL = /[\x00-\x08\x0a-\x1f\x7f]/g;
 const toText = (raw: string) => raw.replace(/\t/g, ' ').replace(CONTROL, '');
 
+/**
+ * Renderer stdout → rows. Blank lines at either end (the trailing newline) are dropped; a blank
+ * line between content becomes a one-space row, since an empty <Text> takes no height.
+ */
+export function parseOutput(stdout: string): Segment[][] {
+  const lines = stdout.split('\n');
+  const first = lines.findIndex(l => l.length > 0);
+  if (first < 0) return [];
+  const last = lines.findLastIndex(l => l.length > 0);
+  return lines.slice(first, last + 1).map(l => (l.length > 0 ? parseAnsi(l) : [{ text: ' ' }]));
+}
+
 export function parseAnsi(line: string): Segment[] {
   const clean = line.replace(OSC, '').replace(TRUNCATED_CSI, '');
   const out: Segment[] = [];

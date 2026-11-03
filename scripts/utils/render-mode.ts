@@ -57,7 +57,8 @@ export function resolveRenderMode(env: Record<string, string | undefined>): Rend
 /**
  * The layout a mod surface draws: `modPane` / `modBand` from the config, each a display mode
  * name, a preset string, or custom widget lines (`WidgetId[][]`, unknown ids dropped).
- * Unset or yielding no widgets, the pane shows `detailed` and the band keeps the statusLine
+ * Unset or yielding no widgets, the pane shows `detailed` (its dashboard tab draws the overview
+ * instead, see isPaneOverview) and the band keeps the statusLine
  * layout (an empty override). `isWidget` comes from the widget registry; injected to keep
  * this module free of every widget's imports.
  */
@@ -67,19 +68,33 @@ export function resolveModLayout(
   isWidget: (id: string) => boolean = () => true,
 ): Partial<Pick<Config, 'displayMode' | 'lines'>> {
   const fallback = surface === 'pane' ? { displayMode: 'detailed' as const, lines: undefined } : {};
-  const value: unknown = surface === 'pane' ? config.modPane : config.modBand;
+  return configuredLayout(surface === 'pane' ? config.modPane : config.modBand, isWidget) ?? fallback;
+}
+
+/**
+ * The pane's dashboard tab draws the sectioned overview (views/overview.ts) instead of widget
+ * lines when `modPane` yields no widgets, so a layout the user set keeps working unchanged.
+ */
+export function isPaneOverview(config: Config, isWidget: (id: string) => boolean = () => true): boolean {
+  return configuredLayout(config.modPane, isWidget) === null;
+}
+
+function configuredLayout(
+  value: unknown,
+  isWidget: (id: string) => boolean,
+): Pick<Config, 'displayMode' | 'lines'> | null {
   if (typeof value === 'string') {
     if ((NAMED_MODES as readonly string[]).includes(value)) {
       return { displayMode: value as DisplayMode, lines: undefined };
     }
     const lines = parsePreset(value);
-    return lines.length > 0 ? { displayMode: 'custom', lines } : fallback;
+    return lines.length > 0 ? { displayMode: 'custom', lines } : null;
   }
   if (Array.isArray(value)) {
     const lines = customLines(value, isWidget);
-    return lines.length > 0 ? { displayMode: 'custom', lines } : fallback;
+    return lines.length > 0 ? { displayMode: 'custom', lines } : null;
   }
-  return fallback;
+  return null;
 }
 
 // The config file is hand-edited JSON: keep only string ids the registry knows, drop empty lines.

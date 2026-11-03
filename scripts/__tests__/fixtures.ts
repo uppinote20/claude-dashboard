@@ -66,6 +66,13 @@ export const MOCK_TRANSLATIONS: Translations = {
     main: 'main',
     agentsSuffix: 'agents',
   },
+  overview: {
+    usage: 'USAGE',
+    context: 'CONTEXT',
+    cost: 'COST',
+    session: 'SESSION',
+    usageUnavailable: 'Usage data unavailable',
+  },
 };
 
 export const MOCK_CONFIG: Config = {
