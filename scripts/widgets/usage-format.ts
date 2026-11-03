@@ -1,6 +1,7 @@
 /**
  * Shared presentation helpers for per-CLI usage widgets
  * @handbook 3.3-widget-data-sources
+ * @handbook 5.3-usage-based-color
  * @tested scripts/__tests__/widgets.test.ts
  */
 

@@ -46,6 +46,26 @@ export const MOCK_TRANSLATIONS: Translations = {
     errorFetching: 'Error fetching data',
     noData: 'No usage data available',
   },
+  paneViews: {
+    turns: 'Turns',
+    agents: 'Agents',
+    files: 'Files',
+    todos: 'Todos',
+    errors: 'Errors',
+    background: 'Background',
+    emptyTurns: 'No prompts yet',
+    emptyAgents: 'No subagents in this session',
+    emptyFiles: 'No files written yet',
+    emptyTodos: 'No todo list yet',
+    emptyErrors: 'No failed tools',
+    emptyBackground: 'No background jobs',
+    noTranscript: 'Transcript not available yet',
+    running: 'running',
+    done: 'done',
+    stale: 'stale',
+    main: 'main',
+    agentsSuffix: 'agents',
+  },
 };
 
 export const MOCK_CONFIG: Config = {

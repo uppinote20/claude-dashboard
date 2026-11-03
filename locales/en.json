@@ -57,14 +57,44 @@
     "errorFetching": "Error fetching data",
     "noData": "No usage data available"
   },
+  "paneViews": {
+    "turns": "Turns",
+    "agents": "Agents",
+    "files": "Files",
+    "todos": "Todos",
+    "errors": "Errors",
+    "background": "Background",
+    "emptyTurns": "No prompts yet",
+    "emptyAgents": "No subagents in this session",
+    "emptyFiles": "No files written yet",
+    "emptyTodos": "No todo list yet",
+    "emptyErrors": "No failed tools",
+    "emptyBackground": "No background jobs",
+    "noTranscript": "Transcript not available yet",
+    "running": "running",
+    "done": "done",
+    "stale": "stale",
+    "main": "main",
+    "agentsSuffix": "agents"
+  },
   "mod": {
     "paneTitle": "Dashboard",
     "paneOpened": "Dashboard pane opened.",
     "paneClosed": "Dashboard pane closed.",
     "bandOn": "Dashboard band on — statusLine hidden for this session (terminal/desktop only).",
     "bandOff": "Dashboard band off — statusLine restored.",
-    "paneUsage": "Usage: /claude-dashboard-pane [on|off]",
+    "paneUsage": "Usage: /claude-dashboard-pane [on|off|dashboard|turns|agents|files|todos|errors|bg]",
     "bandUsage": "Usage: /claude-dashboard-band [on|off]",
-    "renderFailed": "Dashboard render failed"
+    "renderFailed": "Dashboard render failed",
+    "paneViewSwitched": "Dashboard pane view:",
+    "tabs": {
+      "dashboard": "Dash",
+      "turns": "Turns",
+      "agents": "Agents",
+      "files": "Files",
+      "todos": "Todos",
+      "errors": "Errors",
+      "bg": "Bg"
+    }
   }
 }

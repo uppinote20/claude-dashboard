@@ -131,15 +131,16 @@ restart is needed.
 
 ## /claude-dashboard-pane
 
-Open or close a dashboard pane beside the transcript (mod, tested on Claude Code 2.1.289). Takes `on`, `off`, or no argument to flip the current state.
+Open or close a pane beside the transcript (mod, tested on Claude Code 2.1.289). Takes `on`, `off`, a view name, or no argument to flip the current state (the last view is kept). A view name opens the pane on that view, or switches an open pane in place.
 
 ```bash
 /claude-dashboard-pane on
 /claude-dashboard-pane off
 /claude-dashboard-pane      # no argument: flip the current state
+/claude-dashboard-pane turns   # dashboard | turns | agents | files | todos | errors | bg
 ```
 
-Layout comes from the `modPane` config key (default `detailed`). See [Mods](/guides/mods/).
+Views: `dashboard` (widget layout, default), `turns` (per-prompt tokens/tools), `agents` (subagents), `files` (files edited), `todos`, `errors` (failed tool calls), `bg` (background jobs). The view lasts for the session only. For the `dashboard` view, layout comes from the `modPane` config key (default `detailed`). See [Mods](/guides/mods/) for details on each view.
 
 ## /claude-dashboard-band
 

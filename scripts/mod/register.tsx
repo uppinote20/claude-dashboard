@@ -6,6 +6,7 @@
  * literally and refuses `var register = …`, which an arrow export compiles to.
  * @handbook 9.1-mod-renderer-subprocess
  * @handbook 9.3-engine-validator-constraints
+ * @handbook 9.5-pane-views
  */
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register, Timer } from 'claude-code'
@@ -13,12 +14,14 @@ import type { EngineInterface, Register, Timer } from 'claude-code'
 import en from '../../locales/en.json'
 import ko from '../../locales/ko.json'
 import { parseAnsi, type Segment } from './ansi'
-import { resolveToggle } from './toggle'
+import { PANE_VIEWS, resolvePaneCommand, resolveToggle, type PaneView } from './toggle'
 import { buildStdin, type ModRateLimit, type ModSnapshot } from './stdin-builder'
 import { isMissingExecutable, NODE_LOOKUP_SCRIPT, parseNodePath } from './node-path'
 
 const PANE = 'claude-dashboard'
 const TICK_MS = 60_000
+// Session views follow subagents and background jobs, which fire no session.measure.
+const VIEW_TICK_MS = 10_000
 const RUN_TIMEOUT_MS = 5_000
 // An interactive shell sourcing nvm can be slow; this runs once per session at most.
 const NODE_LOOKUP_TIMEOUT_MS = 10_000
@@ -52,10 +55,15 @@ interface Usage {
 // Module state: a reload re-runs register and session.start, so starting over is fine.
 const snapshot: ModSnapshot = { sessionId: '', model: '', cwd: '', rateLimits: [] }
 let isPaneOpen = false
+// Session-scoped like the band: a new session opens on the dashboard.
+let paneView: PaneView = 'dashboard'
 let isBandOn = false
+// A /clear or resume ended the session with the band on: switchSession re-applies it under the new id.
+let bandCarriesOver = false
 // Band runs re-mark the session when they finish; off must wait for them before clearing.
 const bandRuns = new Set<Promise<void>>()
 let ticker: Timer | null = null
+let tickerMs = 0
 
 // 'node' off PATH until it fails to start; then the looked-up path, shared by concurrent runs.
 let nodeCommand = 'node'
@@ -113,7 +121,7 @@ async function canDrawBand($: EngineInterface): Promise<boolean> {
 
 async function refreshPane($: EngineInterface) {
   if (!isPaneOpen) return
-  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: 'pane' })
+  const lines = await renderLines($, { CLAUDE_DASHBOARD_SURFACE: 'pane', CLAUDE_DASHBOARD_PANE_VIEW: paneView })
   await update($, paneLines, keepOrWarn(lines))
 }
 
@@ -201,11 +209,41 @@ async function setBand($: EngineInterface, on: boolean) {
 
 function syncTicker($: EngineInterface) {
   const needed = isPaneOpen || isBandOn
-  if (needed && !ticker) ticker = $.clock.every(TICK_MS, () => void requestRefresh($))
-  if (!needed && ticker) {
+  const ms = isPaneOpen && paneView !== 'dashboard' ? VIEW_TICK_MS : TICK_MS
+  if (ticker && (!needed || ms !== tickerMs)) {
     ticker.cancel()
     ticker = null
   }
+  if (needed && !ticker) {
+    ticker = $.clock.every(ms, () => void requestRefresh($))
+    tickerMs = ms
+  }
+}
+
+// A tab press or a view argument on an open pane: redraw in place on the new view.
+async function selectView($: EngineInterface, view: PaneView) {
+  if (view === paneView) return
+  paneView = view
+  syncTicker($)
+  await requestRefresh($)
+}
+
+async function runPaneCommand($: EngineInterface, args: string): Promise<string> {
+  const cmd = resolvePaneCommand(args, isPaneOpen, paneView)
+  if (cmd === null) return strings().paneUsage
+  if (!cmd.open) {
+    await setPane($, false)
+    return strings().paneClosed
+  }
+  const switched = cmd.view !== paneView
+  if (isPaneOpen) {
+    await selectView($, cmd.view)
+  } else {
+    // Set before opening so the first render already draws the asked-for view.
+    paneView = cmd.view
+    await setPane($, true)
+  }
+  return switched ? `${strings().paneViewSwitched} ${paneView}` : strings().paneOpened
 }
 
 function applyUsage(u: Usage) {
@@ -230,9 +268,12 @@ async function setPane($: EngineInterface, open: boolean) {
 // /clear, /resume and /branch replace the session without a new session.start: move the band
 // marker to the new id and re-read the session-scoped figures.
 async function switchSession($: EngineInterface, sessionId: string) {
-  const wasBandOn = isBandOn
-  if (wasBandOn) await stopBand($)
+  const wasBandOn = isBandOn || bandCarriesOver
+  bandCarriesOver = false
+  if (isBandOn) await stopBand($)
   snapshot.sessionId = sessionId
+  // The view is session-scoped: the new session starts on the dashboard (the ticker follows).
+  paneView = 'dashboard'
   // A failed read keeps the last value; the band must still be re-applied under the new id.
   const [usage, model] = await Promise.allSettled([$.session.usage(), $.session.model()])
   if (usage.status === 'fulfilled') applyUsage(usage.value)
@@ -245,6 +286,29 @@ async function switchSession($: EngineInterface, sessionId: string) {
     syncTicker($)
     await requestRefresh($)
   }
+}
+
+// One plain Button per view: a click, its digit while the pane holds the keys, or Tab/arrows
+// then Enter switches. The current tab is drawn bold, the rest dim.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function drawTabs($: EngineInterface, Box: any, Text: any, Button: any) {
+  const labels = strings().tabs
+  return (
+    <Box flexDirection="row" gap={2}>
+      {PANE_VIEWS.map((view, i) => (
+        <Button
+          key={`tab:${view}`}
+          plain
+          // Hotkeys follow PANE_VIEWS order (toggle.ts): reordering it renumbers every tab after.
+          hotkey={String(i + 1)}
+          dimColor={view !== paneView}
+          onPress={() => void selectView($, view)}
+        >
+          {view === paneView ? <Text bold>{labels[view]}</Text> : labels[view]}
+        </Button>
+      ))}
+    </Box>
+  )
 }
 
 // Box/Text come from $.ui.resolve(e): each surface has its own element table.
@@ -267,8 +331,8 @@ export function register(on: Parameters<Register>[0]) {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'claude-dashboard-pane',
-      description: 'Show the dashboard in a pane beside the transcript (on|off, none toggles)',
-      argumentHint: '[on|off]',
+      description: 'Show the dashboard or a session view (turns, agents, files, todos, errors, bg) in a pane',
+      argumentHint: '[on|off|dashboard|turns|agents|files|todos|errors|bg]',
     })
     // session.start is awaited before the first prompt: fetch the independent reads together.
     const [id, model, cwd, root, version, usage] = await Promise.all([
@@ -312,12 +376,9 @@ export function register(on: Parameters<Register>[0]) {
     return next(e)
   })
 
-  // Both commands take on, off, or nothing to flip the current state.
+  // Both commands take on, off, or nothing to flip the current state; the pane also takes a view.
   on('command.run', { command: 'claude-dashboard-pane' }, async ($, e) => {
-    const open = resolveToggle(e.args, isPaneOpen)
-    if (open === null) return { text: strings().paneUsage }
-    await setPane($, open)
-    return { text: open ? strings().paneOpened : strings().paneClosed }
+    return { text: await runPaneCommand($, e.args) }
   })
 
   on('ui.close', { id: 'claude-dashboard' }, ($, e, next) => {
@@ -334,8 +395,14 @@ export function register(on: Parameters<Register>[0]) {
   })
 
   on('ui.render', { component: 'Pane', requestId: 'claude-dashboard' }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
-    return drawLines(Box, Text, await read($, paneLines))
+    const { Box, Text, Button } = $.ui.resolve(e)
+    const lines = await read($, paneLines)
+    return (
+      <Box flexDirection="column">
+        {drawTabs($, Box, Text, Button)}
+        {drawLines(Box, Text, lines)}
+      </Box>
+    )
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -347,9 +414,15 @@ export function register(on: Parameters<Register>[0]) {
   })
 
   on('session.end', async ($, e, next) => {
-    // Give statusLine back now rather than after the marker TTL.
-    if (isBandOn) await stopBand($)
-    isPaneOpen = false
+    // /clear and resume go on in this process under a new id (classic.SessionStart → switchSession):
+    // the pane stays on screen, so keep refreshing it, and carry the band over to the new id.
+    const continues = e.reason === 'clear' || e.reason === 'resume'
+    if (isBandOn) {
+      // Give statusLine back now rather than after the marker TTL.
+      await stopBand($)
+      bandCarriesOver = continues
+    }
+    if (!continues) isPaneOpen = false
     syncTicker($)
     return next(e)
   })
