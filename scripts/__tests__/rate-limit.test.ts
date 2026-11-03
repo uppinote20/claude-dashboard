@@ -8,6 +8,7 @@ import {
   rateLimit7dWidget,
   rateLimit7dSonnetWidget,
   rateLimit7dFableWidget,
+  hasScopedWeeklyLimits,
 } from '../widgets/rate-limit.js';
 import type { WidgetContext, UsageLimits, Config } from '../types.js';
 import { ICON } from '../utils/emoji.js';
@@ -42,7 +43,7 @@ describe('rate-limit widgets', () => {
       expect(result).toContain(ICON.warning);
     });
 
-    it('should return error data when five_hour is not available', async () => {
+    it('should return error data when no window is available (malformed response)', async () => {
       const ctx = createContext({
         five_hour: null,
         seven_day: null,
@@ -52,6 +53,17 @@ describe('rate-limit widgets', () => {
 
       expect(data).not.toBeNull();
       expect(data?.isError).toBe(true);
+    });
+
+    it('should hide when only the weekly window exists (verified Ultra has no 5h limit)', async () => {
+      const ctx = createContext({
+        five_hour: null,
+        seven_day: { utilization: 4, resets_at: null },
+        seven_day_sonnet: null,
+      });
+      const data = await rateLimit5hWidget.getData(ctx);
+
+      expect(data).toBeNull();
     });
 
     it('should return correct data when five_hour is available', async () => {
@@ -182,6 +194,16 @@ describe('rate-limit widgets', () => {
       expect(data?.utilization).toBe(52);
     });
 
+    it('should return data for ultra plan when seven_day_fable is available', async () => {
+      const ctx = createContext(
+        { five_hour: null, seven_day: null, seven_day_sonnet: null, seven_day_fable: { utilization: 52, resets_at: null } },
+        { plan: 'ultra' }
+      );
+      const data = await rateLimit7dFableWidget.getData(ctx);
+
+      expect(data?.utilization).toBe(52);
+    });
+
     it('should return null when seven_day_fable is absent (non-Fable account)', async () => {
       const ctx = createContext(
         { five_hour: null, seven_day: null, seven_day_sonnet: null },
@@ -199,6 +221,16 @@ describe('rate-limit widgets', () => {
 
       expect(result).toContain('7d-F');
       expect(result).toContain('45%');
+    });
+  });
+
+  describe('hasScopedWeeklyLimits', () => {
+    it.each([
+      ['pro', false],
+      ['max', true],
+      ['ultra', true],
+    ] as const)('%s -> %s', (plan, expected) => {
+      expect(hasScopedWeeklyLimits(plan)).toBe(expected);
     });
   });
 });

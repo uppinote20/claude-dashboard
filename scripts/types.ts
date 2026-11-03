@@ -248,7 +248,7 @@ export type ModLayout = string | WidgetId[][];
  */
 export interface Config {
   language: 'en' | 'ko' | 'auto';
-  plan: 'pro' | 'max';
+  plan: 'pro' | 'max' | 'ultra';
   /** Display mode: preset (compact/normal/detailed) or custom */
   displayMode: DisplayMode;
   /** Custom line configuration (only used when displayMode is 'custom') */

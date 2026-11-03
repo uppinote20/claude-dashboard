@@ -27,7 +27,7 @@ Configure the status line display mode, language, plan, and theme.
 |----------|---------|---------|-------------|
 | displayMode | `compact`, `normal`, `detailed`, `custom` | `compact` | Number of lines and widget selection |
 | language | `auto`, `en`, `ko` | `auto` | UI language |
-| plan | `max`, `pro` | `max` | Subscription plan (affects available rate limit widgets) |
+| plan | `max`, `ultra`, `pro` | `max` | Subscription plan (affects available rate limit widgets) |
 | customWidgets | `"widget1,widget2\|widget3"` | -- | Custom layout (only for `custom` mode) |
 
 ### Examples
