@@ -44,6 +44,19 @@ describe('renderOverview', () => {
     expect(lines).toContainEqual(expect.stringMatching(/^ {2}7d-F {4}░{20} {3}0%$/));
   });
 
+  it('aligns gauges by display width when labels are Korean (two columns per Hangul)', async () => {
+    const translations = {
+      ...MOCK_TRANSLATIONS,
+      labels: { ...MOCK_TRANSLATIONS.labels, '5h': '5시간', '7d_all': '7일', '7d_fable': '7일-F' },
+    };
+    const out = strip(await renderOverview({ ...ctx(LIMITS), translations })).split('\n');
+    const columns = out
+      .filter((l) => /[█░]{20}/.test(l))
+      .slice(0, 3)
+      .map((l) => [...l.slice(0, l.search(/[█░]/))].reduce((w, ch) => w + (/[가-힣]/.test(ch) ? 2 : 1), 0));
+    expect(columns).toEqual([10, 10, 10]);
+  });
+
   it('hides the 5h row when the account has no 5h window (verified Ultra)', async () => {
     const lines = await render({ ...LIMITS, five_hour: null });
     expect(lines.some((l) => l.includes('5h'))).toBe(false);
