@@ -231,6 +231,17 @@ check-ai          # Pretty output
 check-ai --json   # JSON output for scripting
 ```
 
+### `/claude-dashboard:calibrate-pricing`
+
+For API gateways that bill at contracted rates and report each request's cost in a response header. Sends a small set of billed probe requests per model (input, output, thinking, 5m/1h cache write, cache read, mixed, image), fits a per-token price to every kind, checks the fit reproduces each request's reported cost, and prints Claude Code's `modelPricing` managed setting. Once installed, `/cost` and every cost widget here (`cost`, `todayCost`, `budget`, `forecast`) use those rates.
+
+```bash
+/claude-dashboard:calibrate-pricing --models <model,model> --cost-header <header-name>
+/claude-dashboard:calibrate-pricing --models <model> --cost-header <header-name> --large   # also probe >200K prompts
+```
+
+Claude Code reads `modelPricing` only from managed settings (`/etc/claude-code/managed-settings.json` on Linux), not from user or project settings, so installing the result needs root. Its override rows have a single `cacheWrite` rate (1h cache writes are billed at it) and it adds its own per-request web search charge, which a gateway may not bill.
+
 ### `/claude-dashboard:update`
 
 Repair or verify the statusLine shim. Usually unnecessary — after `/plugin update`, the
