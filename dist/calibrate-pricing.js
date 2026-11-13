@@ -17,6 +17,12 @@ function getClaudeConfigDir() {
 // scripts/utils/pricing-fit.ts
 var PRICE_KINDS = ["input", "output", "cacheWrite5m", "cacheWrite1h", "cacheRead"];
 var num = (v) => typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0;
+function parseCostHeader(raw) {
+  if (raw === null || !/^\s*(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\s*$/.test(raw))
+    return null;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : null;
+}
 function usageVector(u) {
   const write = num(u.cache_creation_input_tokens);
   const w1h = num(u.cache_creation?.ephemeral_1h_input_tokens);
@@ -285,9 +291,11 @@ async function runProbe(opts, headers, model, p) {
     return null;
   }
   const json = await res.json();
-  const cost = Number(res.headers.get(opts.costHeader));
-  if (!json.usage || !Number.isFinite(cost)) {
-    console.error(`  ${p.label}: no usage or no "${opts.costHeader}" header in the response`);
+  const raw = res.headers.get(opts.costHeader);
+  const cost = parseCostHeader(raw);
+  if (!json.usage || cost === null) {
+    const why = !json.usage ? "no usage in the response" : raw === null ? `no "${opts.costHeader}" header` : `"${opts.costHeader}" is not a cost: ${JSON.stringify(raw)}`;
+    console.error(`  ${p.label}: ${why}`);
     return null;
   }
   return { sample: { label: p.label, usage: json.usage, costUsd: cost }, modelId: json.model ?? model };

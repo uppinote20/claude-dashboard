@@ -59,6 +59,17 @@ export interface ModelPricingRow {
 const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0);
 
 /**
+ * Parse a response's cost header. Returns null when the header is absent,
+ * blank or not a non-negative number, so a missing or misnamed header is
+ * never read as a free request (`Number(null)` and `Number('')` are 0).
+ */
+export function parseCostHeader(raw: string | null): number | null {
+  if (raw === null || !/^\s*(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?\s*$/.test(raw)) return null;
+  const v = Number(raw);
+  return Number.isFinite(v) ? v : null;
+}
+
+/**
  * Token counts per price kind. Cache writes without a TTL breakdown are counted
  * as 5m writes, the API default.
  */

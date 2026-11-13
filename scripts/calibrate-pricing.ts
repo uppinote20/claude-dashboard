@@ -18,6 +18,7 @@ import { getClaudeConfigDir } from './utils/config-dir.js';
 import {
   fitPrices,
   mergeModelPricing,
+  parseCostHeader,
   toModelPricingRow,
   usageVector,
   PRICE_KINDS,
@@ -237,9 +238,11 @@ async function runProbe(opts: Options, headers: Record<string, string>, model: s
     return null;
   }
   const json = (await res.json()) as { model?: string; usage?: ApiUsage };
-  const cost = Number(res.headers.get(opts.costHeader));
-  if (!json.usage || !Number.isFinite(cost)) {
-    console.error(`  ${p.label}: no usage or no "${opts.costHeader}" header in the response`);
+  const raw = res.headers.get(opts.costHeader);
+  const cost = parseCostHeader(raw);
+  if (!json.usage || cost === null) {
+    const why = !json.usage ? 'no usage in the response' : raw === null ? `no "${opts.costHeader}" header` : `"${opts.costHeader}" is not a cost: ${JSON.stringify(raw)}`;
+    console.error(`  ${p.label}: ${why}`);
     return null;
   }
   return { sample: { label: p.label, usage: json.usage, costUsd: cost }, modelId: json.model ?? model };

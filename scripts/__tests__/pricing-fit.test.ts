@@ -7,6 +7,7 @@ import {
   fitPrices,
   mergeModelPricing,
   overrideKeys,
+  parseCostHeader,
   toModelPricingRow,
   usageVector,
   type ApiUsage,
@@ -114,5 +115,26 @@ describe('mergeModelPricing', () => {
       multiplier: 1,
       overrides: { other: row, 'claude-sonnet-5': row, 'claude-sonnet-5[1m]': row },
     });
+  });
+});
+
+describe('parseCostHeader', () => {
+  it('rejects a missing or blank header instead of reading it as 0', () => {
+    expect(parseCostHeader(null)).toBeNull();
+    expect(parseCostHeader('')).toBeNull();
+    expect(parseCostHeader('  ')).toBeNull();
+  });
+
+  it('rejects values that are not a non-negative number', () => {
+    expect(parseCostHeader('abc')).toBeNull();
+    expect(parseCostHeader('-0.1')).toBeNull();
+    expect(parseCostHeader('0x10')).toBeNull();
+    expect(parseCostHeader('Infinity')).toBeNull();
+  });
+
+  it('accepts explicit costs, including zero', () => {
+    expect(parseCostHeader('0')).toBe(0);
+    expect(parseCostHeader('0.00032000')).toBe(0.00032);
+    expect(parseCostHeader(' 1.5e-4 ')).toBe(0.00015);
   });
 });
