@@ -71,6 +71,15 @@ async function main() {
 
     console.log(`✓ Built dist/check-usage.js with version ${version}`);
 
+    // Build calibrate-pricing entry point
+    await build({
+      ...commonOptions,
+      entryPoints: ['scripts/calibrate-pricing.ts'],
+      outfile: 'dist/calibrate-pricing.js',
+    });
+
+    console.log(`✓ Built dist/calibrate-pricing.js with version ${version}`);
+
     // Build the Claude Code mod (Node-less sandbox: neutral platform, engine module external).
     // Not minified: the engine's validator matches `$.noun.method` and `on("<event>")` literally.
     await build({
